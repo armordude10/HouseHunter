@@ -29,6 +29,8 @@ export type PanelRole =
   | "back"
   | "left_sleeve"
   | "right_sleeve"
+  | "left_leg"
+  | "right_leg"
   | "hood"
   | "pocket"
   | "neck"
@@ -84,6 +86,7 @@ export const classifyPlacement = (placement: string): PanelRole => {
   if (/neck/.test(name)) return "neck";
   if (/hood/.test(name)) return "hood";
   if (/pocket/.test(name)) return "pocket";
+  if (/leg\b|_leg|leg_/.test(name)) return /right/.test(name) ? "right_leg" : "left_leg";
   if (/(left|l)[_\- ]?sleeve|sleeve[_\- ]?(left|l)\b/.test(name)) return "left_sleeve";
   if (/(right|r)[_\- ]?sleeve|sleeve[_\- ]?(right|r)\b/.test(name)) return "right_sleeve";
   if (/back/.test(name)) return "back";
@@ -126,7 +129,16 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
     ...resolvePanelSize(input)
   }));
 
-  const rowOrder: PanelRole[] = ["left_sleeve", "back", "front", "right_sleeve"];
+  // Legs behave like body panels: on leggings the two leg panels meet at the
+  // center-front/center-back seams, so they share a cut line on the plane.
+  const rowOrder: PanelRole[] = [
+    "left_sleeve",
+    "back",
+    "front",
+    "right_sleeve",
+    "left_leg",
+    "right_leg"
+  ];
   const row = rowOrder
     .map((role) => sized.find((panel) => panel.role === role))
     .filter((panel): panel is NonNullable<typeof panel> => Boolean(panel));

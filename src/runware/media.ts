@@ -3,7 +3,7 @@
  * image tasks the pipeline uses.
  */
 
-import { RunwareClient, RunwareTaskResult, sharedClient } from "./client.js";
+import { RunwareClient, RunwareTask, RunwareTaskResult, sharedClient } from "./client.js";
 import { IMAGE } from "./models.js";
 
 export interface ImageResult extends RunwareTaskResult {
@@ -34,10 +34,15 @@ export const clampFluxDimension = (value: number): number => {
 export class RunwareMedia {
   constructor(private readonly client: RunwareClient = sharedClient()) {}
 
-  /** Text-to-image / reference-guided generation. Returns a hosted public PNG URL. */
+  /**
+   * Text-to-image / reference-guided generation. Returns a hosted public PNG
+   * URL. Parameter support varies per model (e.g. FLUX.2 rejects
+   * negativePrompt), so on an `invalidParameter` error the offending
+   * parameter is stripped and the task retried.
+   */
   async generateImage(params: GenerateImageParams): Promise<ImageResult> {
     const model = params.model ?? IMAGE.FLUX_2_FLEX;
-    return this.client.runTask<ImageResult>({
+    const task: Record<string, unknown> = {
       taskType: "imageInference",
       model,
       positivePrompt: params.positivePrompt,
@@ -59,7 +64,30 @@ export class RunwareMedia {
             }
           }
         : {})
-    });
+    };
+    return this.runTaskStrippingUnsupported<ImageResult>(task);
+  }
+
+  /** Run a task, dropping any parameter the model reports as unsupported. */
+  private async runTaskStrippingUnsupported<T extends RunwareTaskResult>(
+    task: Record<string, unknown>,
+    maxRepairs = 3
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.client.runTask<T>(task as RunwareTask);
+      } catch (error) {
+        const details = (error as { details?: unknown }).details;
+        const errorList = Array.isArray(details)
+          ? details
+          : ((details as { errors?: unknown[] } | undefined)?.errors ?? []);
+        const invalid = (errorList as Array<{ code?: string; parameter?: string }>).find(
+          (item) => item.code === "invalidParameter" && item.parameter && item.parameter in task
+        );
+        if (!invalid?.parameter || attempt >= maxRepairs) throw error;
+        delete task[invalid.parameter];
+      }
+    }
   }
 
   /** BiRefNet General background removal; PNG output preserves transparency. */
