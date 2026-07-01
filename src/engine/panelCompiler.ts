@@ -215,10 +215,11 @@ const panelPrompt = (design: DesignSpec, job: CompileJob): string => {
  * Pick the working (pre-upscale) size and upscale factor for a target spec.
  * Working output stays within generation/upload-friendly bounds; the final
  * upscaled result meets or exceeds the target at the exact aspect ratio.
+ * Factor is restricted to 2 or 4 — Runware's imageUpscale rejects 3.
  */
 export const workingSize = (targetW: number, targetH: number) => {
   const maxDim = Math.max(targetW, targetH);
-  const factor = Math.min(4, Math.max(2, Math.ceil(maxDim / 2048))) as 2 | 3 | 4;
+  const factor = (maxDim <= 4096 ? 2 : 4) as 2 | 4;
   return {
     factor,
     width: Math.max(16, Math.ceil(targetW / factor)),
@@ -721,12 +722,10 @@ export class PanelCompiler {
       });
 
       let fileUrl = generated.imageURL;
-      let factor: 2 | 3 | 4 | null = null;
+      let factor: 2 | 4 | null = null;
       if (Math.max(target.width, target.height) > Math.max(genW, genH)) {
-        factor = Math.min(
-          4,
-          Math.max(2, Math.ceil(Math.max(target.width, target.height) / Math.max(genW, genH)))
-        ) as 2 | 3 | 4;
+        const ratio = Math.max(target.width, target.height) / Math.max(genW, genH);
+        factor = ratio <= 2 ? 2 : 4; // imageUpscale accepts 2 or 4, not 3
         const upscaled = await this.media.upscale(fileUrl, factor);
         fileUrl = upscaled.imageURL;
       }

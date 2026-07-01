@@ -86,6 +86,8 @@ export const classifyPlacement = (placement: string): PanelRole => {
   if (/neck/.test(name)) return "neck";
   if (/hood/.test(name)) return "hood";
   if (/pocket/.test(name)) return "pocket";
+  // Waistband/collar/cuff strips are separate physical pieces; never body panels.
+  if (/belt|waist|cuff|collar|bottom|top\b/.test(name)) return "detached";
   if (/leg\b|_leg|leg_/.test(name)) return /right/.test(name) ? "right_leg" : "left_leg";
   if (/(left|l)[_\- ]?sleeve|sleeve[_\- ]?(left|l)\b/.test(name)) return "left_sleeve";
   if (/(right|r)[_\- ]?sleeve|sleeve[_\- ]?(right|r)\b/.test(name)) return "right_sleeve";
@@ -143,8 +145,9 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
     .map((role) => sized.find((panel) => panel.role === role))
     .filter((panel): panel is NonNullable<typeof panel> => Boolean(panel));
   const hood = sized.find((panel) => panel.role === "hood");
+  const pocket = sized.find((panel) => panel.role === "pocket");
   const detachedPanels = sized.filter(
-    (panel) => !row.includes(panel as never) && panel !== hood
+    (panel) => !row.includes(panel as never) && panel !== hood && panel !== pocket
   );
 
   const panels: PanelPlan[] = [];
@@ -207,6 +210,38 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
         atIn: hoodHeight
       });
     }
+  }
+
+  // AOP pouch-pocket continuity: providers like Printful give the pocket the
+  // SAME print canvas as the front and mask the pocket shape from it, so an
+  // identical crop makes the pocket invisible against the front art. When
+  // the pocket canvas matches the front canvas, pin its rect to the front's.
+  if (pocket) {
+    const front = panels.find((panel) => panel.role === "front");
+    const sameCanvas =
+      front &&
+      Math.abs(front.widthIn - pocket.widthIn) < 0.01 &&
+      Math.abs(front.heightIn - pocket.heightIn) < 0.01;
+    panels.push({
+      placement: pocket.input.placement,
+      role: "pocket",
+      targetWidthPx: pocket.targetWidthPx,
+      targetHeightPx: pocket.targetHeightPx,
+      dpi: pocket.dpi,
+      widthIn: pocket.widthIn,
+      heightIn: pocket.heightIn,
+      xIn: sameCanvas
+        ? front.xIn
+        : front
+          ? front.xIn + (front.widthIn - pocket.widthIn) / 2
+          : 0,
+      yIn: sameCanvas
+        ? front.yIn
+        : front
+          ? front.yIn + front.heightIn - pocket.heightIn
+          : hoodHeight + rowHeight + 1,
+      seamBound: Boolean(front)
+    });
   }
 
   let detachedX = 0;
