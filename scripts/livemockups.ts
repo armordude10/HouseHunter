@@ -242,20 +242,43 @@ const run = async () => {
       { timeout: 300000 } // Printful mockup tasks can take minutes
     );
     const rawTask = mcpText(taskResponse);
+    await writeFile(path.join(OUT_DIR, `${garment.name}-task.json`), rawTask);
+
+    // Collect every image URL in the task response that is not one of the
+    // print files we submitted — those are the Printful-rendered mockups.
+    const submitted = new Set(Object.values(placementFileUrls));
+    const collectUrls = (node: unknown, found: Set<string>) => {
+      if (typeof node === "string") {
+        if (/^https?:\/\/\S+\.(png|jpe?g|webp)(\?|$)/i.test(node) && !submitted.has(node)) {
+          found.add(node);
+        }
+      } else if (Array.isArray(node)) {
+        node.forEach((item) => collectUrls(item, found));
+      } else if (node && typeof node === "object") {
+        Object.values(node).forEach((value) => collectUrls(value, found));
+      }
+    };
     let mockupUrls: string[] = [];
     try {
       const extract = await mcp.callTool({
         name: "extract_printful_mockup_urls",
         arguments: { task_response: JSON.parse(rawTask) }
       });
-      const parsed = JSON.parse(mcpText(extract));
-      mockupUrls = (parsed.mockup_urls ?? parsed.urls ?? parsed) as string[];
+      const found = new Set<string>();
+      collectUrls(JSON.parse(mcpText(extract)), found);
+      collectUrls(JSON.parse(rawTask), found);
+      mockupUrls = [...found];
     } catch {
-      mockupUrls = [...rawTask.matchAll(/https?:\/\/[^"\s\\]+/g)]
-        .map((m) => m[0])
-        .filter((u) => /mockup|printful|files/.test(u));
+      const found = new Set<string>();
+      try {
+        collectUrls(JSON.parse(rawTask), found);
+      } catch {
+        for (const match of rawTask.matchAll(/https?:\/\/[^"\s\\]+/g)) {
+          if (!submitted.has(match[0])) found.add(match[0]);
+        }
+      }
+      mockupUrls = [...found];
     }
-    if (!Array.isArray(mockupUrls)) mockupUrls = [];
     console.log(
       `Printful returned ${mockupUrls.length} mockup(s) in ${((Date.now() - mockupStarted) / 1000).toFixed(0)}s`
     );

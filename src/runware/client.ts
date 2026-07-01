@@ -117,24 +117,46 @@ export class RunwareClient {
     this.apiKey = apiKey;
   }
 
-  /** Run one or more tasks against the native Runware task API. */
+  /**
+   * Run one or more tasks against the native Runware task API.
+   * Transient failures (HTTP 5xx, network errors) are retried with backoff.
+   */
   async runTasks(tasks: RunwareTask[]): Promise<RunwareTaskResult[]> {
     const payload = tasks.map((task) => ({
       taskUUID: randomUUID(),
       ...task
     }));
-    const response = await fetch(RUNWARE_BASE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
-    const body = (await response.json().catch(() => null)) as
+    let response: Response | null = null;
+    let body:
       | { data?: RunwareTaskResult[]; errors?: unknown[] }
       | RunwareTaskResult[]
-      | null;
+      | null = null;
+    const MAX_ATTEMPTS = 4;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        response = await fetch(RUNWARE_BASE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify(payload)
+        });
+        body = (await response.json().catch(() => null)) as typeof body;
+        if (response.status < 500) break;
+      } catch (error) {
+        if (attempt === MAX_ATTEMPTS) {
+          throw new RunwareError(`Runware task API network failure: ${(error as Error).message}`);
+        }
+        response = null;
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * 2 ** (attempt - 1)));
+      }
+    }
+    if (!response) {
+      throw new RunwareError("Runware task API unreachable after retries");
+    }
     if (!response.ok) {
       throw new RunwareError(`Runware task API returned HTTP ${response.status}`, body);
     }
