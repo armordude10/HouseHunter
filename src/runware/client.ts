@@ -126,11 +126,12 @@ export class RunwareClient {
       taskUUID: randomUUID(),
       ...task
     }));
-    let response: Response | null = null;
-    let body:
+    type TaskResponseBody =
       | { data?: RunwareTaskResult[]; errors?: unknown[] }
       | RunwareTaskResult[]
-      | null = null;
+      | null;
+    let response: Response | null = null;
+    let body: TaskResponseBody = null;
     const MAX_ATTEMPTS = 4;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
@@ -142,7 +143,7 @@ export class RunwareClient {
           },
           body: JSON.stringify(payload)
         });
-        body = (await response.json().catch(() => null)) as typeof body;
+        body = (await response.json().catch(() => null)) as TaskResponseBody;
         if (response.status < 500) break;
       } catch (error) {
         if (attempt === MAX_ATTEMPTS) {
