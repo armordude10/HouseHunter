@@ -75,16 +75,40 @@ export class RunwareMedia {
     });
   }
 
-  /** Print-resolution upscaling. */
-  async upscale(imageUrl: string, upscaleFactor: 2 | 3 | 4 = 2): Promise<ImageResult> {
+  /** Print-resolution upscaling. Accepts a URL, image UUID, or base64/data URI. */
+  async upscale(image: string, upscaleFactor: 2 | 3 | 4 = 2): Promise<ImageResult> {
     return this.client.runTask<ImageResult>({
       taskType: "imageUpscale",
       upscaleFactor,
       outputType: "URL",
       outputFormat: "PNG",
       includeCost: true,
-      inputs: { image: imageUrl }
+      inputs: { image }
     });
+  }
+
+  /**
+   * Upload image bytes (base64/data URI) or an external URL into Runware.
+   * Returns an imageUUID referencable by any subsequent task. This is how
+   * locally-sliced panels re-enter the platform: upload -> upscale/transform
+   * -> hosted public output URL.
+   */
+  async uploadImage(image: string): Promise<string> {
+    const result = await this.client.runTask<RunwareTaskResult & { imageUUID: string }>({
+      taskType: "imageUpload",
+      image
+    });
+    return result.imageUUID;
+  }
+
+  /** AI caption for a customer-supplied reference image. */
+  async imageCaption(image: string): Promise<string> {
+    const result = await this.client.runTask<RunwareTaskResult & { text?: string }>({
+      taskType: "imageCaption",
+      includeCost: true,
+      inputs: { image }
+    });
+    return (result.text as string) ?? "";
   }
 
   /**

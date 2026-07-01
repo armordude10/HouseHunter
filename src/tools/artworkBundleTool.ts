@@ -3,223 +3,210 @@
  *
  * The Placement Bundle Compiler's instructions require this exact tool name
  * (formerly served by the hosted threadbot_artwork_mcp service). The tool
- * contract is preserved; the backing engine is now the Runware.ai platform:
+ * contract is preserved; the backing engine is the garment-space Panel
+ * Compiler (src/engine/panelCompiler.ts) running on Runware.ai models.
  *
- *   - Hero / master / side / detail / wrap / overlay panels:
- *       FLUX.2 [flex] (bfl:6@1) - stable layouts, precise text placement,
- *       instruction editing with up to 10 reference images.
- *   - Label lockups and typography-led panels:
- *       Recraft V4.1 Pro (recraft:v4.1-pro@0) - best-in-class text/logo/icon
- *       rendering for apparel labels.
- *   - derive_from_master / slice_from_master / mirror_from_pair / continuation:
- *       FLUX.2 [flex] with the master artwork attached as a reference image.
- *   - repeat_pattern:
- *       FLUX.2 [flex] prompted for a seamless tileable repeat.
- *   - Transparent backgrounds (required by the placement output contract):
- *       BiRefNet General (runware:112@5) via removeBackground -> PNG.
+ * Design goals, mapped to Threadbot's historical failure modes:
  *
- * Every returned file_url is a real hosted public URL from Runware
- * (im.runware.ai), satisfying the pipeline invariant that required
- * generated/renderable placements must have real public file URLs.
+ *   - The tool accepts the FULL surface plan (surface_plan_json) and executes
+ *     every placement job in one call: generated, sliced, tiled, mirrored,
+ *     derived, or intentionally blank. The agent cannot under-iterate; a
+ *     bundle with one filled panel and silently-missing others is
+ *     structurally impossible. missing_required_placements is computed in
+ *     code, not by the model.
+ *
+ *   - Multi-panel continuity is deterministic: one master composition (or
+ *     one seamless swatch) authored on the shared garment plane, then cut or
+ *     phase-locked-tiled into each panel at its exact geometry spec. A
+ *     Gildan 5000 front-only plan collapses naturally to a single direct
+ *     generation; an AOP crew neck (front/back/left_sleeve/right_sleeve)
+ *     slices four spec-exact files from one canvas with shared cut lines.
+ *
+ *   - Every output is a real hosted public URL (Runware), optionally mirrored
+ *     into Printful's File Library for durable print storage, and every panel
+ *     carries a reproducible provenance record (model, seed, prompt, crop and
+ *     tile math) — the "design genome".
+ *
+ * A legacy per-job mode (`jobs` parameter) is kept for callers that pass
+ * individual placement jobs instead of the full plan.
  */
 
 import { AgentTool } from "../runware/agent.js";
-import { RunwareMedia, clampFluxDimension } from "../runware/media.js";
-import { IMAGE } from "../runware/models.js";
+import { RunwareMedia } from "../runware/media.js";
+import {
+  CompileJob,
+  DesignSpec,
+  PanelCompiler
+} from "../engine/panelCompiler.js";
+import { getRunContext } from "../engine/runContext.js";
 
-interface PanelJobInput {
-  job_id: string;
-  placement: string;
-  worker_type?: string;
-  design_action?: string;
-  prompt: string;
-  negative_prompt?: string;
-  width_px?: number;
-  height_px?: number;
-  transparent_background?: boolean;
-  master_artwork_url?: string | null;
-  reference_urls?: string[];
-  mapping_mode?: string;
-  seed?: number;
+interface SurfacePlanShape {
+  placement_jobs?: Array<Record<string, unknown>>;
 }
 
-interface PanelJobOutput {
-  job_id: string;
-  placement: string;
-  status: "success" | "failed";
-  file_url: string | null;
-  file_type: "png";
-  public_url: boolean;
-  transparent_background: boolean;
-  model_used: string;
-  notes: string;
-}
-
-const DEFAULT_SIZE = 1536;
-
-const pickModel = (job: PanelJobInput): string => {
-  if (job.worker_type === "label" || job.mapping_mode === "label_lockup") {
-    return IMAGE.RECRAFT_V4_1_PRO;
-  }
-  return IMAGE.FLUX_2_FLEX;
-};
-
-const buildPrompt = (job: PanelJobInput): string => {
-  const fragments = [job.prompt];
-  if (job.design_action === "repeat_pattern" || job.mapping_mode === "pattern_tile") {
-    fragments.push(
-      "seamless tileable repeating pattern, edges align perfectly for tiling, no border, flat print-ready artwork"
-    );
-  }
-  if (job.design_action === "mirror_from_pair" || job.mapping_mode === "mirror") {
-    fragments.push("mirrored counterpart of the reference artwork, horizontally flipped composition");
-  }
-  if (job.mapping_mode === "continuation" || job.mapping_mode === "edge_wrap") {
-    fragments.push(
-      "artwork continues seamlessly from the reference image across the shared garment seam edge"
-    );
-  }
-  if (job.transparent_background) {
-    fragments.push("isolated artwork on a plain solid background, no scene, no garment, no mockup");
-  }
-  fragments.push("high resolution print-ready apparel graphic");
-  return fragments.join(", ");
-};
+const toCompileJob = (raw: Record<string, unknown>): CompileJob => ({
+  job_id: String(raw.job_id ?? raw.placement ?? "job"),
+  placement: String(raw.placement ?? "front"),
+  worker_type: raw.worker_type as string | undefined,
+  design_action: raw.design_action as string | undefined,
+  must_generate: raw.must_generate as boolean | undefined,
+  must_render_in_mockup: raw.must_render_in_mockup as boolean | undefined,
+  source_job_id: (raw.source_job_id as string | null | undefined) ?? null,
+  prompt: raw.prompt as string | undefined,
+  mapping_rule: raw.mapping_rule as CompileJob["mapping_rule"],
+  geometry_contract: raw.geometry_contract as CompileJob["geometry_contract"],
+  output_contract: raw.output_contract as CompileJob["output_contract"]
+});
 
 export const createGeneratePanelArtworkBundleTool = (
   media: RunwareMedia = new RunwareMedia()
 ): AgentTool => ({
   name: "generate_panel_artwork_bundle",
   description:
-    "Generate, derive, slice, repeat, or mirror print-ready panel artwork files for a set of placement jobs. " +
-    "Backed by Runware.ai image models (FLUX.2 flex for panels/derivation, Recraft V4.1 Pro for label/typography " +
-    "lockups, BiRefNet for transparent PNG output). Returns a bundle with a real hosted public PNG URL per job.",
+    "Generate the COMPLETE panel artwork bundle for a surface plan in one call. " +
+    "Pass surface_plan_json (the full surface plan) plus the design brief; the engine executes every " +
+    "placement_job deterministically — master-slice or phase-locked pattern tiling for multi-panel " +
+    "AOP garments (seam continuity guaranteed by shared garment-space cut lines), direct generation " +
+    "for single-placement products and detached panels, deterministic mirroring for paired panels, " +
+    "and explicit accounting of intentionally blank placements. Backed by Runware.ai models " +
+    "(FLUX.2 flex, Recraft V4.1 Pro for label/typography lockups, BiRefNet transparency, print-res " +
+    "upscaling). Returns one entry per job with real hosted public PNG URLs, code-computed " +
+    "missing_required_placements, and a reproducible design genome. " +
+    "Alternatively pass `jobs` to render individual placement jobs (legacy mode).",
   parameters: {
     type: "object",
     properties: {
-      run_id: { type: "string", description: "Pipeline run identifier." },
+      run_id: { type: "string", description: "Pipeline run identifier (also seeds deterministic generation)." },
+      surface_plan_json: {
+        type: "string",
+        description:
+          "The complete surface_plan JSON (as produced by the Product-Surface Planner). " +
+          "All placement_jobs inside it are executed in one call."
+      },
+      design: {
+        type: "object",
+        description: "Design program distilled for artwork generation.",
+        properties: {
+          artwork_brief: { type: "string", description: "Full artwork brief from the design program." },
+          style_terms: { type: "array", items: { type: "string" } },
+          palette: { type: "array", items: { type: "string" } },
+          mood_terms: { type: "array", items: { type: "string" } },
+          negative_constraints: { type: "array", items: { type: "string" } },
+          required_text: { type: "array", items: { type: "string" } },
+          forbidden_text: { type: "array", items: { type: "string" } },
+          base_product_color: { type: "string" }
+        },
+        required: ["artwork_brief"]
+      },
       jobs: {
         type: "array",
-        description: "Placement jobs to render. One artwork file is produced per job.",
+        description:
+          "LEGACY MODE: individual placement jobs to render when surface_plan_json is not supplied.",
         items: {
           type: "object",
           properties: {
             job_id: { type: "string" },
             placement: { type: "string" },
-            worker_type: {
-              type: "string",
-              description:
-                "master | hero | overlay | wrap | side | detail | embroidery | label | pattern"
-            },
-            design_action: {
-              type: "string",
-              description:
-                "generate_unique_art | derive_from_master | slice_from_master | repeat_pattern | mirror_from_pair"
-            },
-            prompt: {
-              type: "string",
-              description: "Full artwork brief for this placement, including style, palette and constraints."
-            },
-            negative_prompt: { type: "string" },
+            worker_type: { type: "string" },
+            design_action: { type: "string" },
+            prompt: { type: "string" },
             width_px: { type: "number" },
             height_px: { type: "number" },
+            dpi: { type: "number" },
             transparent_background: { type: "boolean" },
-            master_artwork_url: {
-              type: "string",
-              description: "Master artwork URL to derive/slice/mirror/continue from."
-            },
-            reference_urls: {
-              type: "array",
-              items: { type: "string" },
-              description: "Additional reference image URLs (up to 10 total)."
-            },
-            mapping_mode: { type: "string" },
-            seed: { type: "number" }
+            master_artwork_url: { type: "string" },
+            source_job_id: { type: "string" }
           },
           required: ["job_id", "placement", "prompt"]
         }
       }
     },
-    required: ["jobs"]
+    required: ["run_id"]
   },
   execute: async (args) => {
-    const jobs = (args.jobs as PanelJobInput[]) ?? [];
-    const results: PanelJobOutput[] = [];
-    let masterArtworkUrl: string | null = null;
+    const runId = String(args.run_id ?? "run");
+    const context = getRunContext(runId);
+    const compiler = new PanelCompiler(media);
 
-    for (const job of jobs) {
-      const model = pickModel(job);
-      const wantsTransparency = job.transparent_background !== false;
+    const designInput = (args.design as Partial<DesignSpec> | undefined) ?? {};
+    const design: DesignSpec = {
+      artwork_brief: designInput.artwork_brief ?? "",
+      style_terms: designInput.style_terms,
+      palette: designInput.palette,
+      mood_terms: designInput.mood_terms,
+      negative_constraints: designInput.negative_constraints,
+      required_text: designInput.required_text,
+      forbidden_text: designInput.forbidden_text,
+      base_product_color: designInput.base_product_color,
+      customer_image_urls: context?.customerImageUrls,
+      customer_image_captions: context?.customerImageCaptions
+    };
+
+    // Preferred path: execute the entire surface plan in one deterministic pass.
+    if (typeof args.surface_plan_json === "string" && args.surface_plan_json.trim()) {
+      let plan: SurfacePlanShape;
       try {
-        const references: Array<{ image: string }> = [];
-        const masterRef = job.master_artwork_url ?? masterArtworkUrl;
-        const derivesFromMaster =
-          job.design_action === "derive_from_master" ||
-          job.design_action === "slice_from_master" ||
-          job.design_action === "mirror_from_pair" ||
-          job.mapping_mode === "continuation" ||
-          job.mapping_mode === "edge_wrap";
-        if (derivesFromMaster && masterRef) {
-          references.push({ image: masterRef });
-        }
-        for (const url of job.reference_urls ?? []) {
-          if (references.length < 10) references.push({ image: url });
-        }
-
-        const generated = await media.generateImage({
-          model,
-          positivePrompt: buildPrompt(job),
-          negativePrompt: job.negative_prompt,
-          width: clampFluxDimension(job.width_px ?? DEFAULT_SIZE),
-          height: clampFluxDimension(job.height_px ?? DEFAULT_SIZE),
-          referenceImages: references.length ? references : undefined,
-          seed: job.seed
-        });
-
-        let fileUrl = generated.imageURL;
-        if (wantsTransparency) {
-          const cutout = await media.removeBackground(fileUrl);
-          fileUrl = cutout.imageURL;
-        }
-
-        if (job.worker_type === "master" && !masterArtworkUrl) {
-          masterArtworkUrl = fileUrl;
-        }
-
-        results.push({
-          job_id: job.job_id,
-          placement: job.placement,
-          status: "success",
-          file_url: fileUrl,
-          file_type: "png",
-          public_url: true,
-          transparent_background: wantsTransparency,
-          model_used: model,
-          notes: `Generated with ${model} on Runware${
-            wantsTransparency ? "; background removed with BiRefNet General" : ""
-          }.`
-        });
+        plan = JSON.parse(args.surface_plan_json) as SurfacePlanShape;
       } catch (error) {
-        results.push({
-          job_id: job.job_id,
-          placement: job.placement,
-          status: "failed",
-          file_url: null,
-          file_type: "png",
-          public_url: false,
-          transparent_background: wantsTransparency,
-          model_used: model,
-          notes: `Generation failed: ${(error as Error).message}`
+        return JSON.stringify({
+          error: `surface_plan_json is not valid JSON: ${(error as Error).message}`
         });
       }
+      const jobs = (plan.placement_jobs ?? []).map(toCompileJob);
+      if (!jobs.length) {
+        return JSON.stringify({ error: "surface_plan_json contains no placement_jobs" });
+      }
+      const result = await compiler.compile(runId, jobs, design);
+      return JSON.stringify({
+        run_id: runId,
+        provider: "runware",
+        mode: "full_surface_plan",
+        strategy: result.strategy,
+        master_artwork_url: result.master_artwork_url,
+        pattern_tile_url: result.pattern_tile_url,
+        panels: result.panels,
+        submitted_placement_files: result.panels
+          .filter((panel) => panel.status === "success" && panel.file_url && panel.must_render_in_mockup)
+          .map((panel) => ({ placement: panel.placement, file_url: panel.file_url })),
+        missing_required_placements: result.missing_required_placements,
+        all_required_succeeded: result.all_required_succeeded,
+        design_genome: result.genome
+      });
     }
 
+    // Legacy mode: individual jobs.
+    const legacyJobs = (args.jobs as Array<Record<string, unknown>> | undefined) ?? [];
+    if (!legacyJobs.length) {
+      return JSON.stringify({
+        error: "Provide surface_plan_json (preferred) or a non-empty jobs array."
+      });
+    }
+    const outputs = [];
+    let masterUrl: string | null = null;
+    for (const raw of legacyJobs) {
+      const job = toCompileJob(raw);
+      job.geometry_contract = {
+        width_px: raw.width_px as number | undefined,
+        height_px: raw.height_px as number | undefined,
+        dpi: raw.dpi as number | undefined
+      };
+      job.output_contract = {
+        transparent_background: raw.transparent_background as boolean | undefined
+      };
+      const jobMaster = (raw.master_artwork_url as string | undefined) ?? masterUrl;
+      const { panel } = await compiler.compileSingle(runId, job, design, jobMaster);
+      if (job.worker_type === "master" && panel.file_url && !masterUrl) {
+        masterUrl = panel.file_url;
+      }
+      outputs.push(panel);
+    }
     return JSON.stringify({
-      run_id: args.run_id ?? null,
-      master_artwork_url: masterArtworkUrl,
-      jobs: results,
+      run_id: runId,
       provider: "runware",
-      all_succeeded: results.every((job) => job.status === "success")
+      mode: "legacy_jobs",
+      master_artwork_url: masterUrl,
+      panels: outputs,
+      all_succeeded: outputs.every((panel) => panel.status === "success")
     });
   }
 });

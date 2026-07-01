@@ -59,12 +59,56 @@ schema, then Zod-validated with one repair retry. MCP tools execute
 client-side via `@modelcontextprotocol/sdk` (streamable HTTP) — a drop-in
 replacement for the former `hostedMcpTool`.
 
-### 2. Artwork generation (`generate_panel_artwork_bundle`)
+### 2. Artwork generation: the garment-space Panel Compiler
 
 The Placement Bundle Compiler's instructions require the exact tool
-`generate_panel_artwork_bundle`. That tool is now implemented locally
-(`src/tools/artworkBundleTool.ts`) on Runware image models — same name, same
-role, so the instructions apply unchanged:
+`generate_panel_artwork_bundle`. That tool is implemented locally
+(`src/tools/artworkBundleTool.ts`) and drives the **garment-space Panel
+Compiler** (`src/engine/`) — the proprietary core that makes variable panel
+counts and seamless AOP deterministic instead of hopeful:
+
+- **One shared coordinate system.** Every placement of any product (front,
+  back, sleeves, hood, pocket, labels — whatever the surface plan contains)
+  is mapped onto a single "unwrapped garment plane" measured in inches,
+  with physically-adjacent panels sharing cut lines
+  (`src/engine/garmentSpace.ts`). A Gildan 5000 plan collapses to one rect;
+  an AOP crew neck becomes `[left_sleeve][back][front][right_sleeve]`.
+- **Seam continuity is arithmetic, not inference.** For composition AOP, ONE
+  master image is generated on that plane and each panel is *cut* from it
+  with exact pixel math (`master_slice`). For pattern AOP, ONE seamless
+  swatch is generated and each panel is tiled from the same infinite plane,
+  phase-locked by its garment-space offset (`pattern_tile`). Adjacent edges
+  match by construction — no model is ever asked to "make it seamless".
+- **Blank/one-panel bundles are structurally impossible.** The tool takes the
+  ENTIRE `surface_plan_json` in one call and returns exactly one entry per
+  placement job — generated, sliced, tiled, mirrored, derived, or
+  intentionally blank — with `missing_required_placements` computed in code
+  (`computeMissingRequired`), not by the model.
+- **File specs are enforced in code.** Panels are cut at exact aspect ratio,
+  DPI-stamped, and upscaled to meet the geometry contract
+  (local cut → Runware `imageUpload` → `imageUpscale` → hosted public URL).
+- **Every panel is reproducible.** Seeds derive from `run_id + job_id`
+  (FNV-1a) and a full **design genome** records strategy, model, seed,
+  prompt, plane rect, crop/tile math, and upscale factor per panel
+  (`src/engine/provenance.ts`) — the same input reproduces the same output,
+  and any panel can be regenerated or audited exactly.
+- **Printful File Library mirroring (optional).** Set `PRINTFUL_API_KEY` and
+  every final panel URL is registered into Printful's file storage
+  (`src/integrations/printful.ts`), so print files outlive Runware's URL
+  retention; Printful file ids travel in the genome.
+- **Text/image/combo input.** Customer reference images are captioned via
+  Runware `imageCaption` for intent parsing and injected as FLUX.2 reference
+  images during generation (`src/engine/runContext.ts`), without touching
+  any frozen instruction or schema.
+
+Verify the engine offline (no API key needed) with `npm run selfcheck` —
+it renders real pixels through the layout/slice/tile math and asserts seam
+continuity numerically for the AOP master-slice case, phase-locked pattern
+continuity at a mid-tile seam (including the exact predicted pixel value),
+single-panel collapse for a Gildan 5000, blank accounting, and honest
+failure reporting.
+
+Model routing inside the engine:
 
 | Artwork task | Runware model | Why |
 | --- | --- | --- |
@@ -109,7 +153,7 @@ enums — both frozen without your approval, so it is **not** wired in.
 
 ```
 src/
-  index.ts                  CLI entry: npm run dev -- "<customer request>"
+  index.ts                  CLI entry: npm run dev -- "<request>" [--image <url>]...
   workflow.ts               State machine (order/gates/prompts preserved)
   agents.ts                 Agent definitions + MCP toolsets + model routing
   instructions.ts           VERBATIM agent instructions (frozen)
@@ -118,18 +162,33 @@ src/
     client.ts               Native task API + OpenAI-compatible chat client
     agent.ts                Agent/Runner/mcpToolset/withTrace runtime
     models.ts               AIR identifiers + per-node selection rationale
-    media.ts                imageInference/removeBackground/upscale/VTO/etc.
+    media.ts                imageInference/removeBackground/upscale/upload/
+                            caption/VTO wrappers
+  engine/
+    garmentSpace.ts         Unwrapped-garment-plane layout + seam bonds
+    panelCompiler.ts        Deterministic full-coverage panel execution
+    raster.ts               Exact crop/tile/mirror/DPI raster ops (sharp)
+    provenance.ts           Stable seeds + per-panel design genome
+    runContext.ts           Run-scoped customer image context for tools
+  integrations/
+    printful.ts             Optional Printful File Library mirroring
   tools/
-    artworkBundleTool.ts    generate_panel_artwork_bundle on Runware models
+    artworkBundleTool.ts    generate_panel_artwork_bundle -> Panel Compiler
+scripts/
+  selfcheck.ts              Offline pixel-level engine verification
 ```
 
 ## Running
 
 ```bash
 npm install
+npm run selfcheck            # offline engine verification, no key needed
 export RUNWARE_API_KEY=...   # https://my.runware.ai
-npm run dev -- "black tee with a gothic botanical snake wrapping front and back, no words"
+npm run dev -- "black AOP crew neck, flowing koi pond scene wrapping all panels"
+npm run dev -- "make this into a hoodie" --image https://example.com/my-art.png
 ```
 
 Optional env: `RUNWARE_BASE_URL` (default `https://api.runware.ai/v1`),
-`THREADBOT_ARTWORK_MCP_URL` (fall back to hosted artwork MCP).
+`THREADBOT_ARTWORK_MCP_URL` (fall back to hosted artwork MCP),
+`PRINTFUL_API_KEY` (+ `PRINTFUL_API_BASE`) to mirror final print files into
+Printful's File Library.

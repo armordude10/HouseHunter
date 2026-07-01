@@ -22,6 +22,8 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Runner, withTrace } from "./runware/agent.js";
+import { RunwareMedia } from "./runware/media.js";
+import { registerRunContext } from "./engine/runContext.js";
 import {
   threadbotIntakeOrchestrator,
   customerIntentAgent,
@@ -53,7 +55,11 @@ import type {
   FinalResponseComposerSchema
 } from "./schemas.js";
 
-type WorkflowInput = { input_as_text: string };
+type WorkflowInput = {
+  input_as_text: string;
+  /** Optional customer-supplied reference images (URLs). */
+  input_image_urls?: string[];
+};
 
 interface NodeResult<T> {
   output_text: string;
@@ -73,11 +79,30 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
     };
     const runner = new Runner();
 
+    // Customer image inputs: caption them (Runware imageCaption) so intent
+    // parsing can see what was attached, and stash the URLs in the run
+    // context so the artwork engine can use them as generation references.
+    // Captions become part of the customer's request content — no agent
+    // instruction or schema is touched.
+    const imageUrls = workflow.input_image_urls ?? [];
+    let imageCaptions: string[] = [];
+    if (imageUrls.length) {
+      const media = new RunwareMedia();
+      imageCaptions = await Promise.all(
+        imageUrls.map((url) => media.imageCaption(url).catch(() => ""))
+      );
+    }
+    const attachedImagesBlock = imageUrls.length
+      ? `\n\nAttached customer reference images:\n${imageUrls
+          .map((url, i) => `- ${url}${imageCaptions[i] ? ` (depicts: ${imageCaptions[i]})` : ""}`)
+          .join("\n")}`
+      : "";
+
     // --- Intake -------------------------------------------------------------
     const intakeTemp = await runner.run(
       threadbotIntakeOrchestrator,
       `The raw customer request is exactly the text below, excluding these wrapper instructions:
-${workflow.input_as_text}
+${workflow.input_as_text}${attachedImagesBlock}
 Set raw_user_request to only the raw customer request text above.`
     );
     const intakeResult = wrap<z.infer<typeof ThreadbotIntakeOrchestratorSchema>>(
@@ -87,6 +112,11 @@ Set raw_user_request to only the raw customer request text above.`
     // Save Intake State
     state.raw_user_request = intakeResult.output_parsed.raw_user_request;
     state.run_id = intakeResult.output_parsed.run_id || randomUUID();
+    registerRunContext({
+      runId: state.run_id,
+      customerImageUrls: imageUrls,
+      customerImageCaptions: imageCaptions.filter(Boolean)
+    });
 
     // --- Customer intent ----------------------------------------------------
     const intentTemp = await runner.run(
@@ -146,6 +176,11 @@ Create product_candidates_text for the Product Selector.`
     // Save Product Discovery State
     state.product_candidates_text = discoveryResult.output_parsed.product_candidates_text;
     state.run_id = discoveryResult.output_parsed.run_id;
+    registerRunContext({
+      runId: state.run_id,
+      customerImageUrls: imageUrls,
+      customerImageCaptions: imageCaptions.filter(Boolean)
+    });
 
     // --- Product selection --------------------------------------------------
     const selectorTemp = await runner.run(
