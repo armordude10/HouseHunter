@@ -131,6 +131,26 @@ MCP server instead of the Runware implementation.
 **FLUX Virtual Try-On** (`bfl:flux@vto` — person + garment reference images →
 photoreal on-model render, preserving prints/logos/stitching).
 
+## HARD RULE: official Printful mockups only
+
+Final visual outputs are **always** rendered by Printful's Mockup Generator
+API (v2 mockup-tasks), never by an AI image model. The Mockup Render Agent's
+frozen instructions enforce this in the pipeline
+(`printful_mockup_task_backed` truth gate, Printful-only tools); the live
+test harnesses follow the same rule:
+
+- `scripts/livemockups.ts` — pulls real placements/print-area specs/mockup
+  style ids from the Printful mockups MCP, compiles print files at exact
+  Printful specs, submits them to `create_and_wait_for_printful_mockups`,
+  and saves the raw Printful task responses.
+- `scripts/finalize_mockups.ts` — extracts `catalog_variant_mockups` renders
+  from saved task responses, retries failed tasks with the same placement
+  files (Printful mockup tasks occasionally return transient
+  internal-server-errors — matching the pipeline's retryable 5xx
+  classification), and builds `out/printful-mockups/official-mockups.html`.
+
+Runware generates the *print files*; Printful renders the *product truth*.
+
 ## What stayed on existing services (and why)
 
 - **Policy / product-intelligence / pricing MCP servers** — these are
@@ -141,13 +161,9 @@ photoreal on-model render, preserving prints/logos/stitching).
   `MockupRenderAgentSchema` hard-code Printful (`provider: "printful"`,
   `source_truth_status: "printful_mockup_task_backed"`, Printful tool names).
 
-### Proposed follow-up that needs your approval first
-
-Runware's **FLUX Virtual Try-On** could replace or augment Printful mockups
-with on-model lifestyle renders (`RunwareMedia.virtualTryOn` is already
-implemented and unit-usable). Wiring it into the Mockup Render Agent would
-require changing that agent's instructions and the mockup schema's provider
-enums — both frozen without your approval, so it is **not** wired in.
+Per the owner's directive, Printful mockups are the only final output — no
+exceptions. `RunwareMedia.virtualTryOn` remains in the media toolkit as a
+utility but is not, and must not be, wired into the mockup path.
 
 ## Layout
 
