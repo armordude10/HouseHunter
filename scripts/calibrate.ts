@@ -173,41 +173,49 @@ const run = async () => {
       files[p.key] = hosted.imageURL;
       console.log(`  ${p.key}: ${hosted.imageURL}`);
     }
-    let raw = "";
-    for (let attempt = 1; attempt <= 6; attempt++) {
-      try {
-        raw = await callMockupsMcp("create_and_wait_for_printful_mockups", {
-          product_id: cal.productId,
-          variant_ids: [cal.variantId],
-          placement_file_urls: files,
-          mockup_style_ids: cal.styleIds,
-          format: "jpg",
-          mockup_width_px: 2000,
-          max_attempts: 30,
-          interval_seconds: 5
-        });
-        break;
-      } catch (error) {
-        const message = (error as Error).message;
-        const transient =
-          /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error|fetch failed|other side closed|socket|timed? ?out/i.test(
-            message
-          );
-        if (attempt < 6 && transient) {
-          const wait = 45000;
-          console.log(`  transient Printful condition; waiting ${wait / 1000}s (attempt ${attempt}): ${message.slice(0, 120)}`);
-          await new Promise((resolve) => setTimeout(resolve, wait));
-          continue;
+    // Printful rejects heavy tasks ("would exceed available attempts"), so
+    // request at most 2 mockup styles per task and merge results.
+    const mockups: Array<{ view: string; mockup_url: string; style_id: number }> = [];
+    for (let chunkStart = 0; chunkStart < cal.styleIds.length; chunkStart += 2) {
+      const styleChunk = cal.styleIds.slice(chunkStart, chunkStart + 2);
+      let raw = "";
+      for (let attempt = 1; attempt <= 6; attempt++) {
+        try {
+          raw = await callMockupsMcp("create_and_wait_for_printful_mockups", {
+            product_id: cal.productId,
+            variant_ids: [cal.variantId],
+            placement_file_urls: files,
+            mockup_style_ids: styleChunk,
+            format: "jpg",
+            mockup_width_px: 1600,
+            max_attempts: 30,
+            interval_seconds: 5
+          });
+          break;
+        } catch (error) {
+          const message = (error as Error).message;
+          const transient =
+            /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error|fetch failed|other side closed|socket|timed? ?out/i.test(
+              message
+            );
+          if (attempt < 6 && transient) {
+            const wait = 45000;
+            console.log(`  transient Printful condition; waiting ${wait / 1000}s (attempt ${attempt}): ${message.slice(0, 120)}`);
+            await new Promise((resolve) => setTimeout(resolve, wait));
+            continue;
+          }
+          throw error;
         }
-        throw error;
       }
+      await writeFile(path.join(OUT_DIR, `${cal.name}-task-${chunkStart / 2}.json`), raw);
+      const task = JSON.parse(raw)?.waited?.task?.data?.[0];
+      mockups.push(
+        ...(task?.catalog_variant_mockups ?? []).flatMap((g: { mockups: never[] }) => g.mockups)
+      );
+      console.log(`  styles ${styleChunk.join(",")}: status=${task?.status}`);
+      await new Promise((resolve) => setTimeout(resolve, 15000));
     }
-    await writeFile(path.join(OUT_DIR, `${cal.name}-task.json`), raw);
-    const task = JSON.parse(raw)?.waited?.task?.data?.[0];
-    const mockups: Array<{ view: string; mockup_url: string; style_id: number }> = (
-      task?.catalog_variant_mockups ?? []
-    ).flatMap((g: { mockups: unknown[] }) => g.mockups);
-    console.log(`  status=${task?.status} mockups=${mockups.length}`);
+    console.log(`  total mockups=${mockups.length}`);
     for (const m of mockups) {
       try {
         const buffer = Buffer.from(await (await fetch(m.mockup_url)).arrayBuffer());
