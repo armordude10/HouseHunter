@@ -48,6 +48,8 @@ export const createAndWaitForMockups = async (params: {
   variantIds: number[];
   placements: MockupPlacementFile[];
   styleIds: number[];
+  /** Required product options, e.g. { stitch_color: "black" } for cut-sew apparel. */
+  productOptions?: Record<string, string>;
   format?: "jpg" | "png";
   widthPx?: number;
   maxAttempts?: number;
@@ -62,6 +64,14 @@ export const createAndWaitForMockups = async (params: {
         catalog_product_id: params.productId,
         catalog_variant_ids: params.variantIds,
         mockup_style_ids: params.styleIds,
+        ...(params.productOptions
+          ? {
+              product_options: Object.entries(params.productOptions).map(([name, value]) => ({
+                name,
+                value
+              }))
+            }
+          : {}),
         placements: params.placements.map((p) => ({
           placement: p.placement,
           technique: p.technique,

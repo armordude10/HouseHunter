@@ -25,6 +25,8 @@ interface DemoCase {
   styleIds: number[];
   /** Printful technique per placement (from mockup-styles). */
   technique: string;
+  /** Required product options (lowercase values), when the product has them. */
+  productOptions?: Record<string, string>;
   design: DesignSpec;
   jobs: CompileJob[];
 }
@@ -77,6 +79,7 @@ const CASES: DemoCase[] = [
     variantId: 10879,
     styleIds: [3015, 3016],
     technique: "cut-sew",
+    productOptions: { stitch_color: "black" },
     design: {
       artwork_brief:
         "Midnight Japanese great wave seascape with rolling indigo swells, silver moonlit foam and " +
@@ -100,6 +103,7 @@ const CASES: DemoCase[] = [
     variantId: 9063,
     styleIds: [16442, 16444],
     technique: "cut-sew",
+    productOptions: { stitch_color: "black" },
     design: {
       artwork_brief:
         "Retro-futuristic topographic contour map in glowing teal and amber lines over charcoal, " +
@@ -125,7 +129,9 @@ const run = async () => {
   const compiler = new PanelCompiler(new RunwareMedia());
   const blocks: string[] = [];
 
+  const only = (process.env.DEMO_ONLY ?? "").split(",").filter(Boolean);
   for (const demo of CASES) {
+    if (only.length && !only.includes(demo.name)) continue;
     console.log(`\n=== ${demo.title} ===`);
     const profile = getCalibrationProfile(demo.productId);
     console.log(`calibration: ${profile ? Object.keys(profile).join(", ") : "none (piece=canvas)"}`);
@@ -153,6 +159,7 @@ const run = async () => {
         fileUrl
       })),
       styleIds: demo.styleIds,
+      productOptions: demo.productOptions,
       widthPx: 1000
     });
     await writeFile(path.join(OUT_DIR, `${demo.name}-task.json`), JSON.stringify(result.raw));
