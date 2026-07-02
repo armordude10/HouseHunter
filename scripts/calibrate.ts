@@ -180,9 +180,13 @@ const run = async () => {
         break;
       } catch (error) {
         const message = (error as Error).message;
-        if (attempt < 6 && /429|TooManyRequests|exceed available attempts/i.test(message)) {
+        const transient =
+          /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error/i.test(
+            message
+          );
+        if (attempt < 6 && transient) {
           const wait = 45000;
-          console.log(`  Printful rate limit; waiting ${wait / 1000}s (attempt ${attempt})`);
+          console.log(`  transient Printful condition; waiting ${wait / 1000}s (attempt ${attempt}): ${message.slice(0, 120)}`);
           await new Promise((resolve) => setTimeout(resolve, wait));
           continue;
         }
