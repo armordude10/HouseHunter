@@ -27,6 +27,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { RunwareMedia } from "../src/runware/media.js";
 import { PanelCompiler, CompileJob, DesignSpec } from "../src/engine/panelCompiler.js";
+import { getCalibrationProfile } from "../src/engine/calibrationProfiles.js";
 
 const OUT_DIR = path.resolve("out/printful-mockups");
 const MOCKUPS_MCP = "https://threadbot-printful-mockups-mcp-2uts5km5aq-uc.a.run.app/mcp";
@@ -53,7 +54,7 @@ const CASES: GarmentCase[] = [
   {
     name: "hoodie",
     title: "AOP Recycled Unisex Hoodie (Printful #388)",
-    runId: "pf-aop-hoodie-1",
+    runId: "pf-aop-hoodie-2",
     productId: 388,
     variantPick: "White / M",
     mockupStyleCount: 2,
@@ -76,7 +77,7 @@ const CASES: GarmentCase[] = [
   {
     name: "tee",
     title: "AOP Men's Crew Neck T-Shirt (Printful #257)",
-    runId: "pf-aop-tee-1",
+    runId: "pf-aop-tee-2",
     productId: 257,
     variantPick: "White / M",
     mockupStyleCount: 2,
@@ -97,7 +98,7 @@ const CASES: GarmentCase[] = [
   {
     name: "leggings",
     title: "AOP Yoga Leggings (Printful #242)",
-    runId: "pf-aop-leggings-1",
+    runId: "pf-aop-leggings-2",
     productId: 242,
     variantPick: "M",
     mockupStyleCount: 2,
@@ -202,7 +203,12 @@ const run = async () => {
       };
     });
     const started = Date.now();
-    const compiled = await compiler.compile(garment.runId, jobs, garment.design);
+    const compiled = await compiler.compile(
+      garment.runId,
+      jobs,
+      garment.design,
+      getCalibrationProfile(garment.productId)
+    );
     console.log(
       `compile: strategy=${compiled.strategy} ok=${compiled.all_required_succeeded} ` +
         `missing=${compiled.missing_required_placements.length} (${((Date.now() - started) / 1000).toFixed(0)}s)`
@@ -224,24 +230,42 @@ const run = async () => {
     const styleIds = specByKey.get(garment.placements[0].key)!.styleIds.slice(0, garment.mockupStyleCount);
     console.log(`requesting Printful mockups, styles ${styleIds.join(", ")} ...`);
     const mockupStarted = Date.now();
-    const taskResponse = await mcp.callTool(
-      {
-        name: "create_and_wait_for_printful_mockups",
-        arguments: {
-          product_id: garment.productId,
-          variant_ids: [variantId],
-          placement_file_urls: placementFileUrls,
-          mockup_style_ids: styleIds,
-          format: "jpg",
-          mockup_width_px: 1200,
-          max_attempts: 30,
-          interval_seconds: 5
+    let rawTask = "";
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      try {
+        const taskResponse = await mcp.callTool(
+          {
+            name: "create_and_wait_for_printful_mockups",
+            arguments: {
+              product_id: garment.productId,
+              variant_ids: [variantId],
+              placement_file_urls: placementFileUrls,
+              mockup_style_ids: styleIds,
+              format: "jpg",
+              mockup_width_px: 1000, // Printful task weight scales with render size
+              max_attempts: 30,
+              interval_seconds: 5
+            }
+          },
+          undefined,
+          { timeout: 300000 } // Printful mockup tasks can take minutes
+        );
+        rawTask = mcpText(taskResponse);
+        break;
+      } catch (error) {
+        const message = (error as Error).message;
+        const transient =
+          /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error|fetch failed|other side closed|socket|timed? ?out/i.test(
+            message
+          );
+        if (attempt < 6 && transient) {
+          console.log(`  transient Printful condition; waiting 60s (attempt ${attempt})`);
+          await new Promise((resolve) => setTimeout(resolve, 60000));
+          continue;
         }
-      },
-      undefined,
-      { timeout: 300000 } // Printful mockup tasks can take minutes
-    );
-    const rawTask = mcpText(taskResponse);
+        throw error;
+      }
+    }
     await writeFile(path.join(OUT_DIR, `${garment.name}-task.json`), rawTask);
 
     // Collect every image URL in the task response that is not one of the
