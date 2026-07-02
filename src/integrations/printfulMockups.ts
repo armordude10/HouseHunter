@@ -16,6 +16,13 @@ const apiKey = () => {
   return key;
 };
 
+/** Account-level keys require a store context for mockup tasks. */
+const headers = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${apiKey()}`,
+  ...(process.env.PRINTFUL_STORE_ID ? { "X-PF-Store-Id": process.env.PRINTFUL_STORE_ID } : {})
+});
+
 export interface MockupPlacementFile {
   placement: string;
   technique: string;
@@ -68,10 +75,7 @@ export const createAndWaitForMockups = async (params: {
   for (let attempt = 1; attempt <= 6; attempt++) {
     const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey()}`
-      },
+      headers: headers(),
       body: JSON.stringify(body)
     });
     const created = (await response.json().catch(() => null)) as {
@@ -99,7 +103,7 @@ export const createAndWaitForMockups = async (params: {
   for (let poll = 0; poll < maxAttempts; poll++) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
     const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks?id=${taskId}`, {
-      headers: { Authorization: `Bearer ${apiKey()}` }
+      headers: headers()
     });
     const polled = (await response.json().catch(() => null)) as { data?: TaskData[] } | null;
     const task = polled?.data?.[0];
