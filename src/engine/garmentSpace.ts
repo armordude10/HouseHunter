@@ -82,11 +82,12 @@ export interface PlacementCalibration {
   pieceCxFrac: number;
   pieceCyFrac: number;
   /**
-   * Optional anatomical anchor: piece-center offset (inches) from another
-   * placement's piece center — e.g. a hoodie pouch pocket anchored to the
-   * front so its art continues the surrounding front art.
+   * Optional anatomical anchor: piece-center offset from another placement's
+   * piece center, as fractions of THIS placement's canvas — e.g. a hoodie
+   * pouch pocket anchored to the front so its art continues the surrounding
+   * front art.
    */
-  anchor?: { relativeTo: string; dxIn: number; dyIn: number };
+  anchor?: { relativeTo: string; dxFrac: number; dyFrac: number };
 }
 
 export type CalibrationProfile = Record<string, PlacementCalibration>;
@@ -284,11 +285,14 @@ export const buildGarmentPlane = (
     const front = panels.find((panel) => panel.role === "front");
     if (front) {
       const anchor = pocket.anchor;
+      const anchored = anchor?.relativeTo === front.placement;
       const cx =
-        front.xIn + front.widthIn / 2 + (anchor?.relativeTo === front.placement ? anchor.dxIn : 0);
-      const cy = anchor?.relativeTo === front.placement
-        ? front.yIn + front.heightIn / 2 + anchor.dyIn
-        : front.yIn + front.heightIn * 0.72;
+        front.xIn + front.widthIn / 2 + (anchored ? anchor.dxFrac * pocket.canvasWIn : 0);
+      // Default pouch position measured empirically on Printful AOP hoodies
+      // (pocket-truth calibration): pocket center ≈ 61% down the front piece.
+      const cy = anchored
+        ? front.yIn + front.heightIn / 2 + anchor.dyFrac * pocket.canvasHIn
+        : front.yIn + front.heightIn * 0.61;
       push(pocket, cx - pocket.widthIn / 2, cy - pocket.heightIn / 2, true, panels);
     } else {
       push(pocket, 0, hoodHeight + rowHeight + 1, false, panels);
