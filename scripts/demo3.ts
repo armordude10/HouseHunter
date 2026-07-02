@@ -6,7 +6,7 @@
  * Usage: RUNWARE_API_KEY=... npx tsx scripts/demo3.ts
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { RunwareMedia } from "../src/runware/media.js";
@@ -124,6 +124,54 @@ const thumb = async (buffer: Buffer, maxW: number) =>
   sharp(buffer).resize({ width: maxW, withoutEnlargement: true }).jpeg({ quality: 86 }).toBuffer();
 const b64 = (buffer: Buffer) => `data:image/jpeg;base64,${buffer.toString("base64")}`;
 
+const renderMockups = async (
+  demo: DemoCase,
+  files: Record<string, string>,
+  strategy: string,
+  blocks: string[]
+) => {
+  const result = await createAndWaitForMockups({
+    productId: demo.productId,
+    variantIds: [demo.variantId],
+    placements: Object.entries(files).map(([placement, fileUrl]) => ({
+      placement,
+      technique: demo.technique,
+      fileUrl
+    })),
+    styleIds: demo.styleIds,
+    productOptions: demo.productOptions,
+    widthPx: 1000,
+    maxAttempts: 90
+  });
+  await writeFile(path.join(OUT_DIR, `${demo.name}-task.json`), JSON.stringify(result.raw));
+  const mockups = result.mockups;
+  console.log(`Printful status=${result.status} mockups=${mockups.length}`);
+  if (result.status === "failed") console.log(JSON.stringify(result.raw?.failure_reasons));
+
+  const cells: string[] = [];
+  for (let i = 0; i < mockups.length; i++) {
+    try {
+      const buffer = Buffer.from(await (await fetch(mockups[i].mockup_url)).arrayBuffer());
+      await writeFile(
+        path.join(OUT_DIR, `${demo.name}-official-${mockups[i].view.toLowerCase().replace(/\W+/g, "_")}-${i + 1}.jpg`),
+        buffer
+      );
+      cells.push(
+        `<figure><img src="${b64(await thumb(buffer, 640))}"/><figcaption><b>${mockups[i].view}</b> · style ${mockups[i].style_id} · rendered by Printful</figcaption></figure>`
+      );
+    } catch (error) {
+      console.log(`  download failed: ${(error as Error).message}`);
+    }
+  }
+  blocks.push(`
+    <section>
+      <h2>${demo.title}</h2>
+      <p class="brief">${demo.design.artwork_brief}</p>
+      <p class="meta">strategy ${strategy} · ${Object.keys(files).length} placement files</p>
+      <div class="grid">${cells.join("")}</div>
+    </section>`);
+};
+
 const run = async () => {
   await mkdir(OUT_DIR, { recursive: true });
   const compiler = new PanelCompiler(new RunwareMedia());
@@ -135,6 +183,17 @@ const run = async () => {
     console.log(`\n=== ${demo.title} ===`);
     const profile = getCalibrationProfile(demo.productId);
     console.log(`calibration: ${profile ? Object.keys(profile).join(", ") : "none (piece=canvas)"}`);
+    const filesPath = path.join(OUT_DIR, `${demo.name}-files.json`);
+    if (process.env.REUSE_FILES === "1") {
+      try {
+        const reused = JSON.parse(await readFile(filesPath, "utf8")) as Record<string, string>;
+        if (Object.keys(reused).length) {
+          console.log("reusing previously compiled placement files");
+          await renderMockups(demo, reused, "reused", blocks);
+          continue;
+        }
+      } catch { /* no cached files; compile fresh */ }
+    }
     const started = Date.now();
     const compiled = await compiler.compile(demo.runId, demo.jobs, demo.design, profile);
     console.log(
@@ -149,48 +208,9 @@ const run = async () => {
     for (const panel of compiled.panels) {
       if (panel.status === "success" && panel.file_url) files[panel.placement] = panel.file_url;
     }
+    await writeFile(path.join(OUT_DIR, `${demo.name}-files.json`), JSON.stringify(files, null, 1));
 
-    const result = await createAndWaitForMockups({
-      productId: demo.productId,
-      variantIds: [demo.variantId],
-      placements: Object.entries(files).map(([placement, fileUrl]) => ({
-        placement,
-        technique: demo.technique,
-        fileUrl
-      })),
-      styleIds: demo.styleIds,
-      productOptions: demo.productOptions,
-      widthPx: 1000
-    });
-    await writeFile(path.join(OUT_DIR, `${demo.name}-task.json`), JSON.stringify(result.raw));
-    const mockups = result.mockups;
-    console.log(`Printful status=${result.status} mockups=${mockups.length}`);
-    if (result.status === "failed") console.log(JSON.stringify(result.raw?.failure_reasons));
-
-    const cells: string[] = [];
-    for (let i = 0; i < mockups.length; i++) {
-      try {
-        const buffer = Buffer.from(await (await fetch(mockups[i].mockup_url)).arrayBuffer());
-        await writeFile(
-          path.join(OUT_DIR, `${demo.name}-official-${mockups[i].view.toLowerCase().replace(/\W+/g, "_")}-${i + 1}.jpg`),
-          buffer
-        );
-        cells.push(
-          `<figure><img src="${b64(await thumb(buffer, 640))}"/><figcaption><b>${mockups[i].view}</b> · style ${mockups[i].style_id} · rendered by Printful</figcaption></figure>`
-        );
-      } catch (error) {
-        console.log(`  download failed: ${(error as Error).message}`);
-      }
-    }
-    blocks.push(`
-      <section>
-        <h2>${demo.title}</h2>
-        <p class="brief">${demo.design.artwork_brief}</p>
-        <p class="meta">strategy ${compiled.strategy} · ${Object.keys(files).length} placement files · calibrated placements: ${
-          profile ? Object.keys(profile).length : 0
-        }</p>
-        <div class="grid">${cells.join("")}</div>
-      </section>`);
+    await renderMockups(demo, files, compiled.strategy, blocks);
   }
 
   const html = `<!doctype html><html><head><meta charset="utf-8"/>

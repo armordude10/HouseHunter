@@ -159,10 +159,16 @@ export class RunwareClient {
       throw new RunwareError("Runware task API unreachable after retries");
     }
     if (!response.ok) {
-      throw new RunwareError(`Runware task API returned HTTP ${response.status}`, body);
+      throw new RunwareError(
+        `Runware task API returned HTTP ${response.status}: ${JSON.stringify(body)?.slice(0, 400)}`,
+        body
+      );
     }
     if (body && !Array.isArray(body) && body.errors?.length) {
-      throw new RunwareError("Runware task API returned errors", body.errors);
+      throw new RunwareError(
+        `Runware task API returned errors: ${JSON.stringify(body.errors)?.slice(0, 400)}`,
+        body.errors
+      );
     }
     const data = Array.isArray(body) ? body : (body?.data ?? []);
     if (!data.length) {
