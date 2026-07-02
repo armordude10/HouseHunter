@@ -1,0 +1,8090 @@
+{
+ "generated_at": "2026-07-02T02:30:09.852Z",
+ "profiles": {
+  "19": {
+   "default": {
+    "pieceWFrac": 0.9949,
+    "pieceHFrac": 0.993,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.4968
+   }
+  },
+  "83": {
+   "front": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   },
+   "back": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   }
+  },
+  "84": {
+   "default": {
+    "pieceWFrac": 0.9945,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5003,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "89": {
+   "front": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   },
+   "back": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   }
+  },
+  "181": {
+   "default": {
+    "pieceWFrac": 0.9609,
+    "pieceHFrac": 0.9973,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "186": {
+   "default": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "189": {
+   "default": {
+    "pieceWFrac": 0.785,
+    "pieceHFrac": 0.8113,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4647
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "198": {
+   "default": {
+    "pieceWFrac": 0.927,
+    "pieceHFrac": 0.8422,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5688
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9849,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.497
+   }
+  },
+  "200": {
+   "default": {
+    "pieceWFrac": 0.915,
+    "pieceHFrac": 0.9022,
+    "pieceCxFrac": 0.4982,
+    "pieceCyFrac": 0.532
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9849,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.497
+   }
+  },
+  "202": {
+   "default": {
+    "pieceWFrac": 0.904,
+    "pieceHFrac": 0.7237,
+    "pieceCxFrac": 0.5007,
+    "pieceCyFrac": 0.5606
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9849,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.497
+   }
+  },
+  "214": {
+   "front": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   },
+   "back": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   }
+  },
+  "215": {
+   "front": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   },
+   "back": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4989
+   }
+  },
+  "221": {
+   "default": {
+    "pieceWFrac": 0.814,
+    "pieceHFrac": 0.9216,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.511
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "242": {
+   "default": {
+    "pieceWFrac": 0.828,
+    "pieceHFrac": 0.8177,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4532
+   },
+   "belt_front": {
+    "pieceWFrac": 0.8276,
+    "pieceHFrac": 0.6769,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.5554
+   },
+   "belt_back": {
+    "pieceWFrac": 0.8561,
+    "pieceHFrac": 0.8016,
+    "pieceCxFrac": 0.4981,
+    "pieceCyFrac": 0.5294
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "257": {
+   "default": {
+    "pieceWFrac": 0.943,
+    "pieceHFrac": 0.992,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5
+   },
+   "back": {
+    "pieceWFrac": 0.9417,
+    "pieceHFrac": 0.892,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.549
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.7886,
+    "pieceHFrac": 0.7232,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.6088
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.7886,
+    "pieceHFrac": 0.7232,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.6088
+   }
+  },
+  "259": {
+   "default": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "261": {
+   "default": {
+    "pieceWFrac": 0.8385,
+    "pieceHFrac": 0.971,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.8359,
+    "pieceHFrac": 0.869,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5495
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.789,
+    "pieceHFrac": 0.7116,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6238
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.789,
+    "pieceHFrac": 0.7116,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6238
+   }
+  },
+  "262": {
+   "default": {
+    "pieceWFrac": 0.9937,
+    "pieceHFrac": 0.998,
+    "pieceCxFrac": 0.4984,
+    "pieceCyFrac": 0.499
+   }
+  },
+  "267": {
+   "default": {
+    "pieceWFrac": 0.876,
+    "pieceHFrac": 0.998,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4994
+   }
+  },
+  "272": {
+   "front": {
+    "pieceWFrac": 0.5978,
+    "pieceHFrac": 0.515,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4775
+   },
+   "back": {
+    "pieceWFrac": 0.6706,
+    "pieceHFrac": 0.539,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5805
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "274": {
+   "default": {
+    "pieceWFrac": 0.9453,
+    "pieceHFrac": 0.994,
+    "pieceCxFrac": 0.4974,
+    "pieceCyFrac": 0.499
+   },
+   "pocket": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5008
+   }
+  },
+  "276": {
+   "front": {
+    "pieceWFrac": 0.9559,
+    "pieceHFrac": 0.768,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.608
+   },
+   "back": {
+    "pieceWFrac": 0.9597,
+    "pieceHFrac": 0.9,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.543
+   }
+  },
+  "279": {
+   "front": {
+    "pieceWFrac": 0.8895,
+    "pieceHFrac": 0.9615,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.514
+   },
+   "top": {
+    "pieceWFrac": 0.979,
+    "pieceHFrac": 0.9627,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5047
+   },
+   "bottom": {
+    "pieceWFrac": 0.9793,
+    "pieceHFrac": 0.9308,
+    "pieceCxFrac": 0.498,
+    "pieceCyFrac": 0.4972
+   },
+   "pocket": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9835,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5012
+   }
+  },
+  "280": {
+   "default": {
+    "pieceWFrac": 0.817,
+    "pieceHFrac": 0.9477,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5261
+   },
+   "belt_front": {
+    "pieceWFrac": 0.823,
+    "pieceHFrac": 0.6714,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.549
+   },
+   "belt_back": {
+    "pieceWFrac": 0.683,
+    "pieceHFrac": 0.6257,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4919
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "281": {
+   "default": {
+    "pieceWFrac": 0.88,
+    "pieceHFrac": 0.846,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5222
+   },
+   "belt_front": {
+    "pieceWFrac": 0.823,
+    "pieceHFrac": 0.6714,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.549
+   },
+   "belt_back": {
+    "pieceWFrac": 0.683,
+    "pieceHFrac": 0.6257,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4919
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "282": {
+   "front": {
+    "pieceWFrac": 0.644,
+    "pieceHFrac": 0.5763,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.7119
+   },
+   "back": {
+    "pieceWFrac": 0.606,
+    "pieceHFrac": 0.7304,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6208
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "288": {
+   "default": {
+    "pieceWFrac": 0.837,
+    "pieceHFrac": 0.7911,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4552
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5018,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "298": {
+   "default": {
+    "pieceWFrac": 0.851,
+    "pieceHFrac": 0.848,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5276
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5045
+   }
+  },
+  "300": {
+   "default": {
+    "pieceWFrac": 0.9958,
+    "pieceHFrac": 0.9932,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "301": {
+   "front": {
+    "pieceWFrac": 0.7989,
+    "pieceHFrac": 0.91,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.494
+   },
+   "back": {
+    "pieceWFrac": 0.8529,
+    "pieceHFrac": 0.729,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5845
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4966,
+    "pieceHFrac": 0.724,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.516
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4966,
+    "pieceHFrac": 0.724,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.517
+   }
+  },
+  "302": {
+   "front": {
+    "pieceWFrac": 0.7847,
+    "pieceHFrac": 0.909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4985
+   },
+   "back": {
+    "pieceWFrac": 0.8105,
+    "pieceHFrac": 0.713,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5965
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4181,
+    "pieceHFrac": 0.68,
+    "pieceCxFrac": 0.5019,
+    "pieceCyFrac": 0.504
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4181,
+    "pieceHFrac": 0.683,
+    "pieceCxFrac": 0.4981,
+    "pieceCyFrac": 0.5055
+   }
+  },
+  "303": {
+   "front": {
+    "pieceWFrac": 0.953,
+    "pieceHFrac": 0.9574,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4993
+   },
+   "back": {
+    "pieceWFrac": 0.953,
+    "pieceHFrac": 0.8152,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5681
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.615,
+    "pieceHFrac": 0.4548,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.6088
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.615,
+    "pieceHFrac": 0.4529,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.6079
+   }
+  },
+  "314": {
+   "front": {
+    "pieceWFrac": 0.723,
+    "pieceHFrac": 0.6597,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4813
+   },
+   "back": {
+    "pieceWFrac": 0.7372,
+    "pieceHFrac": 0.7319,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5159
+   },
+   "belt": {
+    "pieceWFrac": 0.9794,
+    "pieceHFrac": 0.8671,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "315": {
+   "front": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "top_front": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "top_back": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9849,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.497
+   }
+  },
+  "320": {
+   "front": {
+    "pieceWFrac": 0.9332,
+    "pieceHFrac": 0.8916,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5416
+   },
+   "back": {
+    "pieceWFrac": 0.9332,
+    "pieceHFrac": 0.8916,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5416
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.533,
+    "pieceHFrac": 0.572,
+    "pieceCxFrac": 0.4969,
+    "pieceCyFrac": 0.427
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.533,
+    "pieceHFrac": 0.572,
+    "pieceCxFrac": 0.5022,
+    "pieceCyFrac": 0.427
+   },
+   "label_inside": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_panel": {
+    "pieceWFrac": 0.2699,
+    "pieceHFrac": 0.124,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.507
+   }
+  },
+  "322": {
+   "default": {
+    "pieceWFrac": 0.835,
+    "pieceHFrac": 0.9106,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5134
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "323": {
+   "default": {
+    "pieceWFrac": 0.802,
+    "pieceHFrac": 0.947,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5105
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "328": {
+   "front": {
+    "pieceWFrac": 0.952,
+    "pieceHFrac": 0.932,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.502
+   },
+   "back": {
+    "pieceWFrac": 0.9455,
+    "pieceHFrac": 0.862,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.559
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.822,
+    "pieceHFrac": 0.7152,
+    "pieceCxFrac": 0.503,
+    "pieceCyFrac": 0.6088
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.814,
+    "pieceHFrac": 0.717,
+    "pieceCxFrac": 0.505,
+    "pieceCyFrac": 0.6079
+   }
+  },
+  "329": {
+   "front": {
+    "pieceWFrac": 0.9027,
+    "pieceHFrac": 0.896,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.49
+   },
+   "back": {
+    "pieceWFrac": 0.9051,
+    "pieceHFrac": 0.847,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5385
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.714,
+    "pieceHFrac": 0.6399,
+    "pieceCxFrac": 0.511,
+    "pieceCyFrac": 0.657
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.716,
+    "pieceHFrac": 0.642,
+    "pieceCxFrac": 0.49,
+    "pieceCyFrac": 0.658
+   }
+  },
+  "330": {
+   "front": {
+    "pieceWFrac": 0.828,
+    "pieceHFrac": 0.7572,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4879
+   },
+   "back": {
+    "pieceWFrac": 0.93,
+    "pieceHFrac": 0.7744,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4466
+   }
+  },
+  "332": {
+   "front": {
+    "pieceWFrac": 0.8777,
+    "pieceHFrac": 0.816,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4839
+   },
+   "back": {
+    "pieceWFrac": 0.9757,
+    "pieceHFrac": 0.8246,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4641
+   }
+  },
+  "334": {
+   "leg_right": {
+    "pieceWFrac": 0.6452,
+    "pieceHFrac": 0.689,
+    "pieceCxFrac": 0.5151,
+    "pieceCyFrac": 0.4125
+   },
+   "leg_left": {
+    "pieceWFrac": 0.6452,
+    "pieceHFrac": 0.688,
+    "pieceCxFrac": 0.4845,
+    "pieceCyFrac": 0.412
+   },
+   "belt_front": {
+    "pieceWFrac": 0.7883,
+    "pieceHFrac": 0.6232,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5604
+   },
+   "belt_back": {
+    "pieceWFrac": 0.6821,
+    "pieceHFrac": 0.6304,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5278
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "345": {
+   "default": {
+    "pieceWFrac": 0.869,
+    "pieceHFrac": 0.557,
+    "pieceCxFrac": 0.5075,
+    "pieceCyFrac": 0.5036
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "346": {
+   "default": {
+    "pieceWFrac": 0.86,
+    "pieceHFrac": 0.5554,
+    "pieceCxFrac": 0.501,
+    "pieceCyFrac": 0.5037
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "350": {
+   "front": {
+    "pieceWFrac": 0.831,
+    "pieceHFrac": 0.7582,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4941
+   },
+   "top": {
+    "pieceWFrac": 0.542,
+    "pieceHFrac": 0.4755,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4633
+   },
+   "back": {
+    "pieceWFrac": 0.657,
+    "pieceHFrac": 0.7962,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4443
+   },
+   "pocket": {
+    "pieceWFrac": 0.935,
+    "pieceHFrac": 0.9386,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.4988
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9917,
+    "pieceHFrac": 0.9931,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4965
+   }
+  },
+  "359": {
+   "default": {
+    "pieceWFrac": 0.9053,
+    "pieceHFrac": 0.878,
+    "pieceCxFrac": 0.4988,
+    "pieceCyFrac": 0.501
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9804,
+    "pieceHFrac": 0.9804,
+    "pieceCxFrac": 0.4947,
+    "pieceCyFrac": 0.4926
+   }
+  },
+  "368": {
+   "front": {
+    "pieceWFrac": 0.8704,
+    "pieceHFrac": 0.903,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.88,
+    "pieceHFrac": 0.735,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5835
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5408,
+    "pieceHFrac": 0.836,
+    "pieceCxFrac": 0.496,
+    "pieceCyFrac": 0.553
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5408,
+    "pieceHFrac": 0.836,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.553
+   }
+  },
+  "369": {
+   "front": {
+    "pieceWFrac": 0.8318,
+    "pieceHFrac": 0.865,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.8348,
+    "pieceHFrac": 0.693,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5855
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4955,
+    "pieceHFrac": 0.837,
+    "pieceCxFrac": 0.507,
+    "pieceCyFrac": 0.5475
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.494,
+    "pieceHFrac": 0.838,
+    "pieceCxFrac": 0.4907,
+    "pieceCyFrac": 0.547
+   }
+  },
+  "382": {
+   "default": {
+    "pieceWFrac": 0.9929,
+    "pieceHFrac": 0.9931,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5012
+   }
+  },
+  "384": {
+   "front": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "385": {
+   "front": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "back": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.999,
+    "pieceHFrac": 0.999,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "387": {
+   "front": {
+    "pieceWFrac": 0.244,
+    "pieceHFrac": 0.161,
+    "pieceCxFrac": 0.517,
+    "pieceCyFrac": 0.5185
+   },
+   "back": {
+    "pieceWFrac": 0.114,
+    "pieceHFrac": 0.12,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.545
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "388": {
+   "front": {
+    "pieceWFrac": 0.7944,
+    "pieceHFrac": 0.9184,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5146
+   },
+   "back": {
+    "pieceWFrac": 0.7943,
+    "pieceHFrac": 0.9389,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5036
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.438,
+    "pieceHFrac": 0.589,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4225
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.438,
+    "pieceHFrac": 0.589,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4225
+   },
+   "pocket": {
+    "pieceWFrac": 0.473,
+    "pieceHFrac": 0.284,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.504,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": 0.0005,
+     "dyFrac": -0.0106
+    }
+   },
+   "hood": {
+    "pieceWFrac": 0.704,
+    "pieceHFrac": 0.939,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5015
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9917,
+    "pieceHFrac": 0.9931,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4965
+   },
+   "label_panel": {
+    "pieceWFrac": 0.221,
+    "pieceHFrac": 0.144,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "389": {
+   "front": {
+    "pieceWFrac": 0.9175,
+    "pieceHFrac": 0.9196,
+    "pieceCxFrac": 0.4927,
+    "pieceCyFrac": 0.5087
+   },
+   "top": {
+    "pieceWFrac": 0.981,
+    "pieceHFrac": 0.927,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5
+   },
+   "bottom": {
+    "pieceWFrac": 0.981,
+    "pieceHFrac": 0.8929,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4975
+   }
+  },
+  "390": {
+   "front": {
+    "pieceWFrac": 0.9495,
+    "pieceHFrac": 0.7669,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5705
+   },
+   "back": {
+    "pieceWFrac": 0.8653,
+    "pieceHFrac": 0.9314,
+    "pieceCxFrac": 0.4983,
+    "pieceCyFrac": 0.4895
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.505,
+    "pieceHFrac": 0.636,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.418
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5062,
+    "pieceHFrac": 0.636,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.418
+   },
+   "details": {
+    "pieceWFrac": 0.275,
+    "pieceHFrac": 0.3389,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.7972
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "394": {
+   "default": {
+    "pieceWFrac": 0.9204,
+    "pieceHFrac": 0.9177,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5014
+   }
+  },
+  "395": {
+   "default": {
+    "pieceWFrac": 0.955,
+    "pieceHFrac": 0.94,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.498
+   }
+  },
+  "400": {
+   "leg_right": {
+    "pieceWFrac": 0.276,
+    "pieceHFrac": 0.601,
+    "pieceCxFrac": 0.513,
+    "pieceCyFrac": 0.3925
+   },
+   "leg_left": {
+    "pieceWFrac": 0.217,
+    "pieceHFrac": 0.639,
+    "pieceCxFrac": 0.4765,
+    "pieceCyFrac": 0.3985
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "401": {
+   "leg_right": {
+    "pieceWFrac": 0.265,
+    "pieceHFrac": 0.626,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.388
+   },
+   "leg_left": {
+    "pieceWFrac": 0.25,
+    "pieceHFrac": 0.689,
+    "pieceCxFrac": 0.497,
+    "pieceCyFrac": 0.4225
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "403": {
+   "default": {
+    "pieceWFrac": 0.9949,
+    "pieceHFrac": 0.993,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.4968
+   }
+  },
+  "407": {
+   "default": {
+    "pieceWFrac": 0.9919,
+    "pieceHFrac": 0.9845,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4946
+   }
+  },
+  "420": {
+   "default": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9981,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5009
+   }
+  },
+  "428": {
+   "default": {
+    "pieceWFrac": 0.874,
+    "pieceHFrac": 0.8428,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4588
+   },
+   "front": {
+    "pieceWFrac": 0.3956,
+    "pieceHFrac": 0.7184,
+    "pieceCxFrac": 0.4989,
+    "pieceCyFrac": 0.4962
+   },
+   "bottom": {
+    "pieceWFrac": 0.6664,
+    "pieceHFrac": 0.2751,
+    "pieceCxFrac": 0.4989,
+    "pieceCyFrac": 0.4946
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "458": {
+   "default": {
+    "pieceWFrac": 0.909,
+    "pieceHFrac": 0.669,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "label_inside": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 0.9981,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.499
+   }
+  },
+  "465": {
+   "front": {
+    "pieceWFrac": 0.88,
+    "pieceHFrac": 0.5991,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4987
+   },
+   "back": {
+    "pieceWFrac": 0.879,
+    "pieceHFrac": 0.5991,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4987
+   },
+   "sides": {
+    "pieceWFrac": 0.969,
+    "pieceHFrac": 0.7087,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5325
+   },
+   "bottom": {
+    "pieceWFrac": 0.879,
+    "pieceHFrac": 0.9264,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4987
+   },
+   "pocket": {
+    "pieceWFrac": 0.879,
+    "pieceHFrac": 0.467,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4987,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": -0.0005,
+     "dyFrac": 0
+    }
+   },
+   "top": {
+    "pieceWFrac": 0.88,
+    "pieceHFrac": 0.7207,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4995
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9973,
+    "pieceHFrac": 0.9973,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.5014
+   }
+  },
+  "468": {
+   "top_front": {
+    "pieceWFrac": 0.657,
+    "pieceHFrac": 0.4961,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6869
+   },
+   "top_back": {
+    "pieceWFrac": 0.395,
+    "pieceHFrac": 0.3019,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.7243
+   },
+   "bottom_front": {
+    "pieceWFrac": 0.312,
+    "pieceHFrac": 0.367,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.2139
+   },
+   "bottom_back": {
+    "pieceWFrac": 0.735,
+    "pieceHFrac": 0.5647,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.3861
+   },
+   "lining_top": {
+    "pieceWFrac": 0.6107,
+    "pieceHFrac": 0.1408,
+    "pieceCxFrac": 0.3773,
+    "pieceCyFrac": 0.5685
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.6018,
+    "pieceHFrac": 0.1906,
+    "pieceCxFrac": 0.4392,
+    "pieceCyFrac": 0.3875
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "469": {
+   "top_front": {
+    "pieceWFrac": 0.657,
+    "pieceHFrac": 0.4961,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6869
+   },
+   "top_back": {
+    "pieceWFrac": 0.395,
+    "pieceHFrac": 0.3019,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.7243
+   },
+   "lining_top": {
+    "pieceWFrac": 0.6107,
+    "pieceHFrac": 0.1408,
+    "pieceCxFrac": 0.3773,
+    "pieceCyFrac": 0.5685
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "470": {
+   "bottom_front": {
+    "pieceWFrac": 0.312,
+    "pieceHFrac": 0.367,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.2139
+   },
+   "bottom_back": {
+    "pieceWFrac": 0.735,
+    "pieceHFrac": 0.5647,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.3861
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.6018,
+    "pieceHFrac": 0.1906,
+    "pieceCxFrac": 0.4392,
+    "pieceCyFrac": 0.3875
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "477": {
+   "front": {
+    "pieceWFrac": 0.88,
+    "pieceHFrac": 0.5794,
+    "pieceCxFrac": 0.5024,
+    "pieceCyFrac": 0.6451
+   },
+   "back": {
+    "pieceWFrac": 0.6273,
+    "pieceHFrac": 0.7271,
+    "pieceCxFrac": 0.4984,
+    "pieceCyFrac": 0.5713
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "490": {
+   "front": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 0.9979,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.499
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "507": {
+   "belt_back": {
+    "pieceWFrac": 0.618,
+    "pieceHFrac": 0.7802,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4833
+   },
+   "belt_front": {
+    "pieceWFrac": 0.741,
+    "pieceHFrac": 0.775,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5353
+   },
+   "leg_left": {
+    "pieceWFrac": 0.823,
+    "pieceHFrac": 0.9012,
+    "pieceCxFrac": 0.4805,
+    "pieceCyFrac": 0.5165
+   },
+   "pocket": {
+    "pieceWFrac": 0.625,
+    "pieceHFrac": 0.4866,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4523
+   },
+   "leg_right": {
+    "pieceWFrac": 0.823,
+    "pieceHFrac": 0.9012,
+    "pieceCxFrac": 0.5185,
+    "pieceCyFrac": 0.5165
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "513": {
+   "shoe_quarters_left": {
+    "pieceWFrac": 0.7507,
+    "pieceHFrac": 0.8327,
+    "pieceCxFrac": 0.498,
+    "pieceCyFrac": 0.5205
+   },
+   "shoe_quarters_right": {
+    "pieceWFrac": 0.7507,
+    "pieceHFrac": 0.8314,
+    "pieceCxFrac": 0.498,
+    "pieceCyFrac": 0.5212
+   },
+   "shoe_tongue_right": {
+    "pieceWFrac": 0.278,
+    "pieceHFrac": 0.785,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4865
+   },
+   "shoe_tongue_left": {
+    "pieceWFrac": 0.278,
+    "pieceHFrac": 0.785,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4865
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "514": {
+   "front": {
+    "pieceWFrac": 0.9655,
+    "pieceHFrac": 0.8933,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5444
+   },
+   "back": {
+    "pieceWFrac": 0.9655,
+    "pieceHFrac": 0.8902,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.547
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5277,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6021
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5269,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4999,
+    "pieceCyFrac": 0.6021
+   }
+  },
+  "518": {
+   "default": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9888,
+    "pieceCxFrac": 0.4979,
+    "pieceCyFrac": 0.4975
+   }
+  },
+  "525": {
+   "label_inside": {
+    "pieceWFrac": 0.9962,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.501,
+    "pieceCyFrac": 0.4987
+   },
+   "shoe_quarters_left": {
+    "pieceWFrac": 0.7507,
+    "pieceHFrac": 0.8327,
+    "pieceCxFrac": 0.498,
+    "pieceCyFrac": 0.5205
+   },
+   "shoe_tongue_left": {
+    "pieceWFrac": 0.278,
+    "pieceHFrac": 0.785,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4865
+   },
+   "shoe_quarters_right": {
+    "pieceWFrac": 0.7507,
+    "pieceHFrac": 0.8314,
+    "pieceCxFrac": 0.498,
+    "pieceCyFrac": 0.5212
+   },
+   "shoe_tongue_right": {
+    "pieceWFrac": 0.278,
+    "pieceHFrac": 0.785,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4865
+   }
+  },
+  "530": {
+   "default": {
+    "pieceWFrac": 0.978,
+    "pieceHFrac": 0.932,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.4927
+   },
+   "details": {
+    "pieceWFrac": 0.3826,
+    "pieceHFrac": 0.7143,
+    "pieceCxFrac": 0.4999,
+    "pieceCyFrac": 0.4966
+   }
+  },
+  "545": {
+   "default": {
+    "pieceWFrac": 0.998,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5
+   },
+   "label_inside": {
+    "pieceWFrac": 0.993,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "558": {
+   "belt_front": {
+    "pieceWFrac": 0.6115,
+    "pieceHFrac": 0.829,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5215
+   },
+   "belt_back": {
+    "pieceWFrac": 0.546,
+    "pieceHFrac": 0.8387,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4992
+   },
+   "leg_left": {
+    "pieceWFrac": 0.6883,
+    "pieceHFrac": 0.7001,
+    "pieceCxFrac": 0.4988,
+    "pieceCyFrac": 0.4465
+   },
+   "leg_right": {
+    "pieceWFrac": 0.6883,
+    "pieceHFrac": 0.7001,
+    "pieceCxFrac": 0.4977,
+    "pieceCyFrac": 0.4465
+   },
+   "pocket": {
+    "pieceWFrac": 0.457,
+    "pieceHFrac": 0.7094,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5037
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "559": {
+   "leg_left": {
+    "pieceWFrac": 0.6872,
+    "pieceHFrac": 0.6991,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.446
+   },
+   "leg_right": {
+    "pieceWFrac": 0.6859,
+    "pieceHFrac": 0.6992,
+    "pieceCxFrac": 0.4975,
+    "pieceCyFrac": 0.4459
+   },
+   "belt_back": {
+    "pieceWFrac": 0.546,
+    "pieceHFrac": 0.8387,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4992
+   },
+   "belt_front": {
+    "pieceWFrac": 0.792,
+    "pieceHFrac": 0.81,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5309
+   },
+   "pocket": {
+    "pieceWFrac": 0.457,
+    "pieceHFrac": 0.7094,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5037
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "571": {
+   "front": {
+    "pieceWFrac": 0.849,
+    "pieceHFrac": 0.8919,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4874
+   },
+   "back": {
+    "pieceWFrac": 0.955,
+    "pieceHFrac": 0.9315,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5072
+   },
+   "pocket": {
+    "pieceWFrac": 0.997,
+    "pieceHFrac": 0.9899,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.4998
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "574": {
+   "shoe_right": {
+    "pieceWFrac": 0.54,
+    "pieceHFrac": 0.707,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5485
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "575": {
+   "shoe_right": {
+    "pieceWFrac": 0.54,
+    "pieceHFrac": 0.707,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5485
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "578": {
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   },
+   "shoe_quarters_left": {
+    "pieceWFrac": 0.592,
+    "pieceHFrac": 0.738,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.514
+   },
+   "shoe_quarters_right": {
+    "pieceWFrac": 0.592,
+    "pieceHFrac": 0.738,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.514
+   },
+   "shoe_tongue_left": {
+    "pieceWFrac": 0.394,
+    "pieceHFrac": 0.468,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.374
+   },
+   "shoe_tongue_right": {
+    "pieceWFrac": 0.394,
+    "pieceHFrac": 0.468,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.374
+   }
+  },
+  "579": {
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   },
+   "shoe_quarters_left": {
+    "pieceWFrac": 0.592,
+    "pieceHFrac": 0.738,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.514
+   },
+   "shoe_quarters_right": {
+    "pieceWFrac": 0.592,
+    "pieceHFrac": 0.738,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.514
+   },
+   "shoe_tongue_left": {
+    "pieceWFrac": 0.394,
+    "pieceHFrac": 0.468,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.374
+   },
+   "shoe_tongue_right": {
+    "pieceWFrac": 0.394,
+    "pieceHFrac": 0.468,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.374
+   }
+  },
+  "583": {
+   "default": {
+    "pieceWFrac": 0.9958,
+    "pieceHFrac": 0.9918,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4986
+   }
+  },
+  "585": {
+   "default": {
+    "pieceWFrac": 0.994,
+    "pieceHFrac": 0.993,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "588": {
+   "default": {
+    "pieceWFrac": 0.9696,
+    "pieceHFrac": 0.9728,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "589": {
+   "front": {
+    "pieceWFrac": 0.898,
+    "pieceHFrac": 0.8063,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5172
+   },
+   "back": {
+    "pieceWFrac": 0.914,
+    "pieceHFrac": 0.8172,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5133
+   },
+   "top_front": {
+    "pieceWFrac": 0.6578,
+    "pieceHFrac": 0.504,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.511
+   },
+   "top_back": {
+    "pieceWFrac": 0.7059,
+    "pieceHFrac": 0.493,
+    "pieceCxFrac": 0.5019,
+    "pieceCyFrac": 0.5085
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4739,
+    "pieceHFrac": 0.643,
+    "pieceCxFrac": 0.4977,
+    "pieceCyFrac": 0.5265
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4749,
+    "pieceHFrac": 0.6442,
+    "pieceCxFrac": 0.5019,
+    "pieceCyFrac": 0.5268
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "594": {
+   "front": {
+    "pieceWFrac": 0.972,
+    "pieceHFrac": 0.689,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4777
+   },
+   "back": {
+    "pieceWFrac": 0.972,
+    "pieceHFrac": 0.689,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4777
+   },
+   "side_right": {
+    "pieceWFrac": 0.568,
+    "pieceHFrac": 0.6964,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4986
+   },
+   "side_left": {
+    "pieceWFrac": 0.568,
+    "pieceHFrac": 0.6964,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4986
+   },
+   "bottom": {
+    "pieceWFrac": 0.973,
+    "pieceHFrac": 0.8913,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.498
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9917,
+    "pieceHFrac": 0.9931,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4965
+   },
+   "pocket": {
+    "pieceWFrac": 0.625,
+    "pieceHFrac": 0.5247,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4716,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": -0.0005,
+     "dyFrac": -0.0061
+    }
+   }
+  },
+  "597": {
+   "shoe_right": {
+    "pieceWFrac": 0.804,
+    "pieceHFrac": 0.35,
+    "pieceCxFrac": 0.504,
+    "pieceCyFrac": 0.503
+   },
+   "shoe_left": {
+    "pieceWFrac": 0.805,
+    "pieceHFrac": 0.35,
+    "pieceCxFrac": 0.4955,
+    "pieceCyFrac": 0.502
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "598": {
+   "shoe_right": {
+    "pieceWFrac": 0.804,
+    "pieceHFrac": 0.35,
+    "pieceCxFrac": 0.504,
+    "pieceCyFrac": 0.503
+   },
+   "shoe_left": {
+    "pieceWFrac": 0.805,
+    "pieceHFrac": 0.35,
+    "pieceCxFrac": 0.4955,
+    "pieceCyFrac": 0.502
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "601": {
+   "default": {
+    "pieceWFrac": 0.9881,
+    "pieceHFrac": 0.9944,
+    "pieceCxFrac": 0.497,
+    "pieceCyFrac": 0.4991
+   }
+  },
+  "604": {
+   "front": {
+    "pieceWFrac": 0.634,
+    "pieceHFrac": 0.9497,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5038
+   },
+   "back": {
+    "pieceWFrac": 0.711,
+    "pieceHFrac": 0.8845,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4848
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "611": {
+   "default": {
+    "pieceWFrac": 0.9358,
+    "pieceHFrac": 0.9329,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.5019
+   }
+  },
+  "615": {
+   "front": {
+    "pieceWFrac": 0.8879,
+    "pieceHFrac": 0.864,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.528
+   },
+   "back": {
+    "pieceWFrac": 0.7941,
+    "pieceHFrac": 0.928,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.524
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5127,
+    "pieceHFrac": 0.771,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5365
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5127,
+    "pieceHFrac": 0.771,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5365
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9821,
+    "pieceCxFrac": 0.5013,
+    "pieceCyFrac": 0.5
+   },
+   "hood": {
+    "pieceWFrac": 0.8488,
+    "pieceHFrac": 0.334,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4717
+   },
+   "hood_inner": {
+    "pieceWFrac": 0.8488,
+    "pieceHFrac": 0.334,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4717
+   },
+   "facing": {
+    "pieceWFrac": 0.3326,
+    "pieceHFrac": 0.8269,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5137
+   }
+  },
+  "618": {
+   "front": {
+    "pieceWFrac": 0.7227,
+    "pieceHFrac": 0.9595,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.4981
+   },
+   "back": {
+    "pieceWFrac": 0.8165,
+    "pieceHFrac": 0.8022,
+    "pieceCxFrac": 0.488,
+    "pieceCyFrac": 0.4958
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9975,
+    "pieceHFrac": 0.9778,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.5022
+   }
+  },
+  "619": {
+   "front": {
+    "pieceWFrac": 0.899,
+    "pieceHFrac": 0.8251,
+    "pieceCxFrac": 0.5505,
+    "pieceCyFrac": 0.5608
+   },
+   "back": {
+    "pieceWFrac": 0.7972,
+    "pieceHFrac": 0.8554,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5457
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.478,
+    "pieceHFrac": 0.629,
+    "pieceCxFrac": 0.5004,
+    "pieceCyFrac": 0.5195
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.478,
+    "pieceHFrac": 0.629,
+    "pieceCxFrac": 0.5004,
+    "pieceCyFrac": 0.5195
+   },
+   "hood": {
+    "pieceWFrac": 0.8504,
+    "pieceHFrac": 0.3357,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4698
+   },
+   "label_inside": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 0.9865,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5022
+   }
+  },
+  "630": {
+   "front": {
+    "pieceWFrac": 0.991,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4977
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "631": {
+   "front": {
+    "pieceWFrac": 0.7795,
+    "pieceHFrac": 0.8827,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5007
+   },
+   "back": {
+    "pieceWFrac": 0.7807,
+    "pieceHFrac": 0.7118,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5861
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4746,
+    "pieceHFrac": 0.7705,
+    "pieceCxFrac": 0.4988,
+    "pieceCyFrac": 0.5993
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4746,
+    "pieceHFrac": 0.7705,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5993
+   },
+   "label_inside": {
+    "pieceWFrac": 0.984,
+    "pieceHFrac": 0.9733,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4973
+   }
+  },
+  "632": {
+   "default": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9815,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "634": {
+   "front": {
+    "pieceWFrac": 0.4942,
+    "pieceHFrac": 0.4853,
+    "pieceCxFrac": 0.4955,
+    "pieceCyFrac": 0.5333
+   },
+   "back": {
+    "pieceWFrac": 0.4942,
+    "pieceHFrac": 0.4853,
+    "pieceCxFrac": 0.5019,
+    "pieceCyFrac": 0.5333
+   }
+  },
+  "644": {
+   "front": {
+    "pieceWFrac": 0.9527,
+    "pieceHFrac": 0.9,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.544
+   },
+   "back": {
+    "pieceWFrac": 0.9527,
+    "pieceHFrac": 0.873,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5575
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.746,
+    "pieceHFrac": 0.7566,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5805
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.746,
+    "pieceHFrac": 0.7566,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5805
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9935,
+    "pieceHFrac": 0.9851,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.498
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9902,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4997
+   }
+  },
+  "653": {
+   "default": {
+    "pieceWFrac": 0.9986,
+    "pieceHFrac": 0.9918,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4986
+   }
+  },
+  "654": {
+   "outside_front": {
+    "pieceWFrac": 0.6219,
+    "pieceHFrac": 0.557,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.6555
+   },
+   "outside_back": {
+    "pieceWFrac": 0.6908,
+    "pieceHFrac": 0.53,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.668
+   },
+   "inside_front": {
+    "pieceWFrac": 0.6219,
+    "pieceHFrac": 0.557,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.6555
+   },
+   "inside_back": {
+    "pieceWFrac": 0.6908,
+    "pieceHFrac": 0.53,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.668
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9934,
+    "pieceHFrac": 0.9924,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5008
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9934,
+    "pieceHFrac": 0.9924,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5008
+   }
+  },
+  "657": {
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   },
+   "shoe_left": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.549,
+    "pieceCxFrac": 0.5011,
+    "pieceCyFrac": 0.6125
+   },
+   "shoe_right": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.549,
+    "pieceCxFrac": 0.5011,
+    "pieceCyFrac": 0.6125
+   }
+  },
+  "658": {
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5012,
+    "pieceCyFrac": 0.5013
+   },
+   "shoe_left": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.549,
+    "pieceCxFrac": 0.5011,
+    "pieceCyFrac": 0.6125
+   },
+   "shoe_right": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.549,
+    "pieceCxFrac": 0.5011,
+    "pieceCyFrac": 0.6125
+   }
+  },
+  "659": {
+   "front": {
+    "pieceWFrac": 0.9645,
+    "pieceHFrac": 0.733,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.6295
+   },
+   "back": {
+    "pieceWFrac": 0.9133,
+    "pieceHFrac": 0.918,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.536
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.563,
+    "pieceHFrac": 0.5913,
+    "pieceCxFrac": 0.4885,
+    "pieceCyFrac": 0.6023
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.562,
+    "pieceHFrac": 0.5894,
+    "pieceCxFrac": 0.512,
+    "pieceCyFrac": 0.6014
+   },
+   "details": {
+    "pieceWFrac": 0.2155,
+    "pieceHFrac": 0.363,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.1965
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9957,
+    "pieceHFrac": 0.9878,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.498
+   },
+   "inside_yoke": {
+    "pieceWFrac": 0.649,
+    "pieceHFrac": 0.5057,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5469
+   }
+  },
+  "663": {
+   "default": {
+    "pieceWFrac": 0.9954,
+    "pieceHFrac": 0.9927,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.4964
+   }
+  },
+  "667": {
+   "top": {
+    "pieceWFrac": 0.7,
+    "pieceHFrac": 0.6528,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.3461
+   },
+   "bottom": {
+    "pieceWFrac": 0.705,
+    "pieceHFrac": 0.5254,
+    "pieceCxFrac": 0.5285,
+    "pieceCyFrac": 0.2824
+   },
+   "lining_top": {
+    "pieceWFrac": 0.671,
+    "pieceHFrac": 0.3503,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5588
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.729,
+    "pieceHFrac": 0.3867,
+    "pieceCxFrac": 0.5285,
+    "pieceCyFrac": 0.37
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "668": {
+   "top": {
+    "pieceWFrac": 0.69,
+    "pieceHFrac": 0.7096,
+    "pieceCxFrac": 0.447,
+    "pieceCyFrac": 0.3677
+   },
+   "lining_top": {
+    "pieceWFrac": 0.666,
+    "pieceHFrac": 0.348,
+    "pieceCxFrac": 0.448,
+    "pieceCyFrac": 0.594
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "669": {
+   "bottom": {
+    "pieceWFrac": 0.699,
+    "pieceHFrac": 0.6778,
+    "pieceCxFrac": 0.4905,
+    "pieceCyFrac": 0.3518
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9891,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.73,
+    "pieceHFrac": 0.5368,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.4382
+   }
+  },
+  "672": {
+   "front": {
+    "pieceWFrac": 0.964,
+    "pieceHFrac": 0.973,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5002
+   },
+   "back": {
+    "pieceWFrac": 0.964,
+    "pieceHFrac": 0.973,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5002
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9862,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "675": {
+   "default": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9888,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.5019
+   }
+  },
+  "676": {
+   "front": {
+    "pieceWFrac": 0.8914,
+    "pieceHFrac": 0.7604,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.6041
+   },
+   "back": {
+    "pieceWFrac": 0.9666,
+    "pieceHFrac": 0.9686,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9918,
+    "pieceHFrac": 0.9891,
+    "pieceCxFrac": 0.4984,
+    "pieceCyFrac": 0.497
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9935,
+    "pieceHFrac": 0.9851,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.498
+   }
+  },
+  "678": {
+   "default": {
+    "pieceWFrac": 0.9931,
+    "pieceHFrac": 0.9333,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "681": {
+   "front": {
+    "pieceWFrac": 0.484,
+    "pieceHFrac": 0.6776,
+    "pieceCxFrac": 0.474,
+    "pieceCyFrac": 0.5022
+   },
+   "back": {
+    "pieceWFrac": 0.484,
+    "pieceHFrac": 0.6776,
+    "pieceCxFrac": 0.524,
+    "pieceCyFrac": 0.5022
+   }
+  },
+  "682": {
+   "front": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "683": {
+   "default": {
+    "pieceWFrac": 0.9969,
+    "pieceHFrac": 0.9943,
+    "pieceCxFrac": 0.4984,
+    "pieceCyFrac": 0.4991
+   }
+  },
+  "684": {
+   "default": {
+    "pieceWFrac": 0.9907,
+    "pieceHFrac": 0.9927,
+    "pieceCxFrac": 0.5015,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "686": {
+   "default": {
+    "pieceWFrac": 0.9911,
+    "pieceHFrac": 0.9928,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "690": {
+   "default": {
+    "pieceWFrac": 0.9972,
+    "pieceHFrac": 0.993,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "691": {
+   "default": {
+    "pieceWFrac": 0.9972,
+    "pieceHFrac": 0.9783,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4891
+   }
+  },
+  "693": {
+   "front": {
+    "pieceWFrac": 0.9505,
+    "pieceHFrac": 0.8803,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.5266
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9917,
+    "pieceHFrac": 0.9931,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4965
+   },
+   "back": {
+    "pieceWFrac": 0.9474,
+    "pieceHFrac": 0.883,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5148
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9915,
+    "pieceHFrac": 0.9935,
+    "pieceCxFrac": 0.4984,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "708": {
+   "first": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5007
+   },
+   "second": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5007
+   },
+   "third": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5007
+   },
+   "fourth": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5007
+   }
+  },
+  "709": {
+   "first": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9913,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5009
+   },
+   "second": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9913,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5009
+   },
+   "third": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9913,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5009
+   },
+   "fourth": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9913,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5009
+   }
+  },
+  "710": {
+   "front": {
+    "pieceWFrac": 0.8699,
+    "pieceHFrac": 0.9712,
+    "pieceCxFrac": 0.4982,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "711": {
+   "default": {
+    "pieceWFrac": 0.9405,
+    "pieceHFrac": 0.9499,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4991
+   }
+  },
+  "717": {
+   "back": {
+    "pieceWFrac": 0.9029,
+    "pieceHFrac": 0.9247,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5227
+   },
+   "front": {
+    "pieceWFrac": 0.9413,
+    "pieceHFrac": 0.9068,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5317
+   },
+   "hood": {
+    "pieceWFrac": 0.8851,
+    "pieceHFrac": 0.9482,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4909
+   },
+   "label_panel": {
+    "pieceWFrac": 0.2487,
+    "pieceHFrac": 0.228,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4525
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4903,
+    "pieceHFrac": 0.613,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.4795
+   },
+   "pocket": {
+    "pieceWFrac": 0.5723,
+    "pieceHFrac": 0.4618,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4589
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4903,
+    "pieceHFrac": 0.613,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.4785
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "730": {
+   "label_inside": {
+    "pieceWFrac": 0.9935,
+    "pieceHFrac": 0.9851,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.498
+   },
+   "back": {
+    "pieceWFrac": 0.9697,
+    "pieceHFrac": 0.9518,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.4973
+   },
+   "front": {
+    "pieceWFrac": 0.9709,
+    "pieceHFrac": 0.7281,
+    "pieceCxFrac": 0.5004,
+    "pieceCyFrac": 0.5717
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.6188,
+    "pieceCxFrac": 0.505,
+    "pieceCyFrac": 0.6276
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5743,
+    "pieceHFrac": 0.6188,
+    "pieceCxFrac": 0.4958,
+    "pieceCyFrac": 0.6276
+   },
+   "yoke": {
+    "pieceWFrac": 0.8247,
+    "pieceHFrac": 0.2356,
+    "pieceCxFrac": 0.5004,
+    "pieceCyFrac": 0.5502
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9961,
+    "pieceHFrac": 0.9948,
+    "pieceCxFrac": 0.5007,
+    "pieceCyFrac": 0.4974
+   }
+  },
+  "737": {
+   "back": {
+    "pieceWFrac": 0.853,
+    "pieceHFrac": 0.9595,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5027
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9939,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5024
+   },
+   "belt_back": {
+    "pieceWFrac": 0.481,
+    "pieceHFrac": 0.7851,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4996
+   },
+   "front": {
+    "pieceWFrac": 0.8429,
+    "pieceHFrac": 0.9641,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5015
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9939,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5024
+   },
+   "belt_front": {
+    "pieceWFrac": 0.6484,
+    "pieceHFrac": 0.661,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4996
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9777,
+    "pieceHFrac": 0.9657,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5053
+   },
+   "pocket": {
+    "pieceWFrac": 0.483,
+    "pieceHFrac": 0.3777,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4685
+   }
+  },
+  "742": {
+   "default": {
+    "pieceWFrac": 0.9944,
+    "pieceHFrac": 0.9895,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4983
+   }
+  },
+  "744": {
+   "back": {
+    "pieceWFrac": 0.4297,
+    "pieceHFrac": 0.8615,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.502
+   },
+   "details": {
+    "pieceWFrac": 0.8928,
+    "pieceHFrac": 0.8099,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4813
+   },
+   "front": {
+    "pieceWFrac": 0.4297,
+    "pieceHFrac": 0.8615,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.502
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9973,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.5047
+   },
+   "inside_pocket": {
+    "pieceWFrac": 0.4297,
+    "pieceHFrac": 0.7037,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5809,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": 0,
+     "dyFrac": 0.0789
+    }
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9939,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5024
+   },
+   "pocket": {
+    "pieceWFrac": 0.4292,
+    "pieceHFrac": 0.9338,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4669,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": -0.0002,
+     "dyFrac": -0.0351
+    }
+   }
+  },
+  "745": {
+   "label_inside": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9896,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5017
+   }
+  },
+  "746": {
+   "front": {
+    "pieceWFrac": 0.8701,
+    "pieceHFrac": 0.885,
+    "pieceCxFrac": 0.5009,
+    "pieceCyFrac": 0.4797
+   },
+   "back": {
+    "pieceWFrac": 0.8714,
+    "pieceHFrac": 0.885,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4797
+   }
+  },
+  "749": {
+   "label_inside": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9896,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5017
+   },
+   "front": {
+    "pieceWFrac": 0.9558,
+    "pieceHFrac": 0.907,
+    "pieceCxFrac": 0.5211,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "750": {
+   "default": {
+    "pieceWFrac": 0.9558,
+    "pieceHFrac": 0.907,
+    "pieceCxFrac": 0.5211,
+    "pieceCyFrac": 0.5
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9921,
+    "pieceHFrac": 0.9896,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5017
+   }
+  },
+  "751": {
+   "default": {
+    "pieceWFrac": 0.9963,
+    "pieceHFrac": 0.9912,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "761": {
+   "default": {
+    "pieceWFrac": 0.9936,
+    "pieceHFrac": 0.9943,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "764": {
+   "back": {
+    "pieceWFrac": 0.9991,
+    "pieceHFrac": 0.9985,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4993
+   },
+   "front": {
+    "pieceWFrac": 0.9991,
+    "pieceHFrac": 0.9985,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "769": {
+   "front": {
+    "pieceWFrac": 0.9808,
+    "pieceHFrac": 0.9959,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4991
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5951,
+    "pieceHFrac": 0.675,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6599
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5969,
+    "pieceHFrac": 0.675,
+    "pieceCxFrac": 0.5009,
+    "pieceCyFrac": 0.6599
+   },
+   "back": {
+    "pieceWFrac": 0.9495,
+    "pieceHFrac": 0.7799,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.6082
+   }
+  },
+  "779": {
+   "default": {
+    "pieceWFrac": 0.9956,
+    "pieceHFrac": 0.9811,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4991
+   }
+  },
+  "781": {
+   "back": {
+    "pieceWFrac": 0.8348,
+    "pieceHFrac": 0.8401,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5779
+   },
+   "front": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.845,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5755
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4808,
+    "pieceHFrac": 0.6911,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.6518
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4822,
+    "pieceHFrac": 0.6922,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6523
+   }
+  },
+  "784": {
+   "front": {
+    "pieceWFrac": 0.617,
+    "pieceHFrac": 0.6838,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.3543
+   },
+   "back": {
+    "pieceWFrac": 0.601,
+    "pieceHFrac": 0.5971,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4555
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9941,
+    "pieceHFrac": 0.9941,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.499
+   }
+  },
+  "788": {
+   "default": {
+    "pieceWFrac": 0.9952,
+    "pieceHFrac": 0.9927,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4963
+   }
+  },
+  "791": {
+   "back": {
+    "pieceWFrac": 0.9038,
+    "pieceHFrac": 0.9825,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5034
+   },
+   "front": {
+    "pieceWFrac": 0.9038,
+    "pieceHFrac": 0.9825,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5034
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5249,
+    "pieceHFrac": 0.7706,
+    "pieceCxFrac": 0.5071,
+    "pieceCyFrac": 0.6032
+   },
+   "label_inside": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 0.991,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5249,
+    "pieceHFrac": 0.7706,
+    "pieceCxFrac": 0.4919,
+    "pieceCyFrac": 0.6032
+   }
+  },
+  "792": {
+   "back": {
+    "pieceWFrac": 0.8846,
+    "pieceHFrac": 0.818,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5603
+   },
+   "front": {
+    "pieceWFrac": 0.9849,
+    "pieceHFrac": 0.7543,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5629
+   },
+   "details": {
+    "pieceWFrac": 0.1737,
+    "pieceHFrac": 0.2518,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.1589
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9856,
+    "pieceHFrac": 0.979,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.491
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.6658,
+    "pieceHFrac": 0.7077,
+    "pieceCxFrac": 0.5025,
+    "pieceCyFrac": 0.6103
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.664,
+    "pieceHFrac": 0.7053,
+    "pieceCxFrac": 0.4965,
+    "pieceCyFrac": 0.6099
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4961
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4961
+   }
+  },
+  "793": {
+   "default": {
+    "pieceWFrac": 0.9956,
+    "pieceHFrac": 0.9942,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.4992
+   }
+  },
+  "794": {
+   "front": {
+    "pieceWFrac": 0.9992,
+    "pieceHFrac": 0.9944,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5
+   },
+   "back": {
+    "pieceWFrac": 0.9992,
+    "pieceHFrac": 0.9944,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "798": {
+   "default": {
+    "pieceWFrac": 0.9956,
+    "pieceHFrac": 0.9941,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "799": {
+   "default": {
+    "pieceWFrac": 0.9637,
+    "pieceHFrac": 0.9812,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "801": {
+   "back": {
+    "pieceWFrac": 0.7054,
+    "pieceHFrac": 0.9566,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5161
+   },
+   "details": {
+    "pieceWFrac": 0.2471,
+    "pieceHFrac": 0.7776,
+    "pieceCxFrac": 0.5038,
+    "pieceCyFrac": 0.4172
+   },
+   "front": {
+    "pieceWFrac": 0.7239,
+    "pieceHFrac": 0.9556,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5167
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4038,
+    "pieceHFrac": 0.5257,
+    "pieceCxFrac": 0.4875,
+    "pieceCyFrac": 0.537
+   },
+   "label_outside": {
+    "pieceWFrac": 0.9933,
+    "pieceHFrac": 0.9951,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5018
+   },
+   "pocket": {
+    "pieceWFrac": 0.4387,
+    "pieceHFrac": 0.7817,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5016,
+    "anchor": {
+     "relativeTo": "front",
+     "dxFrac": 0,
+     "dyFrac": -0.0151
+    }
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.3788,
+    "pieceHFrac": 0.5298,
+    "pieceCxFrac": 0.4989,
+    "pieceCyFrac": 0.539
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9919,
+    "pieceHFrac": 0.9839,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.504
+   }
+  },
+  "805": {
+   "front": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "827": {
+   "back": {
+    "pieceWFrac": 0.8713,
+    "pieceHFrac": 0.9652,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5109
+   },
+   "details": {
+    "pieceWFrac": 0.2405,
+    "pieceHFrac": 0.3323,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.1835
+   },
+   "front": {
+    "pieceWFrac": 0.9646,
+    "pieceHFrac": 0.7336,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.6231
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9957,
+    "pieceHFrac": 0.9949,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.4992
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4625,
+    "pieceHFrac": 0.7445,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.6055
+   },
+   "pocket": {
+    "pieceWFrac": 0.1742,
+    "pieceHFrac": 0.839,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.503
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4625,
+    "pieceHFrac": 0.7433,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.6061
+   }
+  },
+  "828": {
+   "front": {
+    "pieceWFrac": 0.9547,
+    "pieceHFrac": 0.6892,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.6201
+   },
+   "back": {
+    "pieceWFrac": 0.6614,
+    "pieceHFrac": 0.922,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.486
+   },
+   "details": {
+    "pieceWFrac": 0.2433,
+    "pieceHFrac": 0.3514,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.1913
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5893,
+    "pieceHFrac": 0.7418,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.6124
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.59,
+    "pieceHFrac": 0.7418,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6091
+   },
+   "pocket": {
+    "pieceWFrac": 0.175,
+    "pieceHFrac": 0.7555,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4986
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9947,
+    "pieceHFrac": 0.9874,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "829": {
+   "back": {
+    "pieceWFrac": 0.6719,
+    "pieceHFrac": 0.9237,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5289
+   },
+   "front": {
+    "pieceWFrac": 0.6607,
+    "pieceHFrac": 0.9853,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4994
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9938,
+    "pieceHFrac": 0.9874,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "830": {
+   "back": {
+    "pieceWFrac": 0.6826,
+    "pieceHFrac": 0.7819,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4945
+   },
+   "front": {
+    "pieceWFrac": 0.6877,
+    "pieceHFrac": 0.8595,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.439
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9966,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "835": {
+   "back": {
+    "pieceWFrac": 0.9666,
+    "pieceHFrac": 0.9708,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5011
+   },
+   "front": {
+    "pieceWFrac": 0.8914,
+    "pieceHFrac": 0.7621,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.6055
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "836": {
+   "back": {
+    "pieceWFrac": 0.6141,
+    "pieceHFrac": 0.7573,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5923
+   },
+   "front": {
+    "pieceWFrac": 0.9787,
+    "pieceHFrac": 0.745,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5638
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9952,
+    "pieceHFrac": 0.9878,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4939
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.3971,
+    "pieceHFrac": 0.712,
+    "pieceCxFrac": 0.5013,
+    "pieceCyFrac": 0.5933
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9896,
+    "pieceHFrac": 0.9896,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4961
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9896,
+    "pieceHFrac": 0.9896,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4961
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.3971,
+    "pieceHFrac": 0.712,
+    "pieceCxFrac": 0.4983,
+    "pieceCyFrac": 0.5933
+   }
+  },
+  "837": {
+   "default": {
+    "pieceWFrac": 0.9993,
+    "pieceHFrac": 0.9977,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "848": {
+   "default": {
+    "pieceWFrac": 0.9931,
+    "pieceHFrac": 0.9832,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5017
+   }
+  },
+  "850": {
+   "front": {
+    "pieceWFrac": 0.9962,
+    "pieceHFrac": 0.8982,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5471
+   }
+  },
+  "853": {
+   "default": {
+    "pieceWFrac": 0.9979,
+    "pieceHFrac": 0.9975,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4992
+   }
+  },
+  "855": {
+   "back": {
+    "pieceWFrac": 0.936,
+    "pieceHFrac": 0.8024,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5967
+   },
+   "front": {
+    "pieceWFrac": 0.9544,
+    "pieceHFrac": 0.9936,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5011
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.6901,
+    "pieceHFrac": 0.2553,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5208
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.6885,
+    "pieceHFrac": 0.2553,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5208
+   }
+  },
+  "858": {
+   "back": {
+    "pieceWFrac": 0.7391,
+    "pieceHFrac": 0.8012,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5964
+   },
+   "front": {
+    "pieceWFrac": 0.9958,
+    "pieceHFrac": 0.9948,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4996
+   }
+  },
+  "859": {
+   "back": {
+    "pieceWFrac": 0.9723,
+    "pieceHFrac": 0.8086,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5942
+   },
+   "front": {
+    "pieceWFrac": 0.9896,
+    "pieceHFrac": 0.9962,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5004
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.4744,
+    "pieceHFrac": 0.6061,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.6954
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.4729,
+    "pieceHFrac": 0.6061,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6954
+   }
+  },
+  "860": {
+   "back": {
+    "pieceWFrac": 0.9406,
+    "pieceHFrac": 0.8253,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5835
+   },
+   "front": {
+    "pieceWFrac": 0.9698,
+    "pieceHFrac": 0.9938,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4992
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.5994,
+    "pieceHFrac": 0.6083,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.692
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.5994,
+    "pieceHFrac": 0.6083,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.692
+   }
+  },
+  "870": {
+   "bottom_back": {
+    "pieceWFrac": 0.6499,
+    "pieceHFrac": 0.5418,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.409
+   },
+   "bottom_front": {
+    "pieceWFrac": 0.3912,
+    "pieceHFrac": 0.2861,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.267
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.5741,
+    "pieceHFrac": 0.1324,
+    "pieceCxFrac": 0.5131,
+    "pieceCyFrac": 0.4459
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9806,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4981
+   },
+   "top_back": {
+    "pieceWFrac": 0.8258,
+    "pieceHFrac": 0.2901,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4965
+   },
+   "top_front": {
+    "pieceWFrac": 0.8945,
+    "pieceHFrac": 0.4276,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5035
+   },
+   "lining_top": {
+    "pieceWFrac": 0.7086,
+    "pieceHFrac": 0.1385,
+    "pieceCxFrac": 0.4894,
+    "pieceCyFrac": 0.5076
+   }
+  },
+  "871": {
+   "label_inside": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9845,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5
+   },
+   "top_back": {
+    "pieceWFrac": 0.8258,
+    "pieceHFrac": 0.2901,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4965
+   },
+   "top_front": {
+    "pieceWFrac": 0.8945,
+    "pieceHFrac": 0.4276,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5035
+   },
+   "lining_top": {
+    "pieceWFrac": 0.7086,
+    "pieceHFrac": 0.1385,
+    "pieceCxFrac": 0.4894,
+    "pieceCyFrac": 0.5076
+   }
+  },
+  "872": {
+   "label_inside": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9806,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.4981
+   },
+   "lining_bottom": {
+    "pieceWFrac": 0.5741,
+    "pieceHFrac": 0.1324,
+    "pieceCxFrac": 0.5131,
+    "pieceCyFrac": 0.4459
+   },
+   "bottom_back": {
+    "pieceWFrac": 0.6499,
+    "pieceHFrac": 0.5428,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4095
+   },
+   "bottom_front": {
+    "pieceWFrac": 0.3912,
+    "pieceHFrac": 0.2861,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.267
+   }
+  },
+  "874": {
+   "front": {
+    "pieceWFrac": 0.9092,
+    "pieceHFrac": 0.9092,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.499
+   }
+  },
+  "875": {
+   "front": {
+    "pieceWFrac": 0.997,
+    "pieceHFrac": 0.9933,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "881": {
+   "front": {
+    "pieceWFrac": 0.7721,
+    "pieceHFrac": 0.6604,
+    "pieceCxFrac": 0.4989,
+    "pieceCyFrac": 0.4285
+   }
+  },
+  "882": {
+   "leg_back_left": {
+    "pieceWFrac": 0.9826,
+    "pieceHFrac": 0.9962,
+    "pieceCxFrac": 0.4976,
+    "pieceCyFrac": 0.5
+   },
+   "leg_back_right": {
+    "pieceWFrac": 0.9778,
+    "pieceHFrac": 0.9962,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "leg_front_left": {
+    "pieceWFrac": 0.9826,
+    "pieceHFrac": 0.9962,
+    "pieceCxFrac": 0.4976,
+    "pieceCyFrac": 0.5
+   },
+   "leg_front_right": {
+    "pieceWFrac": 0.9778,
+    "pieceHFrac": 0.9962,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "883": {
+   "front": {
+    "pieceWFrac": 0.9968,
+    "pieceHFrac": 0.9976,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "884": {
+   "front": {
+    "pieceWFrac": 0.9955,
+    "pieceHFrac": 0.9919,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4992
+   }
+  },
+  "885": {
+   "front": {
+    "pieceWFrac": 0.9213,
+    "pieceHFrac": 0.8526,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.458
+   }
+  },
+  "886": {
+   "front": {
+    "pieceWFrac": 0.995,
+    "pieceHFrac": 0.9957,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "887": {
+   "label_inside": {
+    "pieceWFrac": 0.9933,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.5013
+   },
+   "back": {
+    "pieceWFrac": 0.9809,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.643
+   },
+   "front": {
+    "pieceWFrac": 0.9809,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.643
+   },
+   "details": {
+    "pieceWFrac": 0.911,
+    "pieceHFrac": 0.192,
+    "pieceCxFrac": 0.5345,
+    "pieceCyFrac": 0.586
+   }
+  },
+  "888": {
+   "label_inside": {
+    "pieceWFrac": 0.9981,
+    "pieceHFrac": 0.9941,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.497
+   },
+   "front": {
+    "pieceWFrac": 0.9977,
+    "pieceHFrac": 0.9942,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5
+   },
+   "back": {
+    "pieceWFrac": 0.9977,
+    "pieceHFrac": 0.9942,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "889": {
+   "front": {
+    "pieceWFrac": 0.8842,
+    "pieceHFrac": 0.8054,
+    "pieceCxFrac": 0.5008,
+    "pieceCyFrac": 0.4475
+   }
+  },
+  "890": {
+   "front": {
+    "pieceWFrac": 0.9616,
+    "pieceHFrac": 0.9692,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "891": {
+   "front": {
+    "pieceWFrac": 0.9631,
+    "pieceHFrac": 0.9809,
+    "pieceCxFrac": 0.4979,
+    "pieceCyFrac": 0.5005
+   }
+  },
+  "894": {
+   "front": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 0.6399,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.68
+   }
+  },
+  "896": {
+   "back": {
+    "pieceWFrac": 0.9392,
+    "pieceHFrac": 0.8666,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5593
+   },
+   "front": {
+    "pieceWFrac": 0.9392,
+    "pieceHFrac": 0.9061,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5203
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9966,
+    "pieceHFrac": 0.9891,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4987
+   }
+  },
+  "900": {
+   "front": {
+    "pieceWFrac": 0.8627,
+    "pieceHFrac": 0.8627,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "901": {
+   "back": {
+    "pieceWFrac": 0.6913,
+    "pieceHFrac": 0.7008,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5291
+   },
+   "front": {
+    "pieceWFrac": 0.6913,
+    "pieceHFrac": 0.7008,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5291
+   }
+  },
+  "902": {
+   "front": {
+    "pieceWFrac": 0.5238,
+    "pieceHFrac": 0.3711,
+    "pieceCxFrac": 0.5006,
+    "pieceCyFrac": 0.4053
+   }
+  },
+  "904": {
+   "front": {
+    "pieceWFrac": 0.4633,
+    "pieceHFrac": 0.1254,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.8961
+   }
+  },
+  "905": {
+   "front": {
+    "pieceWFrac": 0.9964,
+    "pieceHFrac": 0.9964,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "906": {
+   "front": {
+    "pieceWFrac": 0.9927,
+    "pieceHFrac": 0.9934,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4976
+   }
+  },
+  "908": {
+   "front": {
+    "pieceWFrac": 0.9664,
+    "pieceHFrac": 0.9531,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "909": {
+   "front": {
+    "pieceWFrac": 0.997,
+    "pieceHFrac": 0.995,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "918": {
+   "back": {
+    "pieceWFrac": 0.976,
+    "pieceHFrac": 0.9537,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.4955
+   },
+   "front": {
+    "pieceWFrac": 0.597,
+    "pieceHFrac": 0.8097,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5675
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.546,
+    "pieceHFrac": 0.5784,
+    "pieceCxFrac": 0.501,
+    "pieceCyFrac": 0.5228
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9909,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4961
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.546,
+    "pieceHFrac": 0.576,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.524
+   },
+   "yoke": {
+    "pieceWFrac": 0.65,
+    "pieceHFrac": 0.7536,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "919": {
+   "back": {
+    "pieceWFrac": 0.9934,
+    "pieceHFrac": 0.9525,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5216
+   },
+   "left_hood": {
+    "pieceWFrac": 0.9562,
+    "pieceHFrac": 0.8929,
+    "pieceCxFrac": 0.4805,
+    "pieceCyFrac": 0.4526
+   },
+   "right_hood": {
+    "pieceWFrac": 0.9586,
+    "pieceHFrac": 0.8921,
+    "pieceCxFrac": 0.5195,
+    "pieceCyFrac": 0.4541
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.624,
+    "pieceHFrac": 0.9148,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5285
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.6246,
+    "pieceHFrac": 0.9155,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5285
+   },
+   "front": {
+    "pieceWFrac": 0.9925,
+    "pieceHFrac": 0.9442,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5254
+   }
+  },
+  "920": {
+   "back": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9544,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5198
+   },
+   "collar": {
+    "pieceWFrac": 0.9956,
+    "pieceHFrac": 0.9765,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5
+   },
+   "front": {
+    "pieceWFrac": 0.9909,
+    "pieceHFrac": 0.9499,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5228
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.6325,
+    "pieceHFrac": 0.8429,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5054
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.6325,
+    "pieceHFrac": 0.8429,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5054
+   }
+  },
+  "924": {
+   "front": {
+    "pieceWFrac": 0.9918,
+    "pieceHFrac": 0.9944,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "935": {
+   "default": {
+    "pieceWFrac": 0.9949,
+    "pieceHFrac": 0.9914,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4981
+   }
+  },
+  "938": {
+   "default": {
+    "pieceWFrac": 0.9951,
+    "pieceHFrac": 0.9963,
+    "pieceCxFrac": 0.4988,
+    "pieceCyFrac": 0.4996
+   }
+  },
+  "944": {
+   "collar": {
+    "pieceWFrac": 0.9963,
+    "pieceHFrac": 0.9581,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4952
+   },
+   "back": {
+    "pieceWFrac": 0.9931,
+    "pieceHFrac": 0.9591,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5166
+   },
+   "front": {
+    "pieceWFrac": 0.994,
+    "pieceHFrac": 0.9441,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5255
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.8394,
+    "pieceHFrac": 0.7905,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5991
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.8394,
+    "pieceHFrac": 0.7894,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5989
+   }
+  },
+  "963": {
+   "bottom": {
+    "pieceWFrac": 0.9755,
+    "pieceHFrac": 0.9561,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4976
+   },
+   "front": {
+    "pieceWFrac": 0.9393,
+    "pieceHFrac": 0.9772,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5027
+   },
+   "top": {
+    "pieceWFrac": 0.9943,
+    "pieceHFrac": 0.9268,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4967
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9933,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.5013
+   }
+  },
+  "964": {
+   "back": {
+    "pieceWFrac": 0.3778,
+    "pieceHFrac": 0.0513,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.9551
+   },
+   "front": {
+    "pieceWFrac": 0.9707,
+    "pieceHFrac": 0.154,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.0947
+   }
+  },
+  "973": {
+   "default": {
+    "pieceWFrac": 0.998,
+    "pieceHFrac": 0.9983,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "1367": {
+   "back": {
+    "pieceWFrac": 0.928,
+    "pieceHFrac": 0.9892,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5004
+   },
+   "front": {
+    "pieceWFrac": 0.8309,
+    "pieceHFrac": 0.9314,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5293
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9914,
+    "pieceHFrac": 0.9871,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.4978
+   },
+   "sleeve_left": {
+    "pieceWFrac": 0.619,
+    "pieceHFrac": 0.7607,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5707
+   },
+   "sleeve_right": {
+    "pieceWFrac": 0.619,
+    "pieceHFrac": 0.7607,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5707
+   },
+   "label_outside_back": {
+    "pieceWFrac": 0.9838,
+    "pieceHFrac": 0.9857,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.4961
+   },
+   "label_outside_front": {
+    "pieceWFrac": 0.9838,
+    "pieceHFrac": 0.9857,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.4961
+   }
+  },
+  "1399": {
+   "default": {
+    "pieceWFrac": 0.931,
+    "pieceHFrac": 0.931,
+    "pieceCxFrac": 0.5335,
+    "pieceCyFrac": 0.5335
+   }
+  },
+  "1400": {
+   "front": {
+    "pieceWFrac": 0.9395,
+    "pieceHFrac": 0.9224,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.499
+   }
+  },
+  "1414": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9417,
+    "pieceHFrac": 0.892,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.549
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.943,
+    "pieceHFrac": 0.992,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.7876,
+    "pieceHFrac": 0.7232,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6088
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.7876,
+    "pieceHFrac": 0.7232,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6088
+   }
+  },
+  "1415": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.8359,
+    "pieceHFrac": 0.869,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.5495
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.8385,
+    "pieceHFrac": 0.971,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.789,
+    "pieceHFrac": 0.7116,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6238
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.789,
+    "pieceHFrac": 0.7116,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6238
+   }
+  },
+  "1416": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9324,
+    "pieceHFrac": 0.807,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.5745
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9324,
+    "pieceHFrac": 0.907,
+    "pieceCxFrac": 0.4987,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.779,
+    "pieceHFrac": 0.6638,
+    "pieceCxFrac": 0.4975,
+    "pieceCyFrac": 0.6203
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.779,
+    "pieceHFrac": 0.6638,
+    "pieceCxFrac": 0.5025,
+    "pieceCyFrac": 0.6203
+   }
+  },
+  "1417": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9245,
+    "pieceHFrac": 0.854,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.554
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9245,
+    "pieceHFrac": 0.951,
+    "pieceCxFrac": 0.4986,
+    "pieceCyFrac": 0.4885
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.661,
+    "pieceHFrac": 0.4892,
+    "pieceCxFrac": 0.4985,
+    "pieceCyFrac": 0.6393
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.663,
+    "pieceHFrac": 0.4871,
+    "pieceCxFrac": 0.5025,
+    "pieceCyFrac": 0.6403
+   }
+  },
+  "1418": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9444,
+    "pieceHFrac": 0.8844,
+    "pieceCxFrac": 0.4891,
+    "pieceCyFrac": 0.5489
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9491,
+    "pieceHFrac": 0.8941,
+    "pieceCxFrac": 0.4899,
+    "pieceCyFrac": 0.5441
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_panel_dtfabric": {
+    "pieceWFrac": 0.2699,
+    "pieceHFrac": 0.124,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.507
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.5591,
+    "pieceHFrac": 0.735,
+    "pieceCxFrac": 0.4721,
+    "pieceCyFrac": 0.5255
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.5631,
+    "pieceHFrac": 0.735,
+    "pieceCxFrac": 0.4662,
+    "pieceCyFrac": 0.5255
+   }
+  },
+  "1419": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.7943,
+    "pieceHFrac": 0.9389,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.5036
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.7944,
+    "pieceHFrac": 0.9184,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5146
+   },
+   "hood_dtfabric": {
+    "pieceWFrac": 0.704,
+    "pieceHFrac": 0.939,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5015
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 1,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   },
+   "label_panel_dtfabric": {
+    "pieceWFrac": 0.221,
+    "pieceHFrac": 0.145,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.438,
+    "pieceHFrac": 0.589,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4225
+   },
+   "pocket_dtfabric": {
+    "pieceWFrac": 0.473,
+    "pieceHFrac": 0.284,
+    "pieceCxFrac": 0.5005,
+    "pieceCyFrac": 0.504,
+    "anchor": {
+     "relativeTo": "front_dtfabric",
+     "dxFrac": 0.0005,
+     "dyFrac": -0.0106
+    }
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.438,
+    "pieceHFrac": 0.589,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4225
+   }
+  },
+  "1423": {
+   "front": {
+    "pieceWFrac": 0.7114,
+    "pieceHFrac": 0.7289,
+    "pieceCxFrac": 0.4958,
+    "pieceCyFrac": 0.4998
+   }
+  },
+  "1426": {
+   "front": {
+    "pieceWFrac": 0.9982,
+    "pieceHFrac": 1,
+    "pieceCxFrac": 0.4991,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "1427": {
+   "front": {
+    "pieceWFrac": 0.8658,
+    "pieceHFrac": 0.8603,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5015
+   }
+  },
+  "1428": {
+   "front": {
+    "pieceWFrac": 0.7929,
+    "pieceHFrac": 0.9421,
+    "pieceCxFrac": 0.4145,
+    "pieceCyFrac": 0.4724
+   }
+  },
+  "1429": {
+   "front": {
+    "pieceWFrac": 0.901,
+    "pieceHFrac": 0.7415,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4993
+   }
+  },
+  "1467": {
+   "front": {
+    "pieceWFrac": 0.9975,
+    "pieceHFrac": 0.9975,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4995
+   }
+  },
+  "1474": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.8064,
+    "pieceHFrac": 0.9365,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.518
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.8137,
+    "pieceHFrac": 0.6066,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.6818
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.985,
+    "pieceHFrac": 0.9789,
+    "pieceCxFrac": 0.497,
+    "pieceCyFrac": 0.497
+   }
+  },
+  "1475": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.8082,
+    "pieceHFrac": 0.9127,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.5217
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.8144,
+    "pieceHFrac": 0.6308,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.6048
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.9924,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "1476": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9655,
+    "pieceHFrac": 0.8902,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.547
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9655,
+    "pieceHFrac": 0.8933,
+    "pieceCxFrac": 0.4998,
+    "pieceCyFrac": 0.5444
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.5269,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4999,
+    "pieceCyFrac": 0.6021
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.5277,
+    "pieceHFrac": 0.666,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.6021
+   }
+  },
+  "1477": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.7392,
+    "pieceHFrac": 0.7148,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.5114
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.7332,
+    "pieceHFrac": 0.6559,
+    "pieceCxFrac": 0.4997,
+    "pieceCyFrac": 0.4819
+   },
+   "top_back_dtfabric": {
+    "pieceWFrac": 0.8627,
+    "pieceHFrac": 0.7208,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.6199
+   },
+   "top_front_dtfabric": {
+    "pieceWFrac": 0.8595,
+    "pieceHFrac": 0.617,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.667
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.9902,
+    "pieceHFrac": 0.9834,
+    "pieceCxFrac": 0.4989,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "1478": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.8301,
+    "pieceHFrac": 0.9636,
+    "pieceCxFrac": 0.4983,
+    "pieceCyFrac": 0.5111
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.8386,
+    "pieceHFrac": 0.7844,
+    "pieceCxFrac": 0.4992,
+    "pieceCyFrac": 0.6007
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.9917,
+    "pieceHFrac": 0.9804,
+    "pieceCxFrac": 0.4996,
+    "pieceCyFrac": 0.4977
+   }
+  },
+  "1479": {
+   "front_dtfabric": {
+    "pieceWFrac": 0.634,
+    "pieceHFrac": 0.9497,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5038
+   },
+   "back_dtfabric": {
+    "pieceWFrac": 0.711,
+    "pieceHFrac": 0.8845,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4848
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9879,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "1480": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9458,
+    "pieceHFrac": 0.8799,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5139
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9514,
+    "pieceHFrac": 0.8796,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5253
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.994,
+    "pieceHFrac": 0.9894,
+    "pieceCxFrac": 0.4994,
+    "pieceCyFrac": 0.4977
+   },
+   "label_outside_dtfabric": {
+    "pieceWFrac": 0.9928,
+    "pieceHFrac": 0.9948,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "1481": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9789,
+    "pieceHFrac": 0.7599,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.4408
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9799,
+    "pieceHFrac": 0.7531,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.4868
+   },
+   "label_inside_dtfabric": {
+    "pieceWFrac": 0.9791,
+    "pieceHFrac": 0.973,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5
+   }
+  },
+  "1482": {
+   "back_dtfabric": {
+    "pieceWFrac": 0.9436,
+    "pieceHFrac": 0.8873,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.5383
+   },
+   "front_dtfabric": {
+    "pieceWFrac": 0.9451,
+    "pieceHFrac": 0.795,
+    "pieceCxFrac": 0.4993,
+    "pieceCyFrac": 0.5844
+   },
+   "sleeve_left_dtfabric": {
+    "pieceWFrac": 0.7115,
+    "pieceHFrac": 0.6409,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6393
+   },
+   "sleeve_right_dtfabric": {
+    "pieceWFrac": 0.7115,
+    "pieceHFrac": 0.6409,
+    "pieceCxFrac": 0.5,
+    "pieceCyFrac": 0.6393
+   }
+  },
+  "1483": {
+   "back": {
+    "pieceWFrac": 0.922,
+    "pieceHFrac": 0.8362,
+    "pieceCxFrac": 0.499,
+    "pieceCyFrac": 0.5222
+   },
+   "front": {
+    "pieceWFrac": 0.749,
+    "pieceHFrac": 0.8203,
+    "pieceCxFrac": 0.4995,
+    "pieceCyFrac": 0.5332
+   },
+   "pocket": {
+    "pieceWFrac": 0.177,
+    "pieceHFrac": 0.8981,
+    "pieceCxFrac": 0.4935,
+    "pieceCyFrac": 0.4936
+   },
+   "label_inside": {
+    "pieceWFrac": 0.9966,
+    "pieceHFrac": 0.9908,
+    "pieceCxFrac": 0.5002,
+    "pieceCyFrac": 0.4987
+   }
+  }
+ },
+ "meta": {
+  "1": {
+   "title": "Enhanced Matte Paper Poster (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "2": {
+   "title": "Enhanced Matte Paper Framed Poster (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "3": {
+   "title": "Canvas (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "12": {
+   "title": "Unisex Basic Softstyle T-Shirt | Gildan 64000",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "19": {
+   "title": "White Glossy Mug",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "37": {
+   "title": "Unisex Lightweight T-Shirt | Gildan 980",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "57": {
+   "title": "Unisex Long Sleeve Shirt | Gildan 2400",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "71": {
+   "title": "Unisex Staple T-Shirt | Bella + Canvas 3001",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "77": {
+   "title": "Snapback | Otto Cap 125-978",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "81": {
+   "title": "Knit Beanie | Otto Cap 82-480",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "83": {
+   "title": "All-Over Print Basic Pillow",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "84": {
+   "title": "All-Over Print Tote Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 1
+  },
+  "89": {
+   "title": "All-Over Print Basic Pillow Case",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "91": {
+   "title": "Flat Bill Cap | Yupoong 6007",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "92": {
+   "title": "5 Panel Cap | Yupoong 7005",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "93": {
+   "title": "Pom-Pom Knit Cap | Sportsman SP15",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "99": {
+   "title": "Classic Snapback | Yupoong 6089M",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "100": {
+   "title": "5 Panel Trucker Cap | Yupoong 6006",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "108": {
+   "title": "Men's Fitted T-Shirt | Next Level 3600",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "116": {
+   "title": "Men's Fitted Long Sleeve Shirt | Next Level 3601",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "140": {
+   "title": "Closed-Back Structured Cap | Flexfit 6277",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "145": {
+   "title": "Unisex Crew Neck Sweatshirt | Gildan 18000",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "146": {
+   "title": "Unisex Heavy Blend Hoodie | Gildan 18500",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "162": {
+   "title": "Unisex Tri-Blend T-Shirt | Bella + Canvas 3413",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "163": {
+   "title": "Women's Racerback Tank Top | Next Level 6733",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "171": {
+   "title": "Premium Luster Photo Paper Poster (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "172": {
+   "title": "Premium Luster Photo Paper Framed Poster (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "181": {
+   "title": "Clear Case for iPhone®",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "186": {
+   "title": "Black Foot Sublimated Socks",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "189": {
+   "title": "All-Over Print Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "198": {
+   "title": "All-Over Print Bodycon Dress",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "200": {
+   "title": "All-Over Print Crop Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "202": {
+   "title": "All-Over Print Women's Tank Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "206": {
+   "title": "Classic Dad Hat | Yupoong 6245CM",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "214": {
+   "title": "All-Over Print Premium Pillow",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "215": {
+   "title": "All-Over Print Premium Pillow Case",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "221": {
+   "title": "All-Over Print Capri Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "223": {
+   "title": "Unisex V-Neck Tee | Bella + Canvas 3005",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "233": {
+   "title": "Unisex 3/4 Sleeve Raglan Shirt | Tultex 245",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "234": {
+   "title": "Baby Short Sleeve Bodysuit | Rabbit Skins 4400",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "242": {
+   "title": "All-Over Print Yoga Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "248": {
+   "title": "Men’s Staple Tank Top | Bella + Canvas 3480",
+   "techniques": [
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "252": {
+   "title": "Retro Trucker Hat | Yupoong 6606",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "253": {
+   "title": "Bucket Hat | Flexfit 5003",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "257": {
+   "title": "All-Over Print Men's Crew Neck T-Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "259": {
+   "title": "Beach Towel",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "261": {
+   "title": "All-Over Print Women's Crew Neck T-Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "262": {
+   "title": "All-Over Print Drawstring Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 1
+  },
+  "265": {
+   "title": "Visor | Flexfit 8110",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "266": {
+   "title": "Cuffed Beanie | Yupoong 1501KC",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "267": {
+   "title": "Clear Case for Samsung®",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "268": {
+   "title": "Enhanced Matte Paper Poster (cm)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "271": {
+   "title": "Women's Muscle Tank | Bella + Canvas 8803",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "272": {
+   "title": "All-Over Print One-Piece Swimsuit",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "274": {
+   "title": "All-Over Print Large Tote Bag w/ Pocket",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "276": {
+   "title": "All-Over Print Men's Tank Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "279": {
+   "title": "All-Over Print Backpack",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "280": {
+   "title": "All-Over Print Yoga Capri Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "281": {
+   "title": "All-Over Print Yoga Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "282": {
+   "title": "All-Over Print Sports Bra",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "288": {
+   "title": "All-Over Print Men's Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "294": {
+   "title": "Unisex Pullover Hoodie | Bella + Canvas 3719",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "297": {
+   "title": "Embroidered Apron | Liberty Bags 5502",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "298": {
+   "title": "All-Over Print Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "300": {
+   "title": "Black Glossy Mug",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "301": {
+   "title": "All-Over Print Men's Rash Guard",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "302": {
+   "title": "All-Over Print Women's Rash Guard",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "303": {
+   "title": "All-Over Print Crop Tee",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "304": {
+   "title": "Enhanced Matte Paper Framed Poster (cm)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "305": {
+   "title": "Baby Staple Tee | Bella + Canvas 3001B",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "306": {
+   "title": "Toddler Staple Tee | Bella + Canvas 3001T",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "307": {
+   "title": "Youth Staple Tee | Bella + Canvas 3001Y",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "308": {
+   "title": "Baby Short Sleeve One Piece | Bella + Canvas 100B",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "314": {
+   "title": "All-Over Print Skater Skirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "315": {
+   "title": "All-Over Print Skater Dress",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "317": {
+   "title": "Women's Cropped Hoodie | Bella + Canvas 7502",
+   "techniques": [
+    "embroidery",
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "318": {
+   "title": "Men’s Champion Crewneck Sweatshirt | S149",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "320": {
+   "title": "All-Over Print Recycled Unisex Sweatshirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "322": {
+   "title": "All-Over Print Kids Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "323": {
+   "title": "All-Over Print Youth Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "327": {
+   "title": "Vintage Cap | Otto Cap 18-1248",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "328": {
+   "title": "All-Over Print Men's Athletic T-Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "329": {
+   "title": "All-Over Print Women's Athletic T-Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "330": {
+   "title": "All-Over Print Unisex Athletic Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "332": {
+   "title": "All-Over Print Unisex Athletic Long Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "334": {
+   "title": "All-Over Print Plus Size Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "340": {
+   "title": "Men’s Premium Polo Shirt | Port Authority K500",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "342": {
+   "title": "Unisex Joggers | Jerzees 975MPR",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "345": {
+   "title": "All-Over Print Kids Swimsuit",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "346": {
+   "title": "All-Over Print Youth Swimsuit",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "350": {
+   "title": "All-Over Print Fanny Pack",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "356": {
+   "title": "Unisex Long Sleeve Tee | Bella + Canvas 3501",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "358": {
+   "title": "Kiss-Cut Stickers",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "359": {
+   "title": "Sublimation Flip Flops",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "360": {
+   "title": "Women's Relaxed T-Shirt | Bella + Canvas 6400",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "365": {
+   "title": "Unisex Muscle Shirt | Bella + Canvas 3483",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "366": {
+   "title": "Matte Paper Framed Poster With Mat (cm)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "367": {
+   "title": "Eco Tote Bag | Econscious EC8000",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "368": {
+   "title": "All-Over Print Kids Rash Guard",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "369": {
+   "title": "All-Over Print Youth Rash Guard",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "373": {
+   "title": "Men's Champion Heritage T-Shirt | T105",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "374": {
+   "title": "Men’s Champion Long Sleeve T-Shirt | CC8C",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "378": {
+   "title": "Large Eco Tote | Econscious EC8001",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "379": {
+   "title": "Bucket Hat I Big Accessories BX003",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "380": {
+   "title": "Unisex Premium Pullover Hoodie | Cotton Heritage M2580",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "382": {
+   "title": "Stainless Steel Water Bottle",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "384": {
+   "title": "All-Over Print Kids Crew Neck T-Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "385": {
+   "title": "All-Over Print Youth Crew Neck T-shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "387": {
+   "title": "All-Over Print Padded Sports Bra",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "388": {
+   "title": "All-Over Print Recycled Unisex Hoodie",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "389": {
+   "title": "All-Over Print Minimalist Backpack",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "390": {
+   "title": "All-Over Print Unisex Bomber Jacket",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "394": {
+   "title": "Laptop Sleeve",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "395": {
+   "title": "Throw Blanket",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "396": {
+   "title": "Distressed Dad Hat | Otto Cap 104-1018",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "399": {
+   "title": "Unisex Champion Packable Anorak | CO200",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "400": {
+   "title": "All-Over Print Recycled Men’s Joggers",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "401": {
+   "title": "All-Over Print Recycled Women’s Joggers",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "403": {
+   "title": "White Ceramic Mug with Color Inside",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "407": {
+   "title": "Enamel Mug",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "411": {
+   "title": "Unisex Premium Sweatshirt | Cotton Heritage M2480",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "412": {
+   "title": "Unisex Fleece Sweatpants | Cotton Heritage M7580",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "420": {
+   "title": "All-Over Print Neck Gaiter",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 1
+  },
+  "422": {
+   "title": "Snapback Trucker Cap | Richardson 112",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "428": {
+   "title": "All-Over Print Boxer Briefs",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "429": {
+   "title": "Youth Baseball Cap | Valucap VC300Y",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "433": {
+   "title": "Standard Postcard",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "438": {
+   "title": "Unisex Classic Tee | Gildan 5000",
+   "techniques": [
+    "embroidery",
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "440": {
+   "title": "Men's Staple T-Shirt | AS Colour 5001",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "449": {
+   "title": "Organic Ribbed Beanie | Atlantis",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "451": {
+   "title": "Pom-Pom Beanie | Beechfield B426",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "456": {
+   "title": "Unisex Organic Cotton Creator 2.0 T-Shirt | Stanley/Stella STTU169",
+   "techniques": [
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "458": {
+   "title": "All-Over Print Beanie",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "462": {
+   "title": "Unisex Denim T-Shirt | Husky CA6689",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "463": {
+   "title": "Denim Hat | Otto Cap 18-204",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "464": {
+   "title": "Unisex Champion Tie-Dye Hoodie | GDS101",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "465": {
+   "title": "All-Over Print Duffle Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "468": {
+   "title": "All-Over Print Recycled High-Waisted Bikini",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "469": {
+   "title": "All-Over Print Recycled Padded Bikini Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "470": {
+   "title": "All-Over Print Recycled High-Waisted Bikini Bottom",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "474": {
+   "title": "Spiral Notebook",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "476": {
+   "title": "Kids Organic Cotton Mini Creator 2.0 T-Shirt | Stanley/Stella STTK184",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "477": {
+   "title": "All-Over Print Recycled Longline Sports Bra",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "479": {
+   "title": "Unisex Essential Eco Cruiser 2.0 Hoodie | Stanley/Stella STSU177",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "481": {
+   "title": "Pastel Baseball Hat | Beechfield B653",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "482": {
+   "title": "Men's Fleece Shorts | Independent Trading Co. IND20SRT",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "483": {
+   "title": "Kids Eco Hoodie | SOL'S 03576",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "489": {
+   "title": "Toddler Jersey T-Shirt | Rabbit Skins 3321",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "490": {
+   "title": "All-Over Print Flag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "491": {
+   "title": "Organic Baseball Cap | Econscious EC7000",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "493": {
+   "title": "Unisex Eco Changer 2.0 Sweatshirt | Stanley/Stella STSU178",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "501": {
+   "title": "Denim Bucket Hat",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "502": {
+   "title": "Embroidered Crew Socks | SOCCO SC200",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "505": {
+   "title": "Kiss-Cut Sticker Sheet",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "506": {
+   "title": "Unisex Organic Sweatshirt | SOL'S 03574",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "507": {
+   "title": "All-Over Print Biker Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "508": {
+   "title": "Men's Premium Heavyweight Tee | Cotton Heritage MC1086",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "511": {
+   "title": "Youth Long Sleeve Tee | Bella + Canvas 3501Y",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "512": {
+   "title": "Organic Cotton Baby Bodysuit | Babybugz BZ10",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "513": {
+   "title": "Men's High Top Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 5
+  },
+  "514": {
+   "title": "All-Over Print T-Shirt Dress",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "515": {
+   "title": "Unisex Oversized Tie-Dye T-Shirt | Shaka Wear SHHTDS",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "516": {
+   "title": "Embroidered Patches",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "518": {
+   "title": "Mouse Pad",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "519": {
+   "title": "Ribbed Knit Beanie | Atlantis",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "525": {
+   "title": "Women's High Top Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 5
+  },
+  "528": {
+   "title": "Organic Denim Tote Bag | Mantis M196",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "530": {
+   "title": "All-Over Print Recycled Scrunchie",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "531": {
+   "title": "Men's Adidas Quarter-Zip Pullover | A401",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "532": {
+   "title": "Corduroy Hat | Beechfield B682",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "533": {
+   "title": "Kids Fleece Hoodie | Cotton Heritage Y2550",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "534": {
+   "title": "Jigsaw Puzzle",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "536": {
+   "title": "Embroidered Premium Sherpa Blanket | Port Authority BP40",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "537": {
+   "title": "Men's Premium Tank Top | Cotton Heritage MC1790",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "541": {
+   "title": "Unisex Pigment-Dyed Sweatpants | Independent Trading Co. PRM50PTPD",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "542": {
+   "title": "Unisex Pigment-Dyed Hoodie | Independent Trading Co. PRM4500",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "543": {
+   "title": "Unisex Eco Raglan Hoodie | SOL'S 03568",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "545": {
+   "title": "All-Over Print Headband",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "547": {
+   "title": "Organic Bucket Hat",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "548": {
+   "title": "Distressed Denim Bucket Hat",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "558": {
+   "title": "All-Over Print Recycled Crossover Leggings with Pockets",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "559": {
+   "title": "All-Over Print Recycled Leggings with Pockets",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "565": {
+   "title": "Organic Cotton Apron | SOL'S 03569",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "568": {
+   "title": "Greeting Card",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "571": {
+   "title": "All-Over Print Recycled Swim Trunks",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "574": {
+   "title": "Men's Slip-On Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "575": {
+   "title": "Women's Slip-On Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "578": {
+   "title": "Men's Lace-Up Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 5
+  },
+  "579": {
+   "title": "Women's Lace-Up Canvas Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 5
+  },
+  "582": {
+   "title": "Unisex Organic Raglan Sweatshirt | SOL'S 03567",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "583": {
+   "title": "Gaming Mouse Pad",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "584": {
+   "title": "Unisex Fleece Zip Up Hoodie | Independent Trading Co. SS4500Z",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "585": {
+   "title": "Stainless Steel Tumbler",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "586": {
+   "title": "Unisex Garment-Dyed Heavyweight T-Shirt | Comfort Colors 1717",
+   "techniques": [
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "588": {
+   "title": "Glossy Metal Print (in)",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "589": {
+   "title": "All-Over Print Long Sleeve Midi Dress",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "593": {
+   "title": "Unisex Garment-Dyed Pocket T-Shirt | Comfort Colors 6030",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "594": {
+   "title": "All-Over Print Gym Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "596": {
+   "title": "Closed-Back Trucker Cap | Flexfit 6511",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "597": {
+   "title": "Men's Slides",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 3
+  },
+  "598": {
+   "title": "Women's Slides",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 3
+  },
+  "601": {
+   "title": "Tough Case for iPhone®",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "602": {
+   "title": "Unisex Midweight Hoodie | Independent Trading Co. SS4500",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "604": {
+   "title": "All-Over Print Unisex Wide-Leg Pants",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "605": {
+   "title": "Rubber Case for AirPods®",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 0
+  },
+  "611": {
+   "title": "Cork-Back Coaster",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "614": {
+   "title": "Framed Canvas (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "615": {
+   "title": "All-Over Print Men's Windbreaker",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "616": {
+   "title": "Thin Canvas (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "618": {
+   "title": "All-Over Print Unisex Track Pants",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "619": {
+   "title": "All-Over Print Women's Cropped Windbreaker",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "627": {
+   "title": "Foam Trucker Hat | Otto Cap 39-165",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "629": {
+   "title": "Unisex Lightweight Zip Up Windbreaker | Independent Trading Co. EXP54LWZ",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "630": {
+   "title": "All-Over Print Bandana",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "631": {
+   "title": "All-Over Print Recycled Long Sleeve Crop Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "632": {
+   "title": "Wine Tumbler",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "634": {
+   "title": "Wooden Ornaments",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 2
+  },
+  "636": {
+   "title": "Women's Crop Top | AS Colour 4062",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "637": {
+   "title": "Waffle Beanie | Richardson 146R",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "638": {
+   "title": "Adidas Dad Hat",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "640": {
+   "title": "Enhanced Matte Paper Poster With Hanger (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "644": {
+   "title": "All-Over Print Recycled Unisex Sports Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "645": {
+   "title": "Glass Jar Soy Wax Candle",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "653": {
+   "title": "Shaker Pint Glass (16 oz)",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "654": {
+   "title": "All-Over Print Reversible Bucket Hat",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "655": {
+   "title": "Unisex Adidas Premium Polo Shirt | GQ3114",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "656": {
+   "title": "Die-Cut Magnets",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "657": {
+   "title": "Men's Athletic Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 3
+  },
+  "658": {
+   "title": "Women's Athletic Shoes",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 3
+  },
+  "659": {
+   "title": "All-Over Print Unisex Button Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "660": {
+   "title": "Set of Pin Buttons",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "661": {
+   "title": "Unisex Basic Windbreaker | SOL'S 32000",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "662": {
+   "title": "Vintage Corduroy Cap | Big Accessories BA703",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "663": {
+   "title": "Travel Mug with a Handle",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "664": {
+   "title": "Women's Pique Polo Shirt | Gildan 64800L",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "665": {
+   "title": "Unisex CVC T-shirt | Next Level 6210",
+   "techniques": [
+    "embroidery",
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "666": {
+   "title": "Women's High-Waisted Tee | Cotton Heritage OW1086",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "667": {
+   "title": "All-Over Print Recycled String Bikini",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "668": {
+   "title": "All-Over Print Recycled Padded String Bikini Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "669": {
+   "title": "All-Over Print Recycled String Bikini Bottom",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "670": {
+   "title": "Unisex Pique Polo Shirt | Gildan 64800",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "672": {
+   "title": "All-Over Print Crossbody Bag",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 3
+  },
+  "673": {
+   "title": "Kiss-Cut Holographic Stickers",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "674": {
+   "title": "Unisex Fleece Pullover | Cotton Heritage M2475",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "675": {
+   "title": "Yoga Mat",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "676": {
+   "title": "All-Over Print Recycled Unisex Basketball Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "677": {
+   "title": "Youth Crew Neck Sweatshirt | Gildan 18000B",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "678": {
+   "title": "Pet Bowl",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "679": {
+   "title": "Unisex Performance Crew Neck T-Shirt | A4 N3142",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "680": {
+   "title": "Camouflage Trucker Hat | Otto Cap 105-1247",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "681": {
+   "title": "All-Over Print Case for AirPods®",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "682": {
+   "title": "Hardcover Bound Notebook | JournalBook",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "683": {
+   "title": "Snap Case for iPhone",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "684": {
+   "title": "Snap Case for Samsung",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "686": {
+   "title": "Tough Case for Samsung",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "688": {
+   "title": "Unisex Hooded Long Sleeve Tee | Bella Canvas 3512",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "689": {
+   "title": "Youth Heavy Blend Hoodie | Gildan 18500B",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "690": {
+   "title": "Can-Shaped Glass (16 oz)",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "691": {
+   "title": "Stemless Wine Glass (15 oz)",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "692": {
+   "title": "Unisex Heavy Blend Zip Hoodie | Gildan 18600",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "693": {
+   "title": "All-Over Print Recycled Unisex Mesh Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "694": {
+   "title": "Wall Calendar (2024)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "706": {
+   "title": "Wrapping Paper Sheets (3)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "708": {
+   "title": "Cloth Napkin Set (4)",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 4
+  },
+  "709": {
+   "title": "Placemat Set (4)",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 4
+  },
+  "710": {
+   "title": "Table Runner",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "711": {
+   "title": "Sublimated Sherpa Blanket",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "713": {
+   "title": "Men's Oversized Faded T-Shirt | AS Colour 5082",
+   "techniques": [
+    "embroidery",
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "715": {
+   "title": "Unisex Sports Jersey | SOL'S 11939",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "717": {
+   "title": "All-Over Print Recycled Unisex Zip Hoodie",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "724": {
+   "title": "Set of Business Cards",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "730": {
+   "title": "All-Over Print Recycled Hockey Fan Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "732": {
+   "title": "Youth Classic Tee | Gildan 5000B",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "733": {
+   "title": "Unisex Premium T-Shirt | AS Colour 5001T",
+   "techniques": [
+    "dtfilm",
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "734": {
+   "title": "Unisex Relax Hoodie | AS Colour 5161",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "737": {
+   "title": "All-Over Print Flare Leggings",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "742": {
+   "title": "Insulated Tumbler with a Straw",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "744": {
+   "title": "All-Over Print Utility Crossbody Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "745": {
+   "title": "Pet Leash",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 1
+  },
+  "746": {
+   "title": "Garden Flag",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "748": {
+   "title": "Unisex Premium Heavyweight Long Sleeve Shirt | AS Colour 5081",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "749": {
+   "title": "Pet Collar",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "750": {
+   "title": "Pet Collar & Leash",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 2
+  },
+  "751": {
+   "title": "Double Wall Clear Plastic Tumbler (16 oz)",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "753": {
+   "title": "Unisex Garment-Dyed Heavyweight Long Sleeve Shirt | Comfort Colors 6014",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "755": {
+   "title": "Under Armour® Dad Hat",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "760": {
+   "title": "Unisex Staple Eco T-Shirt | Bella + Canvas 3001ECO",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "761": {
+   "title": "Shower Curtain",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "764": {
+   "title": "Can Cooler",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "765": {
+   "title": "Men’s Under Armour Rival Fleece Hoodie | 1379757",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "766": {
+   "title": "Men's Under Armour Performance Polo Shirt | 1370399",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "769": {
+   "title": "Unisex Classic Fit Knitted Crew neck Sweater",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 4
+  },
+  "770": {
+   "title": "Unisex Adidas Space-Dyed Polo Shirt | A591",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "771": {
+   "title": "Women's Under Armour Tech Polo | 1370431",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "773": {
+   "title": "Men's Under Armour Athletic T-Shirt | 1383264",
+   "techniques": [
+    "dtfilm",
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "779": {
+   "title": "Rocks Glass",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "780": {
+   "title": "Women's Micro-Rib Tank Top | Bella Canvas 1012",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "781": {
+   "title": "Unisex Knitted Cardigan",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 4
+  },
+  "782": {
+   "title": "Women's Relaxed V-Neck T-Shirt | Bella Canvas 6405CVC",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "784": {
+   "title": "All-Over Print Unisex Wide-Leg Joggers",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "785": {
+   "title": "Unisex Sports Tee | Gildan 8000",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "786": {
+   "title": "Notepad",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "787": {
+   "title": "Youth Sports Tee | Gildan 8000B",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "788": {
+   "title": "Stainless Steel Water Bottle with a Straw Lid",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "791": {
+   "title": "Men's All-Over Print Slim Fit Polo Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "792": {
+   "title": "All-Over Print Recycled Unisex Baseball Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "793": {
+   "title": "Acrylic Ornaments",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "794": {
+   "title": "Metal Ornaments",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "795": {
+   "title": "Matte Paper Framed Poster With Mat (in)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "798": {
+   "title": "MagSafe Tough Case for iPhone®",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "799": {
+   "title": "MagSafe® Clear Case for iPhone",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "801": {
+   "title": "All-Over Print Recycled Unisex Track Jacket",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 8
+  },
+  "803": {
+   "title": "Wall Calendar (2025)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "804": {
+   "title": "Wall Calendar (blank)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "805": {
+   "title": "Teddy Bear with a T-shirt",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "807": {
+   "title": "Golf Rope Cap | Big Accessories BA671",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "808": {
+   "title": "Unisex NuBlend Sweatshirt | Jerzees 562MR",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "809": {
+   "title": "Fisherman Beanie | AS Colour 1120",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "810": {
+   "title": "Unisex Premium Pique Polo Shirt | SOL'S 11362",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "818": {
+   "title": "Unisex Organic Ribbed Neck Creator 2.0 T-Shirt | Stanley/Stella SATU001",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "819": {
+   "title": "Women's Organic Crew Neck Stella Alma Sweatshirt | Stanley/Stella SASW036",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "820": {
+   "title": "Unisex Organic Mid-Weight Roller Sweatshirt | Stanley/Stella SASU010",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "821": {
+   "title": "Unisex Organic Mid-Weight Drummer 2.0 Hoodie | Stanley/Stella SASU009",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "822": {
+   "title": "Unisex Organic Oversized Raddler 2.0 Sweatshirt | Stanley/Stella SASU025",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "823": {
+   "title": "Unisex Organic Oversized High Neck Blaster 2.0 T-Shirt | Stanley/Stella SATU020",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "824": {
+   "title": "Unisex Organic Mid-Light Crafter T-Shirt | Stanley/Stella SATU007",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "825": {
+   "title": "Women's Organic Ribbed Neck Stella Muser T-Shirt | Stanley/Stella SATW002",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "826": {
+   "title": "Unisex Organic Changer 2.0 Sweatshirt | Stanley/Stella SASU004",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "827": {
+   "title": "All-Over Print Women's Long Sleeve Pajama Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "828": {
+   "title": "All-Over Print Women's Short Sleeve Pajama Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "829": {
+   "title": "All-Over Print Women's Pajama Pants",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "830": {
+   "title": "All-Over Print Women's Pajama Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "831": {
+   "title": "Unisex Organic Relaxed Slammer 2.0 Hoodie | Stanley/Stella SASU024",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "832": {
+   "title": "Women's Organic Stella Nora Hoodie | Stanley/Stella SASW035",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "833": {
+   "title": "Unisex Organic Side Pocket Sounder Hoodie | Stanley/Stella SASU012",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "834": {
+   "title": "Unisex Essential Organic Cruiser 2.0 Hoodie | Stanley/Stella SASU003",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "835": {
+   "title": "All-Over Print Premium Basketball Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "836": {
+   "title": "All-Over Print Men's Recycled Short Sleeve Rash Guard",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "837": {
+   "title": "Latte Mug",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "839": {
+   "title": "Unisex Garment-Dyed Sweatshirt | Comfort Colors 1566",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "842": {
+   "title": "Unisex Champion Powerblend Hoodie | S700",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "843": {
+   "title": "Baby Jersey Bodysuit | Rabbit Skins 4424",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "844": {
+   "title": "Unisex Premium Mid-Weight Hoodie | Lane Seven LS14001",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "845": {
+   "title": "Unisex Premium Crew Neck Sweatshirt | Lane Seven LS14004",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "846": {
+   "title": "Classic Rope Cap | Richardson 258",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "847": {
+   "title": "Under Armour Backpack",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "848": {
+   "title": "Flip Straw Water Bottle | CamelBak Thrive",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "849": {
+   "title": "Women's Basic Softstyle T-Shirt | Gildan 64000L",
+   "techniques": [
+    "dtg",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "850": {
+   "title": "Knitted Beanie",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 1
+  },
+  "853": {
+   "title": "Desk Mat",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "854": {
+   "title": "Baby Jersey T-Shirt | Rabbit Skins 3322",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "855": {
+   "title": "Unisex Knitted T-shirt",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 4
+  },
+  "857": {
+   "title": "Women's Ideal Racerback Tank Top | Next Level 1533",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "858": {
+   "title": "Unisex Knitted V-Neck Vest",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 2
+  },
+  "859": {
+   "title": "Women's Straight Bottom Knitted Sweater",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 4
+  },
+  "860": {
+   "title": "Unisex Relaxed Fit Knitted Crew Neck Sweater",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 4
+  },
+  "861": {
+   "title": "Scented Soy Candle, 9oz",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "862": {
+   "title": "Women's Heavyweight Boxy T-Shirt | Comfort Colors 3023CL",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "864": {
+   "title": "Low Profile Baseball Cap | Otto Cap 18-253",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "867": {
+   "title": "Hardcover Journal Matte",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "870": {
+   "title": "All-Over Print Recycled Bandeau Bikini",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "871": {
+   "title": "All-Over Print Recycled Bandeau Bikini Top",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "872": {
+   "title": "All-Over Print Recycled V-Cut Bikini Bottom",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "873": {
+   "title": "Gift Wrap Papers",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "874": {
+   "title": "Car Magnets",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "875": {
+   "title": "Vanity Plate",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "880": {
+   "title": "Unisex Oversized Garment-Dyed T-Shirt | Bella + Canvas 4810",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "881": {
+   "title": "Ceramic Ornament",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "882": {
+   "title": "Sublimation Socks",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 4
+  },
+  "883": {
+   "title": "Hand Towel",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "884": {
+   "title": "Bath Mat",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "885": {
+   "title": "Pennant",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "886": {
+   "title": "Microfiber Duvet Cover",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "887": {
+   "title": "All-Over Print Shopping Bag",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "888": {
+   "title": "Clear Tote Bag",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 3
+  },
+  "889": {
+   "title": "Pickleball Paddle (Set)",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "890": {
+   "title": "Weekender Bag",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "891": {
+   "title": "Suitcase",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "892": {
+   "title": "Unisex Oversized Heavyweight Hoodie | Bella + Canvas 4719",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "894": {
+   "title": "All-Over Print Apron",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "895": {
+   "title": "Unisex Heavyweight Sweatpants | Bella + Canvas 4737",
+   "techniques": [
+    "dtg",
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "896": {
+   "title": "All-Over Print Slip Dress",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 3
+  },
+  "897": {
+   "title": "Unisex Oversized Heavyweight Sweatshirt | Bella + Canvas 4711",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "898": {
+   "title": "Unisex Garment-Dyed Fleece Sweatpants | Comfort Colors 1469",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "900": {
+   "title": "Ceramic Ornaments, 2-Side Print",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "901": {
+   "title": "Metal Christmas Ornament",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 2
+  },
+  "902": {
+   "title": "Pet Bandana Collar",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "903": {
+   "title": "Unisex Quarter Zip Pullover | Sport-Tek ST357",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "904": {
+   "title": "Metal License Plate Frame",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "905": {
+   "title": "Comforter",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "906": {
+   "title": "Jigsaw Puzzle with Tin",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "907": {
+   "title": "Unisex Garment-Dyed Tank Top | Comfort Colors 9360",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "908": {
+   "title": "Glass Cutting Board",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "909": {
+   "title": "Tapered Stainless Steel Tumbler 20 oz",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "911": {
+   "title": "Wrapping Papers",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "917": {
+   "title": "Men's Box Tee | Cotton Heritage MC1087",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "918": {
+   "title": "All-Over Print American Football Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "919": {
+   "title": "All-Over Print Men's Sports Warmup Hoodie",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 6
+  },
+  "920": {
+   "title": "All-Over Print Men's Long Sleeve Shirt",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "924": {
+   "title": "Area Rug",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "926": {
+   "title": "Post-it® Note Pads",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "927": {
+   "title": "All-Over Print 5-Color Strap Apron",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 0
+  },
+  "935": {
+   "title": "Copper Vacuum Insulated Bottle (22oz)",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "938": {
+   "title": "Luggage Tag",
+   "techniques": [
+    "uv"
+   ],
+   "calibrated": 1
+  },
+  "939": {
+   "title": "Toddler Pullover Fleece Hoodie | Rabbit Skins 3326",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "943": {
+   "title": "Unisex Premium Full Zip Hoodie | Lane Seven LS14003",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "944": {
+   "title": "All-Over Print Kids Sports Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 5
+  },
+  "946": {
+   "title": "Ruled Line Spiral Notebook",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "947": {
+   "title": "Desktop Calendar",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "948": {
+   "title": "Spiral Bound Journal",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "949": {
+   "title": "Simplex Desk Calendar",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "952": {
+   "title": "5 Panel Mid-Profile Baseball Cap | Otto Cap 31-069",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "953": {
+   "title": "Men's Box Hoodie I Cotton Heritage M2635",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "957": {
+   "title": "Die-Cut Stickers",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "959": {
+   "title": "Unisex Ringer T-Shirt | Next Level 3604",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "960": {
+   "title": "Men's Premium Short Sleeve Tee | Cotton Heritage MC1082",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "961": {
+   "title": "Otto Cap 18-772 | Garment-Washed Baseball Cap",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "963": {
+   "title": "All-Over Print Utility Backpack",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "964": {
+   "title": "Knitted Pet Sweater",
+   "techniques": [
+    "knitting"
+   ],
+   "calibrated": 2
+  },
+  "967": {
+   "title": "Women's Micro Rib Raglan Baby Tee | Bella + Canvas 1201",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "968": {
+   "title": "Kids Crew Neck Sweatshirt | Rabbit Skins 3317",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "969": {
+   "title": "Unisex Garment-Dyed Lightweight Fleece Hooded Sweatshirt I Comfort Colors 1467",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "970": {
+   "title": "Unisex Garment-Dyed Hooded Sweatshirt I Comfort Colors 1567",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "971": {
+   "title": "Unisex Garment-Dyed Lightweight Fleece Crewneck Sweatshirt I Comfort Colors 1466",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "973": {
+   "title": "Indoor Wall Tapestry",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "974": {
+   "title": "Kiss-Cut Vinyl Decals",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "975": {
+   "title": "Unisex Urban Hoodie Garment Dyed | Lane Seven LS16001GD",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1011": {
+   "title": "Wall Calendar (2026)",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1013": {
+   "title": "Softcover Journal with Inside Prints",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1367": {
+   "title": "All-Over Print Boxy Football Jersey",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 7
+  },
+  "1383": {
+   "title": "Unisex Urban Sweatshirt | Lane Seven LS16004",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1389": {
+   "title": "Unisex Relax Crew Neck Sweatshirt | AS Colour 5160",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1398": {
+   "title": "Unisex Urban Sweatpants | Lane Seven LS16006",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "1399": {
+   "title": "Round Mouse Pad",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1400": {
+   "title": "Cotton Placemat, 1pc",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 1
+  },
+  "1411": {
+   "title": "Youth Garment-Dyed Lightweight Hooded Sweatshirt | Comfort Colors 1467Y",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1412": {
+   "title": "Women's Relax Hoodie | AS Colour 4161",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1414": {
+   "title": "All-Over Print Men’s Cotton Crew Neck T-Shirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1415": {
+   "title": "All-Over Print Women’s Cotton Crew Neck T-Shirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1416": {
+   "title": "All-Over Print Kids Cotton Crew Neck T-Shirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1417": {
+   "title": "All-Over Print Youth Cotton Crew Neck T-shirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1418": {
+   "title": "All-Over Print Unisex Cotton Sweatshirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 6
+  },
+  "1419": {
+   "title": "All-Over Print Unisex Cotton Hoodie",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 8
+  },
+  "1420": {
+   "title": "Unisex Urban Hoodie | Lane Seven LS16001",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1421": {
+   "title": "Unisex Fine Jersey Tee | LAT Apparel 6901",
+   "techniques": [
+    "dtg",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1423": {
+   "title": "Golf Towel",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1424": {
+   "title": "Amber Jar Scented Soy Candle",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1425": {
+   "title": "Poker Playing Cards",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1426": {
+   "title": "Lightweight Summer Blanket",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1427": {
+   "title": "Christmas Tree Skirt",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1428": {
+   "title": "Rustic Christmas Stocking",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1429": {
+   "title": "Pet Feeding Mat",
+   "techniques": [
+    "sublimation"
+   ],
+   "calibrated": 1
+  },
+  "1435": {
+   "title": "White Coined Napkins",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1439": {
+   "title": "Embroidered Tactical Patches",
+   "techniques": [
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1465": {
+   "title": "Unisex Heavyweight Letterman Jacket | AWDis JH043",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "1466": {
+   "title": "Paper Gift Bag",
+   "techniques": [
+    "digital"
+   ],
+   "calibrated": 0
+  },
+  "1467": {
+   "title": "Cotton Tablecloths",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 1
+  },
+  "1472": {
+   "title": "Unisex Garment Dyed Creator 2.0 Vintage T-Shirt | Stanley/Stella SATU041",
+   "techniques": [
+    "dtg"
+   ],
+   "calibrated": 0
+  },
+  "1473": {
+   "title": "Unisex Premium Quarter Zip Sweatshirt | Lane Seven LS14014",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1474": {
+   "title": "All-Over Print Cotton Crop Top",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 3
+  },
+  "1475": {
+   "title": "All-Over Print Women's Cotton Tank Top",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 3
+  },
+  "1476": {
+   "title": "All-Over Print Cotton T-Shirt Dress",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1477": {
+   "title": "All-Over Print Cotton Skater Dress",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 5
+  },
+  "1478": {
+   "title": "All-Over Print Cotton Bodycon Dress",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 3
+  },
+  "1479": {
+   "title": "All-Over Print Unisex Cotton Wide-Leg Pants",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 3
+  },
+  "1480": {
+   "title": "All-Over Print Unisex Cotton Long Shorts",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1481": {
+   "title": "All-Over Print Unisex Cotton Shorts",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 3
+  },
+  "1482": {
+   "title": "All-Over Print Oversized Cotton T-Shirt",
+   "techniques": [
+    "direct-to-fabric"
+   ],
+   "calibrated": 4
+  },
+  "1483": {
+   "title": "All-Over Print Men's Board Shorts",
+   "techniques": [
+    "cut-sew"
+   ],
+   "calibrated": 4
+  },
+  "1485": {
+   "title": "Youth Garment-Dyed Heavyweight T-Shirt | Comfort Colors 9018",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1540": {
+   "title": "Unisex Super Heavyweight Hoodie | Lane Seven LS17001",
+   "techniques": [
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1543": {
+   "title": "Unisex Heavyweight Hooded Sweatshirt | Independent Trading Co. IND4000",
+   "techniques": [
+    "dtg",
+    "dtfilm",
+    "embroidery"
+   ],
+   "calibrated": 0
+  },
+  "1552": {
+   "title": "Everyday Crossbody Bag | QS309",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "1553": {
+   "title": "Cotton Color Tote Bag | Westford Mill W101",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "1562": {
+   "title": "Urban Crossbody Bag | QD815",
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "1574": {
+   "title": "Surf Cap | AS Colour 1114",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  },
+  "1634": {
+   "title": "Coastal Washed Cap | Comfort Colors CCWC0",
+   "techniques": [
+    "dtfilm"
+   ],
+   "calibrated": 0
+  }
+ }
+}
