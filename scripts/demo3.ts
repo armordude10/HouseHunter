@@ -9,19 +9,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { RunwareMedia } from "../src/runware/media.js";
+import { createAndWaitForMockups } from "../src/integrations/printfulMockups.js";
 import { PanelCompiler, CompileJob, DesignSpec } from "../src/engine/panelCompiler.js";
 import { getCalibrationProfile } from "../src/engine/calibrationProfiles.js";
 
 const OUT_DIR = path.resolve("out/demo3");
-const MOCKUPS_MCP = "https://threadbot-printful-mockups-mcp-2uts5km5aq-uc.a.run.app/mcp";
-
-const mcpText = (r: unknown): string => {
-  const content = (r as { content?: Array<{ text?: string }> }).content;
-  return Array.isArray(content) ? content.map((c) => c.text ?? "").join("") : String(content);
-};
 
 interface DemoCase {
   name: string;
@@ -30,6 +23,8 @@ interface DemoCase {
   productId: number;
   variantId: number;
   styleIds: number[];
+  /** Printful technique per placement (from mockup-styles). */
+  technique: string;
   design: DesignSpec;
   jobs: CompileJob[];
 }
@@ -60,6 +55,7 @@ const CASES: DemoCase[] = [
     productId: 657,
     variantId: 20866,
     styleIds: [4934, 4939],
+    technique: "sublimation",
     design: {
       artwork_brief:
         "Iridescent oil-slick marble flow with electric cyan, magenta and gold veins on deep black, " +
@@ -80,6 +76,7 @@ const CASES: DemoCase[] = [
     productId: 390,
     variantId: 10879,
     styleIds: [3015, 3016],
+    technique: "cut-sew",
     design: {
       artwork_brief:
         "Midnight Japanese great wave seascape with rolling indigo swells, silver moonlit foam and " +
@@ -102,6 +99,7 @@ const CASES: DemoCase[] = [
     productId: 279,
     variantId: 9063,
     styleIds: [16442, 16444],
+    technique: "cut-sew",
     design: {
       artwork_brief:
         "Retro-futuristic topographic contour map in glowing teal and amber lines over charcoal, " +
@@ -118,31 +116,6 @@ const CASES: DemoCase[] = [
   }
 ];
 
-const callMcp = async (mcp: Client, args: Record<string, unknown>): Promise<string> => {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const response = await mcp.callTool(
-        { name: "create_and_wait_for_printful_mockups", arguments: args },
-        undefined,
-        { timeout: 300000 }
-      );
-      return mcpText(response);
-    } catch (error) {
-      const message = (error as Error).message;
-      const transient =
-        /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error|fetch failed|other side closed|socket|timed? ?out/i.test(
-          message
-        );
-      if (attempt < 6 && transient) {
-        console.log(`  transient Printful condition; waiting 60s (attempt ${attempt})`);
-        await new Promise((resolve) => setTimeout(resolve, 60000));
-        continue;
-      }
-      throw error;
-    }
-  }
-};
-
 const thumb = async (buffer: Buffer, maxW: number) =>
   sharp(buffer).resize({ width: maxW, withoutEnlargement: true }).jpeg({ quality: 86 }).toBuffer();
 const b64 = (buffer: Buffer) => `data:image/jpeg;base64,${buffer.toString("base64")}`;
@@ -150,8 +123,6 @@ const b64 = (buffer: Buffer) => `data:image/jpeg;base64,${buffer.toString("base6
 const run = async () => {
   await mkdir(OUT_DIR, { recursive: true });
   const compiler = new PanelCompiler(new RunwareMedia());
-  const mcp = new Client({ name: "threadbot-demo3", version: "1.0.0" });
-  await mcp.connect(new StreamableHTTPClientTransport(new URL(MOCKUPS_MCP)));
   const blocks: string[] = [];
 
   for (const demo of CASES) {
@@ -173,22 +144,21 @@ const run = async () => {
       if (panel.status === "success" && panel.file_url) files[panel.placement] = panel.file_url;
     }
 
-    const raw = await callMcp(mcp, {
-      product_id: demo.productId,
-      variant_ids: [demo.variantId],
-      placement_file_urls: files,
-      mockup_style_ids: demo.styleIds,
-      format: "jpg",
-      mockup_width_px: 1000,
-      max_attempts: 30,
-      interval_seconds: 5
+    const result = await createAndWaitForMockups({
+      productId: demo.productId,
+      variantIds: [demo.variantId],
+      placements: Object.entries(files).map(([placement, fileUrl]) => ({
+        placement,
+        technique: demo.technique,
+        fileUrl
+      })),
+      styleIds: demo.styleIds,
+      widthPx: 1000
     });
-    await writeFile(path.join(OUT_DIR, `${demo.name}-task.json`), raw);
-    const task = JSON.parse(raw)?.waited?.task?.data?.[0];
-    const mockups: Array<{ view: string; mockup_url: string; style_id: number }> = (
-      task?.catalog_variant_mockups ?? []
-    ).flatMap((g: { mockups: never[] }) => g.mockups);
-    console.log(`Printful status=${task?.status} mockups=${mockups.length}`);
+    await writeFile(path.join(OUT_DIR, `${demo.name}-task.json`), JSON.stringify(result.raw));
+    const mockups = result.mockups;
+    console.log(`Printful status=${result.status} mockups=${mockups.length}`);
+    if (result.status === "failed") console.log(JSON.stringify(result.raw?.failure_reasons));
 
     const cells: string[] = [];
     for (let i = 0; i < mockups.length; i++) {
@@ -215,7 +185,6 @@ const run = async () => {
         <div class="grid">${cells.join("")}</div>
       </section>`);
   }
-  await mcp.close();
 
   const html = `<!doctype html><html><head><meta charset="utf-8"/>
   <title>Threadbot — new AOP products (official Printful mockups)</title>
