@@ -184,7 +184,7 @@ const run = async () => {
             placement_file_urls: { [p.key]: files[p.key] },
             mockup_style_ids: [p.styleId],
             format: "jpg",
-            mockup_width_px: 1600,
+            mockup_width_px: 1000,
             max_attempts: 30,
             interval_seconds: 5
           });
