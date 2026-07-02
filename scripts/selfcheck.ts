@@ -287,7 +287,7 @@ const run = async () => {
     );
 
     const failingMedia = new StubMedia();
-    failingMedia.failFor = "unwrapped surface"; // kill the master generation
+    failingMedia.failFor = "continuous mural"; // kill the master generation
     const failed = await new PanelCompiler(failingMedia).compile("selfcheck-fail", jobs, design);
     check(
       "master failure reports BOTH panels as missing required",

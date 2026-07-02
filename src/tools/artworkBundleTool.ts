@@ -39,8 +39,10 @@ import {
   PanelCompiler
 } from "../engine/panelCompiler.js";
 import { getRunContext } from "../engine/runContext.js";
+import { getCalibrationProfile } from "../engine/calibrationProfiles.js";
 
 interface SurfacePlanShape {
+  product_id?: number | string;
   placement_jobs?: Array<Record<string, unknown>>;
 }
 
@@ -156,7 +158,12 @@ export const createGeneratePanelArtworkBundleTool = (
       if (!jobs.length) {
         return JSON.stringify({ error: "surface_plan_json contains no placement_jobs" });
       }
-      const result = await compiler.compile(runId, jobs, design);
+      const result = await compiler.compile(
+        runId,
+        jobs,
+        design,
+        getCalibrationProfile(plan.product_id)
+      );
       return JSON.stringify({
         run_id: runId,
         provider: "runware",

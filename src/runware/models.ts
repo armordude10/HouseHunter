@@ -51,7 +51,14 @@ export const IMAGE = {
   FLUX_2_FLEX: "bfl:6@1",
   RECRAFT_V4_1_PRO: "recraft:v4.1-pro@0",
   FLUX_VTO: "bfl:flux@vto",
-  BIREFNET_GENERAL: "runware:112@5"
+  BIREFNET_GENERAL: "runware:112@5",
+  /**
+   * FLUX.1 [dev]: supports advancedFeatures.layerDiffuse for NATIVE
+   * transparent-background generation (verified: real alpha channel in the
+   * output PNG). Used for transparent placement art; FLUX.2 does not
+   * support LayerDiffuse.
+   */
+  FLUX_1_DEV: "runware:101@1"
 } as const;
 
 export interface NodeModelChoice {

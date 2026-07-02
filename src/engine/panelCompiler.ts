@@ -39,9 +39,8 @@ import { clampFluxDimension } from "../runware/media.js";
 import { IMAGE } from "../runware/models.js";
 import {
   buildGarmentPlane,
-  classifyPlacement,
-  GarmentPlane,
-  PanelPlan
+  CalibrationProfile,
+  classifyPlacement
 } from "./garmentSpace.js";
 import {
   cropExact,
@@ -93,6 +92,8 @@ export interface DesignSpec {
   base_product_color?: string;
   customer_image_urls?: string[];
   customer_image_captions?: string[];
+  /** Physical repeat size for pattern strategies ("statement" ~12-16, "micro" ~3-4). */
+  pattern_tile_inches?: number;
 }
 
 /** Injectable media surface so the engine is testable offline. */
@@ -177,33 +178,33 @@ const negativeFor = (design: DesignSpec): string => {
   return parts.join(", ");
 };
 
-const masterPrompt = (design: DesignSpec, plane: GarmentPlane, seamJobs: PanelPlan[]): string => {
-  const regions = seamJobs
-    .map((panel) => {
-      const x0 = Math.round((panel.xIn / plane.widthIn) * 100);
-      const x1 = Math.round(((panel.xIn + panel.widthIn) / plane.widthIn) * 100);
-      return `${panel.placement} occupies ${x0}%-${x1}% of the width`;
-    })
-    .join("; ");
-  return (
-    `One single continuous artwork composition spanning the full canvas edge to edge, ` +
-    `designed as the unwrapped surface of a garment (${regions}). ` +
-    `The composition must flow uninterrupted across the entire canvas with no borders, ` +
-    `no dividing lines, no framing, and important focal elements kept away from the far left and right edges. ` +
-    `${designCore(design)}. Flat print-ready textile artwork, full bleed, high detail.`
-  );
-};
+/**
+ * Master prompt rules learned from live Printful runs: NEVER mention
+ * garments, panels, unwraps, seams or cut regions — that invites the model
+ * to literally draw cut lines and pattern-piece outlines into the art (the
+ * "black lines" defect). The master is described purely as a continuous
+ * mural; panel structure exists only in the slicing math.
+ */
+const masterPrompt = (design: DesignSpec): string =>
+  `One single continuous mural artwork filling the entire canvas edge to edge. ` +
+  `${designCore(design)}. ` +
+  `The scene flows uninterrupted across the whole canvas: no borders, no frames, no straight dividing lines, ` +
+  `no outlines, no diagrams, no split composition, no text. ` +
+  `Evenly distributed organic composition; important subjects spread across the middle of the canvas ` +
+  `and kept away from all edges. Flat print-ready textile artwork, rich detail, cohesive color and lighting.`;
 
 const tilePrompt = (design: DesignSpec): string =>
   `Seamless repeating textile pattern swatch, edges wrap perfectly for infinite tiling in all directions, ` +
   `uniform density, no border, no vignette. ${designCore(design)}. Flat print-ready pattern.`;
 
 const panelPrompt = (design: DesignSpec, job: CompileJob): string => {
-  const role = job.worker_type ?? classifyPlacement(job.placement);
-  const anchor = job.mapping_rule?.anchor ? `, anchored ${job.mapping_rule.anchor}` : "";
+  const anchor = job.mapping_rule?.anchor ? ` Composition anchored ${job.mapping_rule.anchor}.` : "";
+  // Print-safe framing: keep the subject comfortably inside the canvas so
+  // provider safe-area cropping never clips it.
   return (
-    `${designCore(design)}. Artwork for the ${job.placement} placement of a garment ` +
-    `(${role} panel${anchor}). Flat print-ready apparel graphic, high detail.`
+    `${designCore(design)}.${anchor} A single cohesive graphic composition centered on the canvas ` +
+    `with generous margin on all sides; nothing important within the outer tenth of the image. ` +
+    `No borders, no frames, no text unless specified. Flat print-ready apparel graphic, high detail.`
   );
 };
 
@@ -309,7 +310,12 @@ export const computeMissingRequired = (
 export class PanelCompiler {
   constructor(private readonly media: MediaLike) {}
 
-  async compile(runId: string, jobs: CompileJob[], design: DesignSpec): Promise<CompileResult> {
+  async compile(
+    runId: string,
+    jobs: CompileJob[],
+    design: DesignSpec,
+    profile?: CalibrationProfile
+  ): Promise<CompileResult> {
     const strategy = classifyStrategy(jobs);
     const provenance: PanelProvenance[] = [];
     const panels: CompiledPanel[] = [];
@@ -368,9 +374,9 @@ export class PanelCompiler {
     const primaryJobs = activeJobs.filter((job) => job.design_action !== "mirror_from_pair");
 
     if (strategy === "pattern_tile") {
-      tileUrl = await this.compilePatternTile(runId, primaryJobs, design, record);
+      tileUrl = await this.compilePatternTile(runId, primaryJobs, design, record, profile);
     } else if (strategy === "master_slice") {
-      masterUrl = await this.compileMasterSlice(runId, primaryJobs, design, record);
+      masterUrl = await this.compileMasterSlice(runId, primaryJobs, design, record, profile);
     } else {
       for (const job of primaryJobs) {
         await this.generateDirect(runId, job, design, null, record);
@@ -420,7 +426,8 @@ export class PanelCompiler {
     runId: string,
     jobs: CompileJob[],
     design: DesignSpec,
-    record: (panel: CompiledPanel, prov: PanelProvenance) => void
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void,
+    profile?: CalibrationProfile
   ): Promise<string | null> {
     const plane = buildGarmentPlane(
       jobs.map((job) => ({
@@ -428,22 +435,25 @@ export class PanelCompiler {
         width_px: job.geometry_contract?.width_px,
         height_px: job.geometry_contract?.height_px,
         dpi: job.geometry_contract?.dpi
-      }))
+      })),
+      profile
     );
     const planeByPlacement = new Map(plane.panels.map((panel) => [panel.placement, panel]));
     const sliceJobs = jobs.filter((job) => planeByPlacement.get(job.placement)?.seamBound);
     const directJobs = jobs.filter((job) => !planeByPlacement.get(job.placement)?.seamBound);
 
-    // Master canvas: the seam-bound bounding box rendered at the largest
-    // resolution the generator supports, exact aspect ratio preserved.
+    // Master canvas: the bounding box of the CANVAS WINDOWS (piece rects
+    // plus their canvas margins) rendered at the largest resolution the
+    // generator supports, exact aspect ratio preserved. Margins carry real
+    // neighboring art, which becomes the seam allowance / bleed.
     const bound = sliceJobs
       .map((job) => planeByPlacement.get(job.placement)!)
       .reduce(
         (acc, panel) => ({
-          x0: Math.min(acc.x0, panel.xIn),
-          y0: Math.min(acc.y0, panel.yIn),
-          x1: Math.max(acc.x1, panel.xIn + panel.widthIn),
-          y1: Math.max(acc.y1, panel.yIn + panel.heightIn)
+          x0: Math.min(acc.x0, panel.canvasXIn),
+          y0: Math.min(acc.y0, panel.canvasYIn),
+          x1: Math.max(acc.x1, panel.canvasXIn + panel.canvasWIn),
+          y1: Math.max(acc.y1, panel.canvasYIn + panel.canvasHIn)
         }),
         { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
       );
@@ -455,11 +465,7 @@ export class PanelCompiler {
     const pxPerIn = { x: masterW / boundW, y: masterH / boundH };
 
     const seed = stableSeed(runId, "master");
-    const prompt = masterPrompt(
-      design,
-      plane,
-      sliceJobs.map((job) => planeByPlacement.get(job.placement)!)
-    );
+    const prompt = masterPrompt(design);
 
     let master: RasterImage;
     let masterUrl: string | null = null;
@@ -488,11 +494,13 @@ export class PanelCompiler {
       const panel = planeByPlacement.get(job.placement)!;
       const target = jobTarget(job);
       const sizing = workingSize(target.width, target.height);
+      // Crop the full CANVAS window: the piece region plus its margins,
+      // which carry genuine neighboring art (bleed/seam allowance).
       const crop = {
-        left: (panel.xIn - bound.x0) * pxPerIn.x,
-        top: (panel.yIn - bound.y0) * pxPerIn.y,
-        width: panel.widthIn * pxPerIn.x,
-        height: panel.heightIn * pxPerIn.y
+        left: (panel.canvasXIn - bound.x0) * pxPerIn.x,
+        top: (panel.canvasYIn - bound.y0) * pxPerIn.y,
+        width: panel.canvasWIn * pxPerIn.x,
+        height: panel.canvasHIn * pxPerIn.y
       };
       const transparent = wantsTransparency(job);
       try {
@@ -562,7 +570,8 @@ export class PanelCompiler {
     runId: string,
     jobs: CompileJob[],
     design: DesignSpec,
-    record: (panel: CompiledPanel, prov: PanelProvenance) => void
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void,
+    profile?: CalibrationProfile
   ): Promise<string | null> {
     const seed = stableSeed(runId, "pattern-tile");
     const prompt = tilePrompt(design);
@@ -595,19 +604,21 @@ export class PanelCompiler {
         width_px: job.geometry_contract?.width_px,
         height_px: job.geometry_contract?.height_px,
         dpi: job.geometry_contract?.dpi
-      }))
+      })),
+      profile
     );
     const planeByPlacement = new Map(plane.panels.map((panel) => [panel.placement, panel]));
     /** Physical repeat: one tile spans this many inches of garment. */
-    const TILE_INCHES = 6;
+    const TILE_INCHES = design.pattern_tile_inches ?? 6;
 
     for (const job of jobs) {
       const panel = planeByPlacement.get(job.placement)!;
       const target = jobTarget(job);
       const sizing = workingSize(target.width, target.height);
-      const ppiWork = sizing.width / panel.widthIn;
+      // Tile the full canvas window, phase-locked in garment space.
+      const ppiWork = sizing.width / panel.canvasWIn;
       const tilePx = TILE_INCHES * ppiWork;
-      const phase = { x: panel.xIn * ppiWork, y: panel.yIn * ppiWork };
+      const phase = { x: panel.canvasXIn * ppiWork, y: panel.canvasYIn * ppiWork };
       const transparent = wantsTransparency(job);
       try {
         const buffer = await tileExact(tile, {
@@ -689,15 +700,9 @@ export class PanelCompiler {
   ) {
     const target = jobTarget(job);
     const isLabel = job.worker_type === "label" || job.mapping_rule?.mode === "label_lockup";
-    const model = isLabel ? IMAGE.RECRAFT_V4_1_PRO : IMAGE.FLUX_2_FLEX;
     const seed = stableSeed(runId, job.job_id, job.placement);
     const prompt = job.prompt ?? panelPrompt(design, job);
     const transparent = wantsTransparency(job);
-
-    // Generation size: exact target aspect ratio within model bounds.
-    const scale = Math.min(2048 / target.width, 2048 / target.height, 1);
-    const genW = clampFluxDimension(target.width * scale);
-    const genH = clampFluxDimension(target.height * scale);
 
     const references: Array<{ image: string }> = [];
     const derives =
@@ -710,16 +715,45 @@ export class PanelCompiler {
       if (references.length < 10) references.push({ image: url });
     }
 
+    // Model routing: labels/typography -> Recraft; transparent standalone art
+    // -> FLUX.1 dev with NATIVE LayerDiffuse alpha (no background-removal
+    // artifacts); everything else -> FLUX.2 flex. Reference-guided derivation
+    // needs FLUX.2's multi-reference support, so it keeps the BiRefNet path.
+    const nativeAlpha = transparent && !isLabel && !references.length;
+    let model: string = isLabel ? IMAGE.RECRAFT_V4_1_PRO : IMAGE.FLUX_2_FLEX;
+    if (nativeAlpha) model = IMAGE.FLUX_1_DEV;
+
+    // Generation size: exact target aspect ratio within model bounds.
+    const scale = Math.min(2048 / target.width, 2048 / target.height, 1);
+    const genW = clampFluxDimension(target.width * scale);
+    const genH = clampFluxDimension(target.height * scale);
+
     try {
-      const generated = await this.media.generateImage({
-        model,
-        positivePrompt: prompt,
-        negativePrompt: negativeFor(design),
-        width: genW,
-        height: genH,
-        seed,
-        referenceImages: references.length ? references : undefined
-      });
+      let generated;
+      try {
+        generated = await this.media.generateImage({
+          model,
+          positivePrompt: prompt,
+          negativePrompt: negativeFor(design),
+          width: genW,
+          height: genH,
+          seed,
+          referenceImages: references.length ? references : undefined,
+          ...(nativeAlpha ? { layerDiffuse: true } : {})
+        });
+      } catch (error) {
+        if (!nativeAlpha) throw error;
+        // Fall back to FLUX.2 + background removal if LayerDiffuse fails.
+        model = IMAGE.FLUX_2_FLEX;
+        generated = await this.media.generateImage({
+          model,
+          positivePrompt: prompt,
+          negativePrompt: negativeFor(design),
+          width: genW,
+          height: genH,
+          seed
+        });
+      }
 
       let fileUrl = generated.imageURL;
       let factor: 2 | 4 | null = null;
@@ -729,7 +763,10 @@ export class PanelCompiler {
         const upscaled = await this.media.upscale(fileUrl, factor);
         fileUrl = upscaled.imageURL;
       }
-      if (transparent) {
+      // Native LayerDiffuse alpha survives as-is; a BiRefNet pass is needed
+      // when there is no native alpha, or when upscaling may have flattened it.
+      const hasNativeAlpha = nativeAlpha && model === IMAGE.FLUX_1_DEV && factor === null;
+      if (transparent && !hasNativeAlpha) {
         const cutout = await this.media.removeBackground(fileUrl);
         fileUrl = cutout.imageURL;
       }

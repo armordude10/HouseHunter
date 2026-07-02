@@ -23,6 +23,11 @@ export interface GenerateImageParams {
   numberResults?: number;
   /** Seconds to retain the hosted output URL (default platform TTL is 7 days). */
   ttl?: number;
+  /**
+   * Native transparent-background generation (LayerDiffuse). Supported on
+   * FLUX.1 architecture models (e.g. runware:101@1); FLUX.2 rejects it.
+   */
+  layerDiffuse?: boolean;
 }
 
 /** Clamp to FLUX.2 limits: 256-2048px in 16px increments. */
@@ -55,6 +60,7 @@ export class RunwareMedia {
       includeCost: true,
       ...(params.seed !== undefined ? { seed: params.seed } : {}),
       ...(params.ttl !== undefined ? { ttl: params.ttl } : {}),
+      ...(params.layerDiffuse ? { advancedFeatures: { layerDiffuse: true } } : {}),
       ...(params.referenceImages?.length
         ? {
             inputs: {

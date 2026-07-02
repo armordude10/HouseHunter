@@ -44,15 +44,52 @@ export interface PanelPlan {
   targetWidthPx: number;
   targetHeightPx: number;
   dpi: number;
-  /** Physical size in inches (target / dpi). */
+  /**
+   * VISIBLE PIECE size in inches — the region of the file canvas that ends
+   * up on the sewn piece (from the product's calibration profile; equals the
+   * full canvas when uncalibrated).
+   */
   widthIn: number;
   heightIn: number;
-  /** Position on the garment plane, inches, origin top-left. */
+  /** Piece position on the garment plane, inches, origin top-left. */
   xIn: number;
   yIn: number;
+  /**
+   * FILE CANVAS window on the plane, inches. This is what gets cropped and
+   * submitted: the canvas is positioned so its piece region lands exactly at
+   * (xIn,yIn) — canvas margins then automatically carry the neighboring
+   * plane art, which is what provides seam allowance / bleed continuity.
+   */
+  canvasXIn: number;
+  canvasYIn: number;
+  canvasWIn: number;
+  canvasHIn: number;
   /** Whether this panel participates in seam-bound master slicing. */
   seamBound: boolean;
 }
+
+/**
+ * Per-product calibration: where the visible sewn piece sits within each
+ * placement's file canvas, measured by rendering labeled calibration grids
+ * through the provider's real mockup generator (scripts/calibrate.ts).
+ * Fractions are relative to the canvas (0..1).
+ */
+export interface PlacementCalibration {
+  /** Piece width/height as a fraction of the canvas. */
+  pieceWFrac: number;
+  pieceHFrac: number;
+  /** Piece CENTER position within the canvas, as fractions. */
+  pieceCxFrac: number;
+  pieceCyFrac: number;
+  /**
+   * Optional anatomical anchor: piece-center offset (inches) from another
+   * placement's piece center — e.g. a hoodie pouch pocket anchored to the
+   * front so its art continues the surrounding front art.
+   */
+  anchor?: { relativeTo: string; dxIn: number; dyIn: number };
+}
+
+export type CalibrationProfile = Record<string, PlacementCalibration>;
 
 export interface SeamBond {
   a: string;
@@ -96,18 +133,42 @@ export const classifyPlacement = (placement: string): PanelRole => {
   return "detached";
 };
 
-const resolvePanelSize = (input: PanelGeometryInput) => {
+const resolvePanelSize = (input: PanelGeometryInput, cal?: PlacementCalibration) => {
   const dpi = num(input.dpi) ?? DEFAULT_DPI;
   const widthPx = num(input.width_px) ?? Math.round(DEFAULT_WIDTH_IN * dpi);
   const heightPx = num(input.height_px) ?? Math.round(DEFAULT_HEIGHT_IN * dpi);
+  const canvasWIn = widthPx / dpi;
+  const canvasHIn = heightPx / dpi;
   return {
     dpi,
     targetWidthPx: Math.round(widthPx),
     targetHeightPx: Math.round(heightPx),
-    widthIn: widthPx / dpi,
-    heightIn: heightPx / dpi
+    canvasWIn,
+    canvasHIn,
+    widthIn: canvasWIn * (cal?.pieceWFrac ?? 1),
+    heightIn: canvasHIn * (cal?.pieceHFrac ?? 1),
+    cxFrac: cal?.pieceCxFrac ?? 0.5,
+    cyFrac: cal?.pieceCyFrac ?? 0.5,
+    anchor: cal?.anchor
   };
 };
+
+/** Canvas window placed so the piece region lands at the piece plane rect. */
+const canvasWindow = (panel: {
+  xIn: number;
+  yIn: number;
+  widthIn: number;
+  heightIn: number;
+  canvasWIn: number;
+  canvasHIn: number;
+  cxFrac: number;
+  cyFrac: number;
+}) => ({
+  canvasXIn: panel.xIn + panel.widthIn / 2 - panel.cxFrac * panel.canvasWIn,
+  canvasYIn: panel.yIn + panel.heightIn / 2 - panel.cyFrac * panel.canvasHIn,
+  canvasWIn: panel.canvasWIn,
+  canvasHIn: panel.canvasHIn
+});
 
 /**
  * Build the garment plane for an arbitrary set of placements.
@@ -124,12 +185,37 @@ const resolvePanelSize = (input: PanelGeometryInput) => {
  * detached: they get real positions on a second row for deterministic
  * accounting, but art for them is derived per-panel, not sliced.
  */
-export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane => {
+export const buildGarmentPlane = (
+  inputs: PanelGeometryInput[],
+  profile?: CalibrationProfile
+): GarmentPlane => {
   const sized = inputs.map((input) => ({
     input,
     role: classifyPlacement(input.placement),
-    ...resolvePanelSize(input)
+    ...resolvePanelSize(input, profile?.[input.placement])
   }));
+
+  const push = (
+    panel: (typeof sized)[number],
+    xIn: number,
+    yIn: number,
+    seamBound: boolean,
+    panels: PanelPlan[]
+  ) => {
+    panels.push({
+      placement: panel.input.placement,
+      role: panel.role,
+      targetWidthPx: panel.targetWidthPx,
+      targetHeightPx: panel.targetHeightPx,
+      dpi: panel.dpi,
+      widthIn: panel.widthIn,
+      heightIn: panel.heightIn,
+      xIn,
+      yIn,
+      ...canvasWindow({ ...panel, xIn, yIn }),
+      seamBound
+    });
+  };
 
   // Legs behave like body panels: on leggings the two leg panels meet at the
   // center-front/center-back seams, so they share a cut line on the plane.
@@ -157,18 +243,7 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
   let cursorX = 0;
   let previous: (typeof row)[number] | null = null;
   for (const panel of row) {
-    panels.push({
-      placement: panel.input.placement,
-      role: panel.role,
-      targetWidthPx: panel.targetWidthPx,
-      targetHeightPx: panel.targetHeightPx,
-      dpi: panel.dpi,
-      widthIn: panel.widthIn,
-      heightIn: panel.heightIn,
-      xIn: cursorX,
-      yIn: hoodHeight,
-      seamBound: row.length > 1
-    });
+    push(panel, cursorX, hoodHeight, row.length > 1, panels);
     if (previous) {
       seams.push({
         a: previous.input.placement,
@@ -190,18 +265,7 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
     const hoodX = bodyAnchor
       ? bodyAnchor.xIn + (bodyAnchor.widthIn - hood.widthIn) / 2
       : Math.max(0, (rowWidth - hood.widthIn) / 2);
-    panels.push({
-      placement: hood.input.placement,
-      role: "hood",
-      targetWidthPx: hood.targetWidthPx,
-      targetHeightPx: hood.targetHeightPx,
-      dpi: hood.dpi,
-      widthIn: hood.widthIn,
-      heightIn: hood.heightIn,
-      xIn: Math.max(0, hoodX),
-      yIn: 0,
-      seamBound: row.length > 0
-    });
+    push(hood, Math.max(0, hoodX), 0, row.length > 0, panels);
     if (bodyAnchor) {
       seams.push({
         a: hood.input.placement,
@@ -212,54 +276,30 @@ export const buildGarmentPlane = (inputs: PanelGeometryInput[]): GarmentPlane =>
     }
   }
 
-  // AOP pouch-pocket continuity: providers like Printful give the pocket the
-  // SAME print canvas as the front and mask the pocket shape from it, so an
-  // identical crop makes the pocket invisible against the front art. When
-  // the pocket canvas matches the front canvas, pin its rect to the front's.
+  // Pouch-pocket continuity: the pocket piece sits ON the front piece, so
+  // its plane position must make its art continue the surrounding front art.
+  // A calibrated anchor gives the measured offset from the front piece
+  // center; without calibration, default to lower-center of the front.
   if (pocket) {
     const front = panels.find((panel) => panel.role === "front");
-    const sameCanvas =
-      front &&
-      Math.abs(front.widthIn - pocket.widthIn) < 0.01 &&
-      Math.abs(front.heightIn - pocket.heightIn) < 0.01;
-    panels.push({
-      placement: pocket.input.placement,
-      role: "pocket",
-      targetWidthPx: pocket.targetWidthPx,
-      targetHeightPx: pocket.targetHeightPx,
-      dpi: pocket.dpi,
-      widthIn: pocket.widthIn,
-      heightIn: pocket.heightIn,
-      xIn: sameCanvas
-        ? front.xIn
-        : front
-          ? front.xIn + (front.widthIn - pocket.widthIn) / 2
-          : 0,
-      yIn: sameCanvas
-        ? front.yIn
-        : front
-          ? front.yIn + front.heightIn - pocket.heightIn
-          : hoodHeight + rowHeight + 1,
-      seamBound: Boolean(front)
-    });
+    if (front) {
+      const anchor = pocket.anchor;
+      const cx =
+        front.xIn + front.widthIn / 2 + (anchor?.relativeTo === front.placement ? anchor.dxIn : 0);
+      const cy = anchor?.relativeTo === front.placement
+        ? front.yIn + front.heightIn / 2 + anchor.dyIn
+        : front.yIn + front.heightIn * 0.72;
+      push(pocket, cx - pocket.widthIn / 2, cy - pocket.heightIn / 2, true, panels);
+    } else {
+      push(pocket, 0, hoodHeight + rowHeight + 1, false, panels);
+    }
   }
 
   let detachedX = 0;
   const detachedY = hoodHeight + rowHeight + 1;
   let detachedRowHeight = 0;
   for (const panel of detachedPanels) {
-    panels.push({
-      placement: panel.input.placement,
-      role: panel.role,
-      targetWidthPx: panel.targetWidthPx,
-      targetHeightPx: panel.targetHeightPx,
-      dpi: panel.dpi,
-      widthIn: panel.widthIn,
-      heightIn: panel.heightIn,
-      xIn: detachedX,
-      yIn: detachedY,
-      seamBound: false
-    });
+    push(panel, detachedX, detachedY, false, panels);
     detachedX += panel.widthIn + 1;
     detachedRowHeight = Math.max(detachedRowHeight, panel.heightIn);
   }
