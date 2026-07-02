@@ -110,12 +110,16 @@ export class RunwareMedia {
   }
 
   /** Print-resolution upscaling. Accepts a URL, image UUID, or base64/data URI. */
-  async upscale(image: string, upscaleFactor: 2 | 3 | 4 = 2): Promise<ImageResult> {
+  async upscale(
+    image: string,
+    upscaleFactor: 2 | 3 | 4 = 2,
+    outputFormat: "PNG" | "JPG" = "PNG"
+  ): Promise<ImageResult> {
     return this.client.runTask<ImageResult>({
       taskType: "imageUpscale",
       upscaleFactor,
       outputType: "URL",
-      outputFormat: "PNG",
+      outputFormat,
       includeCost: true,
       inputs: { image }
     });

@@ -134,11 +134,26 @@ const CASES: CalCase[] = [
   }
 ];
 
+/** Fresh MCP connection per call — long retry waits kill idle transports. */
+const callMockupsMcp = async (
+  name: string,
+  args: Record<string, unknown>
+): Promise<string> => {
+  const mcp = new Client({ name: "threadbot-calibrate", version: "1.0.0" });
+  await mcp.connect(new StreamableHTTPClientTransport(new URL(MOCKUPS_MCP)));
+  try {
+    const response = await mcp.callTool({ name, arguments: args }, undefined, {
+      timeout: 300000
+    });
+    return mcpText(response);
+  } finally {
+    await mcp.close().catch(() => {});
+  }
+};
+
 const run = async () => {
   await mkdir(OUT_DIR, { recursive: true });
   const media = new RunwareMedia();
-  const mcp = new Client({ name: "threadbot-calibrate", version: "1.0.0" });
-  await mcp.connect(new StreamableHTTPClientTransport(new URL(MOCKUPS_MCP)));
 
   for (const cal of CASES) {
     console.log(`\n=== calibrating ${cal.name}`);
@@ -152,36 +167,30 @@ const run = async () => {
       const png = await calibrationPng(p.key, wPx, hPx);
       await writeFile(path.join(OUT_DIR, `${cal.name}-${p.key}-grid.png`), png);
       const uuid = await media.uploadImage(`data:image/png;base64,${png.toString("base64")}`);
-      const hosted = await media.upscale(uuid, 2);
+      // JPG output: flat grids upscale to huge noisy PNGs that stall
+      // Printful's file pre-processing; JPG stays small and processes fast.
+      const hosted = await media.upscale(uuid, 2, "JPG");
       files[p.key] = hosted.imageURL;
       console.log(`  ${p.key}: ${hosted.imageURL}`);
     }
     let raw = "";
     for (let attempt = 1; attempt <= 6; attempt++) {
       try {
-        const response = await mcp.callTool(
-          {
-            name: "create_and_wait_for_printful_mockups",
-            arguments: {
-              product_id: cal.productId,
-              variant_ids: [cal.variantId],
-              placement_file_urls: files,
-              mockup_style_ids: cal.styleIds,
-              format: "jpg",
-              mockup_width_px: 2000,
-              max_attempts: 30,
-              interval_seconds: 5
-            }
-          },
-          undefined,
-          { timeout: 300000 }
-        );
-        raw = mcpText(response);
+        raw = await callMockupsMcp("create_and_wait_for_printful_mockups", {
+          product_id: cal.productId,
+          variant_ids: [cal.variantId],
+          placement_file_urls: files,
+          mockup_style_ids: cal.styleIds,
+          format: "jpg",
+          mockup_width_px: 2000,
+          max_attempts: 30,
+          interval_seconds: 5
+        });
         break;
       } catch (error) {
         const message = (error as Error).message;
         const transient =
-          /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error/i.test(
+          /429|TooManyRequests|exceed available attempts|PREUPLOAD_NOT_READY|file_status.*waiting|internal-server-error|fetch failed|other side closed|socket|timed? ?out/i.test(
             message
           );
         if (attempt < 6 && transient) {
@@ -211,7 +220,6 @@ const run = async () => {
       }
     }
   }
-  await mcp.close();
   console.log(`\nCalibration renders in ${OUT_DIR}`);
 };
 
