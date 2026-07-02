@@ -64,8 +64,10 @@ export class RunwareMedia {
       ...(params.referenceImages?.length
         ? {
             inputs: {
+              // Plain URL/UUID strings — the {image, role} object form is
+              // only valid for Virtual Try-On.
               referenceImages: params.referenceImages.map((ref) =>
-                typeof ref === "string" ? { image: ref } : ref
+                typeof ref === "string" ? ref : ref.image
               )
             }
           }

@@ -241,10 +241,13 @@ export const buildGarmentPlane = (
   const seams: SeamBond[] = [];
 
   const hoodHeight = hood ? hood.heightIn : 0;
+  // A single body panel is still master-sliced when overlay/attached pieces
+  // (pocket, hood) must continue its art — e.g. backpack front + pocket.
+  const bodySeamBound = row.length > 1 || Boolean(pocket) || Boolean(hood);
   let cursorX = 0;
   let previous: (typeof row)[number] | null = null;
   for (const panel of row) {
-    push(panel, cursorX, hoodHeight, row.length > 1, panels);
+    push(panel, cursorX, hoodHeight, bodySeamBound, panels);
     if (previous) {
       seams.push({
         a: previous.input.placement,
