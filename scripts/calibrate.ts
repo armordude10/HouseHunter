@@ -90,8 +90,8 @@ interface CalCase {
   name: string;
   productId: number;
   variantId: number;
-  placements: Array<{ key: string; widthIn: number; heightIn: number }>;
-  styleIds: number[];
+  /** styleId = the mockup view that best shows this placement. */
+  placements: Array<{ key: string; widthIn: number; heightIn: number; styleId: number }>;
 }
 
 const CASES: CalCase[] = [
@@ -99,37 +99,34 @@ const CASES: CalCase[] = [
     name: "hoodie388",
     productId: 388,
     variantId: 18730,
-    styleIds: [20132, 20133, 20134, 20135],
     placements: [
-      { key: "front", widthIn: 40, heightIn: 40 },
-      { key: "back", widthIn: 40, heightIn: 40 },
-      { key: "sleeve_left", widthIn: 40, heightIn: 40 },
-      { key: "sleeve_right", widthIn: 40, heightIn: 40 },
-      { key: "hood", widthIn: 40, heightIn: 40 },
-      { key: "pocket", widthIn: 40, heightIn: 40 }
+      { key: "front", widthIn: 40, heightIn: 40, styleId: 20132 },
+      { key: "back", widthIn: 40, heightIn: 40, styleId: 20133 },
+      { key: "sleeve_left", widthIn: 40, heightIn: 40, styleId: 20135 },
+      { key: "sleeve_right", widthIn: 40, heightIn: 40, styleId: 20134 },
+      { key: "hood", widthIn: 40, heightIn: 40, styleId: 20133 },
+      { key: "pocket", widthIn: 40, heightIn: 40, styleId: 20132 }
     ]
   },
   {
     name: "tee257",
     productId: 257,
     variantId: 8852,
-    styleIds: [15710, 15711, 15712, 15713],
     placements: [
-      { key: "default", widthIn: 28, heightIn: 36 },
-      { key: "back", widthIn: 28, heightIn: 36 },
-      { key: "sleeve_left", widthIn: 20, heightIn: 12 },
-      { key: "sleeve_right", widthIn: 20, heightIn: 12 }
+      { key: "default", widthIn: 28, heightIn: 36, styleId: 15710 },
+      { key: "back", widthIn: 28, heightIn: 36, styleId: 15711 },
+      { key: "sleeve_left", widthIn: 20, heightIn: 12, styleId: 15713 },
+      { key: "sleeve_right", widthIn: 20, heightIn: 12, styleId: 15712 }
     ]
   },
   {
     name: "leggings242",
     productId: 242,
     variantId: 8355,
-    styleIds: [15516, 15517, 15518, 15519],
     placements: [
-      { key: "default", widthIn: 47, heightIn: 41 },
-      { key: "belt_front", widthIn: 20, heightIn: 7 },
-      { key: "belt_back", widthIn: 16, heightIn: 6 }
+      { key: "default", widthIn: 47, heightIn: 41, styleId: 15516 },
+      { key: "belt_front", widthIn: 20, heightIn: 7, styleId: 15516 },
+      { key: "belt_back", widthIn: 16, heightIn: 6, styleId: 15519 }
     ]
   }
 ];
@@ -173,19 +170,19 @@ const run = async () => {
       files[p.key] = hosted.imageURL;
       console.log(`  ${p.key}: ${hosted.imageURL}`);
     }
-    // Printful rejects heavy tasks ("would exceed available attempts"), so
-    // request at most 2 mockup styles per task and merge results.
-    const mockups: Array<{ view: string; mockup_url: string; style_id: number }> = [];
-    for (let chunkStart = 0; chunkStart < cal.styleIds.length; chunkStart += 2) {
-      const styleChunk = cal.styleIds.slice(chunkStart, chunkStart + 2);
+    // One placement per task (weight 1): dodges Printful's task-weight
+    // quota AND isolates each placement's grid on an otherwise blank garment,
+    // which is ideal for measurement.
+    const mockups: Array<{ view: string; mockup_url: string; style_id: number; placementKey: string }> = [];
+    for (const p of cal.placements) {
       let raw = "";
       for (let attempt = 1; attempt <= 6; attempt++) {
         try {
           raw = await callMockupsMcp("create_and_wait_for_printful_mockups", {
             product_id: cal.productId,
             variant_ids: [cal.variantId],
-            placement_file_urls: files,
-            mockup_style_ids: styleChunk,
+            placement_file_urls: { [p.key]: files[p.key] },
+            mockup_style_ids: [p.styleId],
             format: "jpg",
             mockup_width_px: 1600,
             max_attempts: 30,
@@ -199,28 +196,26 @@ const run = async () => {
               message
             );
           if (attempt < 6 && transient) {
-            const wait = 45000;
-            console.log(`  transient Printful condition; waiting ${wait / 1000}s (attempt ${attempt}): ${message.slice(0, 120)}`);
+            const wait = 90000;
+            console.log(`  transient Printful condition; waiting ${wait / 1000}s (attempt ${attempt})`);
             await new Promise((resolve) => setTimeout(resolve, wait));
             continue;
           }
           throw error;
         }
       }
-      await writeFile(path.join(OUT_DIR, `${cal.name}-task-${chunkStart / 2}.json`), raw);
+      await writeFile(path.join(OUT_DIR, `${cal.name}-${p.key}-task.json`), raw);
       const task = JSON.parse(raw)?.waited?.task?.data?.[0];
-      mockups.push(
-        ...(task?.catalog_variant_mockups ?? []).flatMap((g: { mockups: never[] }) => g.mockups)
-      );
-      console.log(`  styles ${styleChunk.join(",")}: status=${task?.status}`);
-      await new Promise((resolve) => setTimeout(resolve, 15000));
+      const got = (task?.catalog_variant_mockups ?? []).flatMap((g: { mockups: never[] }) => g.mockups);
+      for (const m of got) mockups.push({ ...(m as object) as { view: string; mockup_url: string; style_id: number }, placementKey: p.key });
+      console.log(`  ${p.key}: status=${task?.status} renders=${got.length}`);
+      await new Promise((resolve) => setTimeout(resolve, 20000));
     }
-    console.log(`  total mockups=${mockups.length}`);
     for (const m of mockups) {
       try {
         const buffer = Buffer.from(await (await fetch(m.mockup_url)).arrayBuffer());
         await writeFile(
-          path.join(OUT_DIR, `${cal.name}-view-${m.view.toLowerCase().replace(/\W+/g, "_")}-${m.style_id}.jpg`),
+          path.join(OUT_DIR, `${cal.name}-${(m as { placementKey?: string }).placementKey ?? "x"}-view-${m.view.toLowerCase().replace(/\W+/g, "_")}.jpg`),
           buffer
         );
       } catch (error) {
