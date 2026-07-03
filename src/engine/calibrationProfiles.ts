@@ -21,15 +21,22 @@ import { CalibrationProfile } from "./garmentSpace.js";
  * These take precedence; the hand-measured built-ins below are the fallback.
  */
 const loadCatalogProfiles = (): Record<string, CalibrationProfile> => {
-  try {
-    const file = path.resolve(process.cwd(), "data/printful-calibration.json");
-    const parsed = JSON.parse(readFileSync(file, "utf8")) as {
-      profiles?: Record<string, CalibrationProfile>;
-    };
-    return parsed.profiles ?? {};
-  } catch {
-    return {};
+  const candidates = [
+    path.resolve(process.cwd(), "data/printful-calibration.json"),
+    // Module-relative: <root>/dist/engine/… or <root>/src/engine/… -> <root>/data/…
+    new URL("../../data/printful-calibration.json", import.meta.url).pathname
+  ];
+  for (const file of candidates) {
+    try {
+      const parsed = JSON.parse(readFileSync(file, "utf8")) as {
+        profiles?: Record<string, CalibrationProfile>;
+      };
+      if (parsed.profiles) return parsed.profiles;
+    } catch {
+      // try next candidate
+    }
   }
+  return {};
 };
 
 const CATALOG_PROFILES = loadCatalogProfiles();

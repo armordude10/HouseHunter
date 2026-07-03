@@ -22,7 +22,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Runner, withTrace } from "./runware/agent.js";
-import { RunwareMedia } from "./runware/media.js";
+import { getLlmProvider } from "./llm/provider.js";
 import { registerRunContext } from "./engine/runContext.js";
 import {
   threadbotIntakeOrchestrator,
@@ -127,9 +127,9 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
     }
     let imageCaptions: string[] = [];
     if (imageUrls.length) {
-      const media = new RunwareMedia();
+      const provider = getLlmProvider();
       imageCaptions = await Promise.all(
-        imageUrls.map((url) => media.imageCaption(url).catch(() => ""))
+        imageUrls.map((url) => provider.captionImage(url).catch(() => ""))
       );
     }
     const attachedImagesBlock = imageUrls.length

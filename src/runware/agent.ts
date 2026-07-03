@@ -21,13 +21,9 @@ import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import {
-  ChatMessage,
-  ChatToolDefinition,
-  sharedClient,
-  RunwareClient
-} from "./client.js";
+import { ChatMessage, ChatToolDefinition } from "./client.js";
 import { NODE_MODELS } from "./models.js";
+import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 
 const MAX_TOOL_TURNS = 24;
 const MAX_OUTPUT_TOKENS = 16000;
@@ -182,7 +178,7 @@ const extractJson = (text: string): string => {
 };
 
 export class Runner {
-  constructor(private readonly client: RunwareClient = sharedClient()) {}
+  constructor(private readonly provider: LlmProvider = getLlmProvider()) {}
 
   async run<TSchema extends z.ZodTypeAny>(
     agent: Agent<TSchema>,
@@ -223,7 +219,7 @@ export class Runner {
     if (!definitions.length) return;
 
     for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-      const completion = await this.client.chatCompletion({
+      const completion = await this.provider.chat({
         model: agent.model,
         messages: transcript,
         tools: definitions,
@@ -287,28 +283,21 @@ export class Runner {
 
     let repairNote = "";
     for (let attempt = 0; attempt < 2; attempt++) {
-      const result = await this.client.textInference({
+      const text = await this.provider.structured({
         model: agent.model,
-        settings: {
-          systemPrompt: agent.instructions,
-          maxTokens: MAX_OUTPUT_TOKENS,
-          thinkingLevel: agent.thinkingLevel
-        },
-        messages: [
-          {
-            role: "user",
-            content: `${folded}\n\nReturn only JSON matching the configured schema.${repairNote}`
-          }
-        ],
+        systemPrompt: agent.instructions,
+        userText: `${folded}\n\nReturn only JSON matching the configured schema.${repairNote}`,
         jsonSchema: {
           name: schemaName(agent.name),
           strict: true,
           schema: jsonSchema
-        }
+        },
+        maxTokens: MAX_OUTPUT_TOKENS,
+        thinkingLevel: agent.thinkingLevel
       });
 
       try {
-        const parsed = JSON.parse(extractJson(result.text));
+        const parsed = JSON.parse(extractJson(text));
         return agent.outputType.parse(parsed);
       } catch (error) {
         repairNote = `\n\nYour previous output failed schema validation: ${
