@@ -134,22 +134,29 @@ export const classifyPlacement = (placement: string): PanelRole => {
   return "detached";
 };
 
+/** Clamp a calibration fraction into a sane range; fall back on garbage. */
+const frac = (value: unknown, fallback: number, min = 0.02, max = 1): number => {
+  const parsed = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
 const resolvePanelSize = (input: PanelGeometryInput, cal?: PlacementCalibration) => {
   const dpi = num(input.dpi) ?? DEFAULT_DPI;
   const widthPx = num(input.width_px) ?? Math.round(DEFAULT_WIDTH_IN * dpi);
   const heightPx = num(input.height_px) ?? Math.round(DEFAULT_HEIGHT_IN * dpi);
-  const canvasWIn = widthPx / dpi;
-  const canvasHIn = heightPx / dpi;
+  // Physical canvas bounded to sane garment scale (corrupt contracts clamp).
+  const canvasWIn = Math.min(120, Math.max(0.25, widthPx / dpi));
+  const canvasHIn = Math.min(120, Math.max(0.25, heightPx / dpi));
   return {
     dpi,
     targetWidthPx: Math.round(widthPx),
     targetHeightPx: Math.round(heightPx),
     canvasWIn,
     canvasHIn,
-    widthIn: canvasWIn * (cal?.pieceWFrac ?? 1),
-    heightIn: canvasHIn * (cal?.pieceHFrac ?? 1),
-    cxFrac: cal?.pieceCxFrac ?? 0.5,
-    cyFrac: cal?.pieceCyFrac ?? 0.5,
+    widthIn: canvasWIn * frac(cal?.pieceWFrac, 1),
+    heightIn: canvasHIn * frac(cal?.pieceHFrac, 1),
+    cxFrac: frac(cal?.pieceCxFrac, 0.5, 0, 1),
+    cyFrac: frac(cal?.pieceCyFrac, 0.5, 0, 1),
     anchor: cal?.anchor
   };
 };

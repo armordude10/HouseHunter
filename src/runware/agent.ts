@@ -158,6 +158,18 @@ export interface RunResult<TSchema extends z.ZodTypeAny> {
 const schemaName = (agentName: string) =>
   agentName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
+/**
+ * Cap one transcript part so a single enormous tool result (a full surface
+ * graph, a catalog dump) cannot blow out the structured-output call's
+ * context. Head and tail are kept — truth gates and summaries usually live
+ * at the edges of tool payloads.
+ */
+export const capText = (text: string, max = 20000): string => {
+  if (text.length <= max) return text;
+  const half = Math.floor(max / 2);
+  return `${text.slice(0, half)}\n...[${text.length - max} chars truncated]...\n${text.slice(-half)}`;
+};
+
 const extractJson = (text: string): string => {
   const trimmed = text.trim();
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) return trimmed;
@@ -261,15 +273,15 @@ export class Runner {
       .slice(1)
       .map((message) => {
         if (message.role === "tool") {
-          return `TOOL RESULT (${message.tool_call_id ?? "unknown"}):\n${message.content ?? ""}`;
+          return `TOOL RESULT (${message.tool_call_id ?? "unknown"}):\n${capText(message.content ?? "")}`;
         }
         if (message.role === "assistant" && message.tool_calls?.length) {
           const calls = message.tool_calls
-            .map((call) => `${call.function.name}(${call.function.arguments})`)
+            .map((call) => `${call.function.name}(${capText(call.function.arguments, 4000)})`)
             .join("\n");
-          return `ASSISTANT TOOL CALLS:\n${calls}${message.content ? `\n${message.content}` : ""}`;
+          return `ASSISTANT TOOL CALLS:\n${calls}${message.content ? `\n${capText(message.content)}` : ""}`;
         }
-        return `${message.role.toUpperCase()}:\n${message.content ?? ""}`;
+        return `${message.role.toUpperCase()}:\n${capText(message.content ?? "")}`;
       })
       .join("\n\n");
 

@@ -151,6 +151,47 @@ test harnesses follow the same rule:
 
 Runware generates the *print files*; Printful renders the *product truth*.
 
+## Threat model & hardening (adversarial stress suite)
+
+`npm run stress` runs a 51-check offline attack battery (`scripts/stresstest.ts`)
+against the deterministic layers, asserting two invariants under hostile
+input: **total accounting** (every placement job yields exactly one honest
+bundle entry — no crashes, drops, or silent partials) and **correctness
+under calibration** (piece-edge seam continuity, bounded memory/files).
+Covered and fixed:
+
+- Geometry pathology: zero/negative/NaN/string/1e9 dimensions, missing
+  contracts, extreme aspect ratios → clamped to sane print bounds
+- Structural abuse: empty plans, duplicate placements/job ids, 24-job mixed
+  plans, all-blank plans, >40-job cost-bomb plans (rejected), >4MB plan JSON
+  (rejected)
+- Mirror pathology: orphaned sources, failed sources, blank sources, mirror
+  cycles → honest per-panel failures, never silent
+- Calibration abuse: out-of-range/NaN fractions, dangling anchors → sanitized
+- Hostile content: megabyte briefs/style lists, injection-shaped and
+  RTL/emoji placement names → prompts stay bounded, forbidden text is never
+  echoed into any prompt, master prompts contain no garment vocabulary
+- Concurrency: parallel compiles share no state; run-context lookups are
+  exact-match (single-context fallback only) so concurrent customers' images
+  cannot cross-contaminate
+- Inputs: text + up to 10 reference images per run — http(s) URLs only,
+  deduplicated, capped, invalid entries reported; captions flow to intent
+  parsing and generation references
+- Module-load safety: importing the workflow no longer requires credentials
+  (media clients construct lazily)
+
+### Known limits that live OUTSIDE this codebase
+
+- **Agent-layer fidelity** (frozen instructions/schemas): run_id propagation
+  trusts model output between nodes; strict jsonSchema behavior of each
+  Runware-hosted LLM needs one live verification pass when credits allow.
+- **threadbot MCP servers**: product-intelligence requires its SQL instance;
+  the mockups MCP's unconditional stitch_color injection breaks
+  no-option products (shoes) — inject only when the product supports it.
+- **Provider quotas**: Printful mockup task weight scales with
+  styles x placements x width (keep ≤2 styles at ≤1000px per task);
+  Runware credit exhaustion mid-bundle is reported honestly per panel.
+
 ## What stayed on existing services (and why)
 
 - **Policy / product-intelligence / pricing MCP servers** — these are

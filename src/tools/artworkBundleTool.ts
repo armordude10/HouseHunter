@@ -61,7 +61,7 @@ const toCompileJob = (raw: Record<string, unknown>): CompileJob => ({
 });
 
 export const createGeneratePanelArtworkBundleTool = (
-  media: RunwareMedia = new RunwareMedia()
+  media?: RunwareMedia
 ): AgentTool => ({
   name: "generate_panel_artwork_bundle",
   description:
@@ -128,7 +128,9 @@ export const createGeneratePanelArtworkBundleTool = (
   execute: async (args) => {
     const runId = String(args.run_id ?? "run");
     const context = getRunContext(runId);
-    const compiler = new PanelCompiler(media);
+    // Lazy media construction: requiring credentials at module load would
+    // crash any process that merely imports the workflow.
+    const compiler = new PanelCompiler(media ?? new RunwareMedia());
 
     const designInput = (args.design as Partial<DesignSpec> | undefined) ?? {};
     const design: DesignSpec = {
@@ -145,6 +147,9 @@ export const createGeneratePanelArtworkBundleTool = (
     };
 
     // Preferred path: execute the entire surface plan in one deterministic pass.
+    if (typeof args.surface_plan_json === "string" && args.surface_plan_json.length > 4_000_000) {
+      return JSON.stringify({ error: "surface_plan_json exceeds the 4MB safety limit" });
+    }
     if (typeof args.surface_plan_json === "string" && args.surface_plan_json.trim()) {
       let plan: SurfacePlanShape;
       try {
@@ -157,6 +162,14 @@ export const createGeneratePanelArtworkBundleTool = (
       const jobs = (plan.placement_jobs ?? []).map(toCompileJob);
       if (!jobs.length) {
         return JSON.stringify({ error: "surface_plan_json contains no placement_jobs" });
+      }
+      // Cost guard: no real product needs more panels than this; a plan that
+      // does is malformed or hostile and must be fixed upstream, not billed.
+      const MAX_JOBS = 40;
+      if (jobs.length > MAX_JOBS) {
+        return JSON.stringify({
+          error: `surface plan contains ${jobs.length} placement_jobs, exceeding the ${MAX_JOBS}-job safety limit`
+        });
       }
       const result = await compiler.compile(
         runId,

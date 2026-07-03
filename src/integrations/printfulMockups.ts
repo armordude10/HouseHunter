@@ -107,6 +107,9 @@ export const createAndWaitForMockups = async (params: {
     taskId = created.data[0].id;
     break;
   }
+  if (taskId === null) {
+    throw new Error("mockup task was never created (rate limited on every attempt)");
+  }
 
   const maxAttempts = params.maxAttempts ?? 30;
   const intervalMs = (params.intervalSeconds ?? 5) * 1000;

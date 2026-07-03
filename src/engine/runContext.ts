@@ -15,14 +15,22 @@ export interface RunContext {
 }
 
 const contexts = new Map<string, RunContext>();
-let latest: RunContext | null = null;
 
 export const registerRunContext = (context: RunContext) => {
   contexts.set(context.runId, context);
-  latest = context;
 };
 
+/**
+ * Exact-match lookup. The only permitted fallback is when a SINGLE context
+ * exists (single-run CLI process) — with concurrent runs a fuzzy fallback
+ * would leak one customer's reference images into another customer's run.
+ */
 export const getRunContext = (runId?: string | null): RunContext | null => {
   if (runId && contexts.has(runId)) return contexts.get(runId)!;
-  return latest;
+  if (contexts.size === 1) return [...contexts.values()][0];
+  return null;
+};
+
+export const clearRunContext = (runId: string) => {
+  contexts.delete(runId);
 };

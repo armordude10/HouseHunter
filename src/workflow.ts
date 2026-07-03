@@ -61,6 +61,41 @@ type WorkflowInput = {
   input_image_urls?: string[];
 };
 
+/** Threadbot accepts text plus up to this many reference images per run. */
+export const MAX_CUSTOMER_IMAGES = 10;
+
+/**
+ * Validate and normalize customer image inputs: http(s) URLs only (no data:
+ * bombs, no file paths, no javascript:), deduplicated, capped at
+ * MAX_CUSTOMER_IMAGES. Invalid entries are dropped and reported.
+ */
+export const normalizeCustomerImages = (
+  urls: string[] | undefined
+): { accepted: string[]; rejected: string[] } => {
+  const accepted: string[] = [];
+  const rejected: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of urls ?? []) {
+    const url = typeof raw === "string" ? raw.trim() : "";
+    let valid = false;
+    try {
+      const parsed = new URL(url);
+      valid = (parsed.protocol === "https:" || parsed.protocol === "http:") && url.length < 2048;
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      rejected.push(String(raw).slice(0, 120));
+      continue;
+    }
+    if (seen.has(url)) continue;
+    seen.add(url);
+    if (accepted.length < MAX_CUSTOMER_IMAGES) accepted.push(url);
+    else rejected.push(`${url.slice(0, 100)} (over ${MAX_CUSTOMER_IMAGES}-image limit)`);
+  }
+  return { accepted, rejected };
+};
+
 interface NodeResult<T> {
   output_text: string;
   output_parsed: T;
@@ -84,7 +119,12 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
     // context so the artwork engine can use them as generation references.
     // Captions become part of the customer's request content — no agent
     // instruction or schema is touched.
-    const imageUrls = workflow.input_image_urls ?? [];
+    const { accepted: imageUrls, rejected: rejectedImages } = normalizeCustomerImages(
+      workflow.input_image_urls
+    );
+    if (rejectedImages.length) {
+      console.error(`[workflow] rejected ${rejectedImages.length} customer image input(s)`);
+    }
     let imageCaptions: string[] = [];
     if (imageUrls.length) {
       const media = new RunwareMedia();

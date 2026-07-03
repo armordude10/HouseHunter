@@ -30,9 +30,10 @@ export interface GenerateImageParams {
   layerDiffuse?: boolean;
 }
 
-/** Clamp to FLUX.2 limits: 256-2048px in 16px increments. */
+/** Clamp to FLUX.2 limits: 256-2048px in 16px increments. NaN-safe. */
 export const clampFluxDimension = (value: number): number => {
-  const clamped = Math.min(2048, Math.max(256, Math.round(value)));
+  const safe = Number.isFinite(value) ? Math.round(value) : 1024;
+  const clamped = Math.min(2048, Math.max(256, safe));
   return clamped - (clamped % 16);
 };
 
@@ -50,7 +51,8 @@ export class RunwareMedia {
     const task: Record<string, unknown> = {
       taskType: "imageInference",
       model,
-      positivePrompt: params.positivePrompt,
+      // Providers cap prompts (~10k chars); truncate rather than 400.
+      positivePrompt: params.positivePrompt.slice(0, 9500),
       ...(params.negativePrompt ? { negativePrompt: params.negativePrompt } : {}),
       width: clampFluxDimension(params.width),
       height: clampFluxDimension(params.height),

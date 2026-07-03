@@ -146,10 +146,14 @@ export interface CompileResult {
 // Prompt assembly.
 // -----------------------------------------------------------------------------
 
-const joinTerms = (terms?: string[]) => (terms?.length ? terms.join(", ") : "");
+/** Field caps: hostile mega-strings must not become mega-prompts. */
+const capField = (text: string, max = 1500) => (text.length > max ? text.slice(0, max) : text);
+
+const joinTerms = (terms?: string[]) =>
+  terms?.length ? capField(terms.slice(0, 24).join(", "), 600) : "";
 
 const designCore = (design: DesignSpec): string => {
-  const parts = [design.artwork_brief];
+  const parts = [capField(design.artwork_brief ?? "", 2500)];
   const style = joinTerms(design.style_terms);
   if (style) parts.push(`style: ${style}`);
   const palette = joinTerms(design.palette);
@@ -157,10 +161,20 @@ const designCore = (design: DesignSpec): string => {
   const mood = joinTerms(design.mood_terms);
   if (mood) parts.push(`mood: ${mood}`);
   if (design.required_text?.length) {
-    parts.push(`must include the exact text: ${design.required_text.map((t) => `"${t}"`).join(", ")}`);
+    parts.push(
+      `must include the exact text: ${design.required_text
+        .slice(0, 8)
+        .map((t) => `"${capField(t, 120)}"`)
+        .join(", ")}`
+    );
   }
   if (design.customer_image_captions?.length) {
-    parts.push(`faithful to customer reference imagery: ${design.customer_image_captions.join("; ")}`);
+    parts.push(
+      `faithful to customer reference imagery: ${capField(
+        design.customer_image_captions.slice(0, 10).join("; "),
+        1200
+      )}`
+    );
   }
   return parts.filter(Boolean).join(". ");
 };
@@ -198,7 +212,9 @@ const tilePrompt = (design: DesignSpec): string =>
   `uniform density, no border, no vignette. ${designCore(design)}. Flat print-ready pattern.`;
 
 const panelPrompt = (design: DesignSpec, job: CompileJob): string => {
-  const anchor = job.mapping_rule?.anchor ? ` Composition anchored ${job.mapping_rule.anchor}.` : "";
+  const anchor = job.mapping_rule?.anchor
+    ? ` Composition anchored ${capField(job.mapping_rule.anchor, 80)}.`
+    : "";
   // Print-safe framing: keep the subject comfortably inside the canvas so
   // provider safe-area cropping never clips it.
   return (
@@ -228,11 +244,21 @@ export const workingSize = (targetW: number, targetH: number) => {
   };
 };
 
+/**
+ * Hard bounds on print-file dimensions. Anything outside is a corrupted or
+ * hostile geometry contract — clamped so degenerate inputs (0, NaN, 1e9)
+ * cannot explode raster memory or produce absurd files.
+ */
+const MIN_TARGET_PX = 16;
+const MAX_TARGET_PX = 16000;
+
 const jobTarget = (job: CompileJob) => {
-  const dpi = numberOr(job.geometry_contract?.dpi, 150);
+  const dpi = Math.min(1200, Math.max(36, numberOr(job.geometry_contract?.dpi, 150)));
+  const clampPx = (value: number) =>
+    Math.min(MAX_TARGET_PX, Math.max(MIN_TARGET_PX, Math.round(value)));
   return {
-    width: Math.round(numberOr(job.geometry_contract?.width_px, 12 * dpi)),
-    height: Math.round(numberOr(job.geometry_contract?.height_px, 16 * dpi)),
+    width: clampPx(numberOr(job.geometry_contract?.width_px, 12 * dpi)),
+    height: clampPx(numberOr(job.geometry_contract?.height_px, 16 * dpi)),
     dpi
   };
 };
@@ -608,8 +634,12 @@ export class PanelCompiler {
       profile
     );
     const planeByPlacement = new Map(plane.panels.map((panel) => [panel.placement, panel]));
-    /** Physical repeat: one tile spans this many inches of garment. */
-    const TILE_INCHES = design.pattern_tile_inches ?? 6;
+    /** Physical repeat: one tile spans this many inches of garment (bounded). */
+    const rawTile = design.pattern_tile_inches;
+    const TILE_INCHES =
+      typeof rawTile === "number" && Number.isFinite(rawTile)
+        ? Math.min(48, Math.max(1, rawTile))
+        : 6;
 
     for (const job of jobs) {
       const panel = planeByPlacement.get(job.placement)!;
