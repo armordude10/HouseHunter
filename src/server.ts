@@ -96,7 +96,9 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   try {
     if (req.method === "OPTIONS") return json(res, 204, {});
-    if (req.method === "GET" && url.pathname === "/healthz") {
+    // NOTE: /healthz is reserved/intercepted by Google's frontend on
+    // run.app default URLs — it never reaches the container. Use /health.
+    if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/healthz")) {
       return json(res, 200, {
         ok: true,
         service: "threadbot-agentic-pipeline",
