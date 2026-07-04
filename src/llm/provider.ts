@@ -90,13 +90,18 @@ class RunwareProvider implements LlmProvider {
 
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
 
-/** Registry (Runware AIR id) -> OpenAI model. Light nodes ride the mini. */
+/**
+ * Registry (Runware AIR id) -> OpenAI model. Light nodes ride the mini.
+ * Overridable per deployment: OPENAI_MODEL_HEAVY / OPENAI_MODEL_LIGHT.
+ */
+const HEAVY = process.env.OPENAI_MODEL_HEAVY ?? "gpt-5.5";
+const LIGHT = process.env.OPENAI_MODEL_LIGHT ?? "gpt-5.4-mini";
 const OPENAI_MODEL_MAP: Record<string, string> = {
-  "deepseek:v4@flash": "gpt-5.5-mini",
-  "minimax:m2.7@0": "gpt-5.5-mini",
-  "minimax:m3@0": "gpt-5.5",
-  "openai:gpt@5.5": "gpt-5.5",
-  "anthropic:claude@opus-4.8": "gpt-5.5"
+  "deepseek:v4@flash": LIGHT,
+  "minimax:m2.7@0": LIGHT,
+  "minimax:m3@0": HEAVY,
+  "openai:gpt@5.5": HEAVY,
+  "anthropic:claude@opus-4.8": HEAVY
 };
 
 class OpenAIProvider implements LlmProvider {
@@ -109,7 +114,7 @@ class OpenAIProvider implements LlmProvider {
   }
 
   resolveModel(runwareModel: string): string {
-    return OPENAI_MODEL_MAP[runwareModel] ?? "gpt-5.5";
+    return OPENAI_MODEL_MAP[runwareModel] ?? HEAVY;
   }
 
   private async post(path: string, body: Record<string, unknown>): Promise<unknown> {
@@ -198,7 +203,7 @@ class OpenAIProvider implements LlmProvider {
 
   async captionImage(url: string): Promise<string> {
     const result = (await this.post("/chat/completions", {
-      model: "gpt-5.5-mini",
+      model: LIGHT,
       max_completion_tokens: 300,
       messages: [
         {
