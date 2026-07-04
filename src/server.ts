@@ -18,10 +18,22 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
+import { runExpress } from "./express/run.js";
 import { activeProviderName, usageTally } from "./llm/provider.js";
+
+type RunMode = "express" | "agents";
+
+/**
+ * Express (one light LLM call + one master image + deterministic panels +
+ * official mockups, cents per run) is the DEFAULT; the 13-agent pipeline is
+ * the opt-in premium/fallback mode. Overridable per deployment and per run.
+ */
+const defaultMode = (): RunMode =>
+  process.env.THREADBOT_DEFAULT_MODE === "agents" ? "agents" : "express";
 
 interface RunRecord {
   run_id: string;
+  mode: RunMode;
   status: "queued" | "running" | "completed" | "failed";
   created_at: string;
   finished_at?: string;
@@ -41,9 +53,18 @@ const prune = () => {
   }
 };
 
-const startRun = (input: { input_as_text: string; input_image_urls?: string[] }): RunRecord => {
+const startRun = (
+  input: {
+    input_as_text: string;
+    input_image_urls?: string[];
+    product_id?: number;
+    variant_id?: number;
+  },
+  mode: RunMode
+): RunRecord => {
   const record: RunRecord = {
     run_id: randomUUID(),
+    mode,
     status: "queued",
     created_at: new Date().toISOString()
   };
@@ -53,8 +74,12 @@ const startRun = (input: { input_as_text: string; input_image_urls?: string[] })
     record.status = "running";
     const before = { ...usageTally };
     try {
-      const result = await runWorkflow(input);
-      record.result = result.output_parsed;
+      if (mode === "express") {
+        record.result = await runExpress(input);
+      } else {
+        const result = await runWorkflow(input);
+        record.result = result.output_parsed;
+      }
       record.status = "completed";
     } catch (error) {
       record.error = (error as Error).message.slice(0, 2000);
@@ -111,12 +136,19 @@ const server = createServer(async (req, res) => {
         service: "threadbot-agentic-pipeline",
         llm_provider: activeProviderName(),
         artwork: process.env.THREADBOT_ARTWORK_MCP_URL ? "hosted-artwork-mcp" : "runware-local",
+        default_mode: defaultMode(),
         max_customer_images: MAX_CUSTOMER_IMAGES
       });
     }
     if (req.method === "POST" && url.pathname === "/runs") {
       const raw = await readBody(req);
-      let body: { input_as_text?: unknown; input_image_urls?: unknown };
+      let body: {
+        input_as_text?: unknown;
+        input_image_urls?: unknown;
+        mode?: unknown;
+        product_id?: unknown;
+        variant_id?: unknown;
+      };
       try {
         body = JSON.parse(raw || "{}");
       } catch {
@@ -129,17 +161,30 @@ const server = createServer(async (req, res) => {
       if (!text && !images.length) {
         return json(res, 400, { error: "input_as_text or input_image_urls required" });
       }
-      const record = startRun({
-        input_as_text: text || "Design a product from the attached reference images.",
-        input_image_urls: images
-      });
+      const mode: RunMode =
+        body.mode === "agents" || body.mode === "express" ? body.mode : defaultMode();
+      const asId = (value: unknown): number | undefined => {
+        const parsed = typeof value === "string" ? Number(value) : (value as number);
+        return typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0
+          ? Math.round(parsed)
+          : undefined;
+      };
+      const record = startRun(
+        {
+          input_as_text: text || "Design a product from the attached reference images.",
+          input_image_urls: images,
+          product_id: asId(body.product_id),
+          variant_id: asId(body.variant_id)
+        },
+        mode
+      );
       if (url.searchParams.get("sync") === "1") {
         while (record.status === "queued" || record.status === "running") {
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
         return json(res, record.status === "completed" ? 200 : 500, record);
       }
-      return json(res, 202, { run_id: record.run_id, status: record.status });
+      return json(res, 202, { run_id: record.run_id, status: record.status, mode: record.mode });
     }
     const runMatch = url.pathname.match(/^\/runs\/([0-9a-f-]{36})$/);
     if (req.method === "GET" && runMatch) {

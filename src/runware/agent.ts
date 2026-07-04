@@ -180,8 +180,27 @@ const extractJson = (text: string): string => {
   return trimmed;
 };
 
+/**
+ * Hard per-run LLM call budget for the agent pipeline. A single workflow run
+ * shares one Runner; if node loops ever spiral, the run fails loudly at a
+ * bounded cost instead of burning an invoice. Tune per deployment.
+ */
+const LLM_CALL_BUDGET = Number(process.env.THREADBOT_LLM_CALL_BUDGET ?? 200);
+
 export class Runner {
+  private llmCalls = 0;
+
   constructor(private readonly provider: LlmProvider = getLlmProvider()) {}
+
+  private spend(kind: string) {
+    this.llmCalls += 1;
+    if (this.llmCalls > LLM_CALL_BUDGET) {
+      throw new Error(
+        `LLM call budget exhausted (${LLM_CALL_BUDGET} calls) at ${kind}; ` +
+          `aborting run to cap spend. Raise THREADBOT_LLM_CALL_BUDGET if intentional.`
+      );
+    }
+  }
 
   async run<TSchema extends z.ZodTypeAny>(
     agent: Agent<TSchema>,
@@ -222,6 +241,7 @@ export class Runner {
     if (!definitions.length) return;
 
     for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+      this.spend(`${agent.name} tool loop turn ${turn + 1}`);
       const completion = await this.provider.chat({
         model: agent.model,
         messages: transcript,
@@ -288,6 +308,7 @@ export class Runner {
 
     let repairNote = "";
     for (let attempt = 0; attempt < 2; attempt++) {
+      this.spend(`${agent.name} structured finalize`);
       const text = await this.provider.structured({
         model: agent.model,
         systemPrompt: agent.instructions,

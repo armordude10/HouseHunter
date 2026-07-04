@@ -10,7 +10,8 @@
     "start": "node --loader tsx src/index.ts",
     "dev": "tsx src/index.ts",
     "selfcheck": "tsx scripts/selfcheck.ts",
-    "stress": "tsx scripts/stresstest.ts"
+    "stress": "tsx scripts/stresstest.ts",
+    "expresscheck": "tsx scripts/expresscheck.ts"
   },
   "engines": {
     "node": ">=20"
