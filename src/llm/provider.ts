@@ -23,6 +23,9 @@ import {
 
 export type LlmProviderName = "runware" | "openai";
 
+/** Cumulative token usage for cost visibility (reported per run by the server). */
+export const usageTally = { calls: 0, input_tokens: 0, output_tokens: 0 };
+
 export interface StructuredParams {
   model: string;
   systemPrompt: string;
@@ -137,6 +140,10 @@ class OpenAIProvider implements LlmProvider {
           `OpenAI ${path} HTTP ${response.status}: ${JSON.stringify(parsed)?.slice(0, 300)}`
         );
       }
+      const usage = (parsed as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage;
+      usageTally.calls += 1;
+      usageTally.input_tokens += usage?.prompt_tokens ?? 0;
+      usageTally.output_tokens += usage?.completion_tokens ?? 0;
       return parsed;
     }
   }
@@ -145,7 +152,10 @@ class OpenAIProvider implements LlmProvider {
     const body: Record<string, unknown> = {
       model: this.resolveModel(params.model),
       messages: params.messages,
-      max_completion_tokens: params.max_tokens
+      max_completion_tokens: params.max_tokens,
+      // Keep reasoning burn low in tool loops; quality lives in the
+      // structured finalize call and the Zod gate.
+      reasoning_effort: process.env.OPENAI_REASONING_EFFORT ?? "low"
     };
     if (params.tools?.length) {
       body.tools = params.tools;
@@ -161,7 +171,8 @@ class OpenAIProvider implements LlmProvider {
         { role: "system", content: params.systemPrompt },
         { role: "user", content: params.userText }
       ],
-      max_completion_tokens: params.maxTokens
+      max_completion_tokens: params.maxTokens,
+      reasoning_effort: params.thinkingLevel === "high" ? "medium" : "low"
     };
     // Strict mode rejects open-ended subschemas (z.any() -> {}); degrade
     // gracefully: strict -> non-strict -> json_object mode. Zod validation

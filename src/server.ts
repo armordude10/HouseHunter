@@ -18,7 +18,7 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
-import { activeProviderName } from "./llm/provider.js";
+import { activeProviderName, usageTally } from "./llm/provider.js";
 
 interface RunRecord {
   run_id: string;
@@ -27,6 +27,7 @@ interface RunRecord {
   finished_at?: string;
   result?: unknown;
   error?: string;
+  llm_usage?: { calls: number; input_tokens: number; output_tokens: number };
 }
 
 const runs = new Map<string, RunRecord>();
@@ -50,6 +51,7 @@ const startRun = (input: { input_as_text: string; input_image_urls?: string[] })
   prune();
   void (async () => {
     record.status = "running";
+    const before = { ...usageTally };
     try {
       const result = await runWorkflow(input);
       record.result = result.output_parsed;
@@ -59,6 +61,11 @@ const startRun = (input: { input_as_text: string; input_image_urls?: string[] })
       record.status = "failed";
     } finally {
       record.finished_at = new Date().toISOString();
+      record.llm_usage = {
+        calls: usageTally.calls - before.calls,
+        input_tokens: usageTally.input_tokens - before.input_tokens,
+        output_tokens: usageTally.output_tokens - before.output_tokens
+      };
     }
   })();
   return record;

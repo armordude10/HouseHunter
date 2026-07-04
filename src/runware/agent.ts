@@ -25,7 +25,10 @@ import { ChatMessage, ChatToolDefinition } from "./client.js";
 import { NODE_MODELS } from "./models.js";
 import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 
-const MAX_TOOL_TURNS = 24;
+const MAX_TOOL_TURNS = 14;
+/** Output budget for tool-loop turns (tool calls + short reasoning). */
+const LOOP_OUTPUT_TOKENS = 4000;
+/** Output budget for the final structured JSON (large plan payloads). */
 const MAX_OUTPUT_TOKENS = 16000;
 
 // -----------------------------------------------------------------------------
@@ -224,7 +227,7 @@ export class Runner {
         messages: transcript,
         tools: definitions,
         tool_choice: "auto",
-        max_tokens: MAX_OUTPUT_TOKENS
+        max_tokens: LOOP_OUTPUT_TOKENS
       });
       const message = completion.choices[0]?.message;
       if (!message) break;
@@ -248,7 +251,9 @@ export class Runner {
             });
           }
         }
-        transcript.push({ role: "tool", tool_call_id: call.id, content });
+        // COST CONTROL: tool payloads (surface graphs, geometry) can be
+        // 100KB+; uncapped they re-bill as input on EVERY subsequent turn.
+        transcript.push({ role: "tool", tool_call_id: call.id, content: capText(content, 16000) });
       }
     }
   }
