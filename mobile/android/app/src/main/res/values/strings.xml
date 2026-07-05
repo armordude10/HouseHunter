@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Threadbot</string>
+    <string name="title_activity_main">Threadbot</string>
+    <string name="package_name">com.threadbot.app</string>
+    <string name="custom_url_scheme">com.threadbot.app</string>
+</resources>

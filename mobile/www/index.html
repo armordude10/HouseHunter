@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threadbot</title>
+<style>
+  :root {
+    --bg: #0b0d12; --panel: #141822; --panel2: #1b2130; --line: #262e42;
+    --text: #e8ecf6; --dim: #8b94ab; --accent: #6c8cff; --accent2: #9a6cff;
+    --ok: #3ecf8e; --warn: #ffb454; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 40px;
+  }
+  header {
+    padding: 18px 20px 10px; display: flex; align-items: baseline; gap: 10px;
+    position: sticky; top: 0; background: linear-gradient(var(--bg) 75%, transparent); z-index: 5;
+  }
+  header h1 {
+    font-size: 22px; font-weight: 800; letter-spacing: .5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header span { color: var(--dim); font-size: 12px; }
+  main { max-width: 720px; margin: 0 auto; padding: 0 16px; display: grid; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 10px; }
+  textarea {
+    width: 100%; min-height: 88px; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; resize: vertical;
+  }
+  input[type=search] {
+    width: 100%; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: inherit;
+  }
+  .products { display: flex; gap: 8px; overflow-x: auto; padding: 10px 2px 4px; scrollbar-width: thin; }
+  .prod {
+    min-width: 150px; max-width: 150px; background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px; cursor: pointer; flex-shrink: 0;
+  }
+  .prod.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .prod .nm { font-size: 13px; font-weight: 600; line-height: 1.3; height: 3.9em; overflow: hidden; }
+  .prod .pr { color: var(--ok); font-weight: 700; margin-top: 6px; }
+  .prod .tg { color: var(--dim); font-size: 11px; }
+  .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 20px; background: #2a3350; color: var(--accent); margin-top: 4px; }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .thumb { position: relative; width: 62px; height: 62px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb button {
+    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%;
+    border: 0; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .addimg {
+    width: 62px; height: 62px; border-radius: 10px; border: 1px dashed var(--line);
+    background: none; color: var(--dim); font-size: 24px; cursor: pointer;
+  }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .modes { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; border: 1px solid var(--line); }
+  .modes button { border: 0; background: none; color: var(--dim); padding: 7px 14px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+  .modes button.sel { background: var(--accent); color: #fff; }
+  #go {
+    width: 100%; padding: 14px; border: 0; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 700;
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff; cursor: pointer;
+  }
+  #go:disabled { opacity: .5; cursor: wait; }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 8px; }
+  #status { display: none; }
+  .stage { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--dim); font-size: 14px; }
+  .stage.on { color: var(--text); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+  .on .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+  .done .dot { background: var(--ok); animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  #result { display: none; }
+  .mockups { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 10px; }
+  .mockups a { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .mockups img { width: 100%; display: block; }
+  .msg { padding: 10px 12px; border-radius: 10px; background: var(--panel2); margin-top: 8px; font-size: 14px; }
+  .msg.ok { border-left: 3px solid var(--ok); } .msg.warn { border-left: 3px solid var(--warn); } .msg.bad { border-left: 3px solid var(--bad); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; color: var(--dim); }
+  .chip b { color: var(--ok); }
+  .econ { margin-top: 10px; font-size: 13px; color: var(--dim); }
+  .econ b { color: var(--ok); }
+</style>
+</head>
+<body>
+<header><h1>THREADBOT</h1><span id="cat-count">loading catalog…</span></header>
+<main>
+  <section class="card">
+    <h2>1 · Describe your design</h2>
+    <textarea id="prompt" placeholder="e.g. A bioluminescent koi pond at midnight, ukiyo-e style, flowing across the whole garment"></textarea>
+    <div class="thumbs" id="thumbs">
+      <button class="addimg" id="addimg" title="Attach up to 10 reference images">+</button>
+    </div>
+    <input type="file" id="file" accept="image/*" multiple hidden>
+    <div class="hint">Optional: attach up to 10 reference photos/sketches — Threadbot works them into the design.</div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Pick a product <span style="text-transform:none">(or let Threadbot choose)</span></h2>
+    <input type="search" id="search" placeholder="Search the full catalog — hoodies, blankets, shoes, mugs…">
+    <div class="products" id="products"></div>
+  </section>
+
+  <section class="card">
+    <h2>3 · Create</h2>
+    <div class="row" style="justify-content:space-between">
+      <div class="modes">
+        <button id="m-express" class="sel">Express</button>
+        <button id="m-agents">Premium</button>
+      </div>
+      <span class="hint" id="mode-hint">Express: seconds-fast, official product previews.</span>
+    </div>
+    <br>
+    <button id="go">Generate my product</button>
+  </section>
+
+  <section class="card" id="status">
+    <h2>Working…</h2>
+    <div class="stage" id="s0"><div class="dot"></div>Uploading references</div>
+    <div class="stage" id="s1"><div class="dot"></div>Understanding your design</div>
+    <div class="stage" id="s2"><div class="dot"></div>Generating print panels</div>
+    <div class="stage" id="s3"><div class="dot"></div>Rendering official product mockups</div>
+  </section>
+
+  <section class="card" id="result">
+    <h2 id="r-title">Your product</h2>
+    <div class="msg" id="r-msg"></div>
+    <div class="mockups" id="r-mockups"></div>
+    <div class="chips" id="r-chips"></div>
+    <div class="econ" id="r-econ"></div>
+  </section>
+</main>
+<script>
+const API = new URLSearchParams(location.search).get("api") || "";
+const $ = (id) => document.getElementById(id);
+const state = { images: [], product: null, mode: "express", running: false };
+
+// ---- catalog picker (same table the backend planner uses) ----
+async function loadProducts(q = "") {
+  try {
+    const r = await fetch(`${API}/catalog?q=${encodeURIComponent(q)}&limit=60`);
+    const b = await r.json();
+    $("cat-count").textContent = `${b.count} products live`;
+    const wrap = $("products");
+    wrap.innerHTML = "";
+    const auto = document.createElement("div");
+    auto.className = "prod" + (state.product === null ? " sel" : "");
+    auto.innerHTML = `<div class="nm">✨ Auto-pick from my description</div><div class="tg">Threadbot chooses the best product</div>`;
+    auto.onclick = () => { state.product = null; loadProducts($("search").value); };
+    wrap.appendChild(auto);
+    for (const p of b.products) {
+      const el = document.createElement("div");
+      el.className = "prod" + (state.product === p.id ? " sel" : "");
+      el.innerHTML = `<div class="nm">${p.name}</div><div class="pr">$${p.retailUsd.toFixed(2)}</div>
+        <div class="tg">${p.placementCount} print area${p.placementCount > 1 ? "s" : ""} · ${p.variantCount} variants</div>
+        ${p.aop ? '<span class="badge">ALL-OVER PRINT</span>' : ""}`;
+      el.onclick = () => { state.product = p.id; loadProducts($("search").value); };
+      wrap.appendChild(el);
+    }
+  } catch { $("cat-count").textContent = "catalog offline"; }
+}
+let searchT; $("search").addEventListener("input", (e) => {
+  clearTimeout(searchT); searchT = setTimeout(() => loadProducts(e.target.value), 250);
+});
+
+// ---- reference images: resize client-side, host via /uploads ----
+$("addimg").onclick = () => $("file").click();
+$("file").addEventListener("change", async (e) => {
+  for (const f of e.target.files) {
+    if (state.images.length >= 10) break;
+    const dataUrl = await shrink(f, 1600);
+    state.images.push({ dataUrl, url: null });
+  }
+  e.target.value = ""; drawThumbs();
+});
+function shrink(file, max) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL("image/jpeg", 0.88));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+function drawThumbs() {
+  const wrap = $("thumbs");
+  wrap.querySelectorAll(".thumb").forEach((n) => n.remove());
+  state.images.forEach((im, i) => {
+    const d = document.createElement("div");
+    d.className = "thumb";
+    d.innerHTML = `<img src="${im.dataUrl}"><button>×</button>`;
+    d.querySelector("button").onclick = () => { state.images.splice(i, 1); drawThumbs(); };
+    wrap.insertBefore(d, $("addimg"));
+  });
+  $("addimg").style.display = state.images.length >= 10 ? "none" : "";
+}
+
+// ---- mode toggle ----
+$("m-express").onclick = () => setMode("express");
+$("m-agents").onclick = () => setMode("agents");
+function setMode(m) {
+  state.mode = m;
+  $("m-express").classList.toggle("sel", m === "express");
+  $("m-agents").classList.toggle("sel", m === "agents");
+  $("mode-hint").textContent = m === "express"
+    ? "Express: seconds-fast, official product previews."
+    : "Premium: full 13-step design studio. Slower, deeper.";
+}
+
+// ---- run ----
+$("go").onclick = async () => {
+  if (state.running) return;
+  const text = $("prompt").value.trim();
+  if (!text && !state.images.length) { $("prompt").focus(); return; }
+  state.running = true; $("go").disabled = true;
+  $("result").style.display = "none"; $("status").style.display = "block";
+  ["s0","s1","s2","s3"].forEach((s) => { $(s).className = "stage"; });
+  try {
+    stage("s0");
+    const urls = [];
+    for (const im of state.images) {
+      if (!im.url) {
+        const r = await fetch(`${API}/uploads`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data_base64: im.dataUrl, content_type: "image/jpeg" })
+        });
+        if (r.ok) im.url = (await r.json()).url;
+      }
+      if (im.url) urls.push(im.url);
+    }
+    stageDone("s0"); stage("s1");
+    const body = { input_as_text: text, input_image_urls: urls, mode: state.mode };
+    if (state.product) body.product_id = state.product;
+    const start = await fetch(`${API}/runs`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    const { run_id, error } = await start.json();
+    if (!run_id) throw new Error(error || "run did not start");
+    let rec, ticks = 0;
+    while (true) {
+      await new Promise((r) => setTimeout(r, 3000));
+      rec = await (await fetch(`${API}/runs/${run_id}`)).json();
+      if (++ticks === 3) { stageDone("s1"); stage("s2"); }
+      if (ticks === 10) { stageDone("s2"); stage("s3"); }
+      if (rec.status === "completed" || rec.status === "failed") break;
+    }
+    ["s1","s2","s3"].forEach(stageDone);
+    render(rec);
+  } catch (err) {
+    render({ status: "failed", error: err.message });
+  } finally {
+    state.running = false; $("go").disabled = false; $("status").style.display = "none";
+  }
+};
+function stage(id) { $(id).className = "stage on"; }
+function stageDone(id) { $(id).className = "stage done"; }
+
+function render(rec) {
+  $("result").style.display = "block";
+  const r = rec.result || {};
+  const msgEl = $("r-msg"), mocks = $("r-mockups"), chips = $("r-chips"), econ = $("r-econ");
+  mocks.innerHTML = chips.innerHTML = econ.innerHTML = "";
+  // express result
+  if (r.mode === "express") {
+    $("r-title").textContent = r.product?.name || "Your product";
+    msgEl.textContent = r.message || rec.error || "";
+    msgEl.className = "msg " + (r.status === "completed" ? "ok" : r.status === "refused" ? "warn" : r.status === "mockup_failed" ? "warn" : "bad");
+    for (const m of r.mockups || []) {
+      const a = document.createElement("a");
+      a.href = m.mockup_url; a.target = "_blank";
+      a.innerHTML = `<img src="${m.mockup_url}" loading="lazy">`;
+      mocks.appendChild(a);
+    }
+    for (const p of r.panels || []) {
+      const c = document.createElement("span");
+      c.className = "chip";
+      c.innerHTML = `${p.placement} <b>${p.status}</b>`;
+      chips.appendChild(c);
+    }
+    if (r.economics) {
+      econ.innerHTML = `AI cost this run ≈ <b>$${r.economics.estimated_ai_cost_usd}</b>` +
+        (r.economics.retail_anchor_usd ? ` · suggested retail <b>$${r.economics.retail_anchor_usd}</b>` : "");
+    }
+    return;
+  }
+  // agents (premium) result: final composer output
+  $("r-title").textContent = "Your product";
+  const msg = r.customer_message || r.message || rec.error || JSON.stringify(r).slice(0, 400);
+  msgEl.textContent = msg;
+  msgEl.className = "msg " + (rec.status === "completed" ? "ok" : "bad");
+  const u = r.mockup_url || r.primary_mockup_url;
+  if (u) {
+    const a = document.createElement("a");
+    a.href = u; a.target = "_blank"; a.innerHTML = `<img src="${u}" loading="lazy">`;
+    mocks.appendChild(a);
+  }
+}
+
+loadProducts();
+</script>
+</body>
+</html>

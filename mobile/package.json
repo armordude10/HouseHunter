@@ -1,0 +1,14 @@
+{
+  "name": "threadbot-mobile",
+  "version": "1.0.0",
+  "description": "Threadbot mobile shell (Capacitor) — wraps the pipeline service UI",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/ios": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0"
+  }
+}

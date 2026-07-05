@@ -1,0 +1,9 @@
+{
+  "appId": "com.threadbot.app",
+  "appName": "Threadbot",
+  "webDir": "www",
+  "server": {
+    "url": "https://threadbot-agentic-pipeline-2uts5km5aq-uc.a.run.app",
+    "cleartext": false
+  }
+}
