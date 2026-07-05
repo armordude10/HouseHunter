@@ -1,0 +1,8 @@
+{
+  "appId": "org.artincpeoria.threadbot",
+  "appName": "Threadbot",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}

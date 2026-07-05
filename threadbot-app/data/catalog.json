@@ -1,0 +1,57 @@
+[
+  {
+    "id": "tee-classic",
+    "name": "Classic Tee",
+    "keywords": ["shirt", "tee", "t-shirt", "tshirt", "top"],
+    "defaultColor": "Black",
+    "default": true,
+    "technique": "dtg",
+    "primaryPlacement": "front",
+    "providers": { "printful": { "productId": 71 } }
+  },
+  {
+    "id": "hoodie-classic",
+    "name": "Classic Hoodie",
+    "keywords": ["hoodie", "sweatshirt", "hooded"],
+    "defaultColor": "Black",
+    "technique": "dtg",
+    "primaryPlacement": "front",
+    "providers": { "printful": { "productId": 146 } }
+  },
+  {
+    "id": "aop-jersey",
+    "name": "All-Over Print Jersey",
+    "keywords": ["all over", "all-over", "aop", "jersey", "football", "sports", "all over print shirt"],
+    "defaultColor": "White",
+    "technique": "cut-sew",
+    "primaryPlacement": "default",
+    "providers": { "printful": { "productId": 918 } }
+  },
+  {
+    "id": "aop-crop-tee",
+    "name": "All-Over Print Crop Tee",
+    "keywords": ["all over", "all-over", "aop", "crop", "crop tee", "cropped"],
+    "defaultColor": "White",
+    "technique": "cut-sew",
+    "primaryPlacement": "default",
+    "providers": { "printful": { "productId": 303 } }
+  },
+  {
+    "id": "aop-leggings",
+    "name": "All-Over Print Leggings",
+    "keywords": ["all over", "all-over", "aop", "leggings", "tights", "yoga", "pants"],
+    "defaultColor": "White",
+    "technique": "cut-sew",
+    "primaryPlacement": "default",
+    "providers": { "printful": { "productId": 189 } }
+  },
+  {
+    "id": "aop-tote",
+    "name": "All-Over Print Tote Bag",
+    "keywords": ["all over", "all-over", "aop", "tote", "bag", "tote bag", "shopping"],
+    "defaultColor": "White",
+    "technique": "cut-sew",
+    "primaryPlacement": "default",
+    "providers": { "printful": { "productId": 274 } }
+  }
+]

@@ -1,0 +1,31 @@
+# Render Blueprint: connect this repo in Render, it reads this file. Set the secret
+# env vars (sync:false) in the dashboard or via the Render API.
+services:
+  - type: web
+    name: threadbot-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: GENERATE_VARIATIONS
+        value: 2
+      - key: PRINTFUL_API_KEY
+        sync: false
+      - key: PRINTFUL_STORE_ID
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: previews
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

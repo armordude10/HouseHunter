@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="threadbot-config.js"></script>
+<link rel="stylesheet" href="threadbot-mobile.css">
+<script src="threadbot-boot.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#07080a"/><circle cx="50" cy="50" r="26" fill="none" stroke="#00E5FF" stroke-width="3"/><rect x="41" y="41" width="18" height="18" rx="3" fill="#00E5FF"/><circle cx="46" cy="48" r="2.4" fill="#07080a"/><circle cx="54" cy="48" r="2.4" fill="#07080a"/></svg>
+</template>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="threadbot-api.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; scrollbar-width: none; -ms-overflow-style: none; }
+  body { margin: 0; }
+  ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  @keyframes tbStar { 0%,100% { transform: scale(.6); opacity:.25 } 50% { transform: scale(1); opacity:.9 } }
+  @keyframes tbDrift { 0% { transform: translateY(0) } 100% { transform: translateY(-22px) } }
+  @keyframes tbScan { 0% { top: -10% } 100% { top: 110% } }
+  @keyframes tbGrid { 0% { background-position: 0 0 } 100% { background-position: 0 40px } }
+  @keyframes tbRing { 0% { transform: rotate(0) } 100% { transform: rotate(360deg) } }
+  @keyframes tbPulse { 0%,100% { opacity:.4 } 50% { opacity:1 } }
+  @keyframes tbBlink { 0%,49% { opacity:1 } 50%,100% { opacity:0 } }
+  @keyframes tbRise { from { opacity:0; transform: translateY(12px) } to { opacity:1; transform: translateY(0) } }
+  @keyframes tbSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
+</style>
+</helmet>
+
+<div style="position:fixed; inset:0; background:#07080a; font-family:'Share Tech Mono', monospace; overflow:hidden;">
+
+  <div style="position:relative; width:100%; height:100%; background:#07080a;">
+
+    <div style="position:relative; width:100%; height:100%; overflow:hidden; background:#07080a; display:flex; flex-direction:column; padding-top:env(safe-area-inset-top);">
+
+      <!-- ambient starfield — 2.5D parallax layers react to device tilt -->
+      <div style="position:absolute; inset:0; pointer-events:none; z-index:0; overflow:hidden;">
+        <div ref="{{ pBackRef }}" style="position:absolute; inset:-7%; will-change:transform; transition:transform .18s ease-out;">{{ particlesBack }}</div>
+        <div ref="{{ pMidRef }}" style="position:absolute; inset:-7%; will-change:transform; transition:transform .16s ease-out;">{{ particlesMid }}</div>
+        <div ref="{{ pFrontRef }}" style="position:absolute; inset:-7%; will-change:transform; transition:transform .12s ease-out;">{{ particlesFront }}</div>
+        <div style="position:absolute; inset:0; background:radial-gradient(80% 50% at 50% 0%, rgba(0,229,255,0.07), transparent 70%);"></div>
+      </div>
+
+      <!-- header -->
+      <header style="position:relative; z-index:5; display:flex; align-items:center; justify-content:space-between; padding:12px 22px 12px;">
+        <div style="display:flex; align-items:center; gap:11px;">
+          <img src="assets/threadbot-icon.png" alt="Threadbot" style="width:48px; height:48px; object-fit:contain; filter:drop-shadow(0 0 9px rgba(0,229,255,0.45));">
+          <div style="display:flex; flex-direction:column; line-height:1;">
+            <span style="font-family:'Chakra Petch'; font-weight:700; font-size:21px; letter-spacing:.5px; color:#eafcff; text-shadow:0 0 18px rgba(0,229,255,0.35);">THREADBOT</span>
+            <span style="font-size:9px; letter-spacing:3px; color:#5b6b73; margin-top:3px;">WEAR YOUR CREATIVITY</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button onClick="{{ goCloset }}" style="width:38px; height:38px; border-radius:12px; border:1px solid rgba(0,229,255,0.18); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5"/></svg>
+          </button>
+          <button onClick="{{ openProfile }}" style="width:38px; height:38px; border-radius:12px; border:1px solid rgba(255,212,0,0.35); background:linear-gradient(150deg,#1a1c12,#0e1014); display:flex; align-items:center; justify-content:center; color:#FFD400; font-size:13px; font-weight:600; cursor:pointer; font-family:'Chakra Petch';">{{ profileInitials }}</button>
+        </div>
+      </header>
+
+      <!-- scrolling body -->
+      <main style="position:relative; z-index:5; flex:1; overflow-y:auto; overflow-x:hidden;">
+
+        <!-- ============ CREATE ============ -->
+        <sc-if value="{{ isCreate }}" hint-placeholder-val="{{ true }}">
+        <section data-screen-label="Create" style="padding:6px 22px 28px;">
+          <div style="animation:tbRise .5s ease both;">
+            <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// DESIGN MATRIX</p>
+            <h1 style="margin:0 0 18px; font-family:'Chakra Petch'; font-weight:600; font-size:27px; line-height:1.2; color:#eafcff;">What are we<br>designing today?</h1>
+          </div>
+
+          <!-- prompt -->
+          <div style="position:relative; border-radius:18px; padding:1px; background:linear-gradient(135deg, rgba(0,229,255,0.5), rgba(0,229,255,0.05) 45%, rgba(255,212,0,0.18)); box-shadow:0 0 30px -8px rgba(0,229,255,0.35);">
+            <div style="border-radius:17px; background:#0a0f14; padding:16px;">
+              <textarea value="{{ prompt }}" onInput="{{ onPrompt }}" placeholder="{{ examplePrompt }}" style="width:100%; height:84px; resize:none; border:0; outline:0; background:transparent; color:#dff6fa; font-family:'Share Tech Mono', monospace; font-size:15px; line-height:1.5;"></textarea>
+
+              <sc-if value="{{ hasRefImage }}" hint-placeholder-val="{{ false }}">
+              <div style="display:inline-flex; align-items:center; gap:9px; margin:2px 0 10px; padding:6px 8px 6px 6px; border-radius:11px; border:1px solid rgba(0,229,255,0.25); background:rgba(0,229,255,0.05);">
+                <img src="{{ refImage }}" alt="reference" style="width:34px; height:34px; border-radius:7px; object-fit:cover;">
+                <span style="font-size:11px; color:#9fd9e3;">Reference attached</span>
+                <button onClick="{{ clearImage }}" style="width:22px; height:22px; border-radius:7px; border:0; background:rgba(255,255,255,0.06); color:#9fd9e3; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cfe9ee" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              </sc-if>
+
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; padding-top:12px; border-top:1px solid rgba(0,229,255,0.10);">
+                <button onClick="{{ pickImage }}" style="display:flex; align-items:center; gap:7px; height:34px; padding:0 12px; border-radius:10px; border:1px solid rgba(0,229,255,0.22); background:rgba(0,229,255,0.06); color:#9fd9e3; font-family:inherit; font-size:12px; cursor:pointer;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>
+                  IMAGE
+                </button>
+                <div style="display:flex; align-items:center; gap:7px; height:34px; padding:0 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); color:#5b6b73; font-size:12px;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#FFD400; box-shadow:0 0 8px #FFD400;"></span>
+                  {{ promptCount }}/240
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" accept="image/*" ref="{{ fileRef }}" onChange="{{ onFile }}" style="display:none;">
+
+          <!-- CTA -->
+          <button onClick="{{ initiate }}" style="margin-top:30px; width:100%; height:62px; border:0; border-radius:18px; cursor:pointer; position:relative; overflow:hidden; background:linear-gradient(100deg,#00E5FF,#19f0c4); box-shadow:0 0 40px -6px rgba(0,229,255,0.6), inset 0 1px 0 rgba(255,255,255,0.4); font-family:'Chakra Petch'; font-weight:700; font-size:17px; letter-spacing:3px; color:#04181c; display:flex; align-items:center; justify-content:center; gap:12px;">
+            <span style="position:absolute; left:0; top:0; bottom:0; width:40%; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); animation:tbScan 2.6s linear infinite; mix-blend-mode:overlay;"></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04181c" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            INITIATE SYNTHESIS
+          </button>
+        </section>
+        </sc-if>
+
+        <!-- ============ CLOSET ============ -->
+        <sc-if value="{{ isCloset }}" hint-placeholder-val="{{ false }}">
+        <section data-screen-label="Closet" style="padding:10px 22px 28px; animation:tbRise .4s ease both;">
+          <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// LOCAL ARCHIVE</p>
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; margin:0 0 4px;">
+            <h1 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:26px; color:#eafcff;">The Closet</h1>
+            <sc-if value="{{ closetHasItems }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ toggleSelectMode }}" style="{{ closetSelectBtnStyle }}">{{ closetSelectBtnLabel }}</button>
+            </sc-if>
+          </div>
+          <p style="margin:0 0 14px; font-size:11px; color:{{ closetCountColor }};">{{ closetCountLabel }}</p>
+          <div style="display:flex; gap:9px; margin-bottom:14px;">
+            <sc-for list="{{ closetTabs }}" as="t" hint-placeholder-count="2">
+              <button onClick="{{ t.select }}" style="{{ t.style }}">{{ t.name }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ selectMode }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:10px; margin:0 0 16px;">
+            <button onClick="{{ selectAll }}" style="height:34px; padding:0 13px; border-radius:10px; border:1px solid rgba(0,229,255,0.25); background:rgba(0,229,255,0.06); color:#9fd9e3; font-family:inherit; font-size:12px; cursor:pointer;">{{ selectAllLabel }}</button>
+            <div style="flex:1;"></div>
+            <button onClick="{{ requestBulkDelete }}" style="{{ bulkDeleteStyle }}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+              Delete {{ selectedCount }}
+            </button>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ closetEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:54px 24px; border-radius:18px; border:1px dashed rgba(0,229,255,0.2); background:rgba(12,17,23,0.4);">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2b6b78" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5"/></svg>
+            <p style="margin:16px 0 4px; font-size:14px; color:#9fd9e3;">{{ closetEmptyTitle }}</p>
+            <p style="margin:0 0 18px; font-size:11px; color:#5b6b73; max-width:200px;">Saved synthesis outputs and favorites land here.</p>
+            <button onClick="{{ goCreate }}" style="height:42px; padding:0 20px; border-radius:12px; border:0; background:linear-gradient(100deg,#00E5FF,#19f0c4); color:#04181c; font-family:'Chakra Petch'; font-weight:700; font-size:12px; letter-spacing:1px; cursor:pointer;">START A DESIGN</button>
+          </div>
+          </sc-if>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:13px;">
+            <sc-for list="{{ closetItems }}" as="it" hint-placeholder-count="4">
+              <div style="{{ it.card }}">
+                <div onClick="{{ it.tap }}" style="{{ it.thumb }}">
+                  <sc-if value="{{ it.showActions }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ it.toggleFav }}" style="position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:9px; border:1px solid {{ it.favBorder }}; background:rgba(7,8,10,0.65); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="{{ it.favFill }}" stroke="{{ it.favStroke }}" stroke-width="1.6"><path d="M12 21l-1.5-1.3C5.4 15.1 2 12.1 2 8.4 2 5.6 4.2 3.5 7 3.5c1.5 0 3 .7 4 1.9 1-1.2 2.5-1.9 4-1.9 2.8 0 5 2.1 5 4.9 0 3.7-3.4 6.7-8.5 11.3z"/></svg>
+                  </button>
+                  </sc-if>
+                  <sc-if value="{{ it.showActions }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ it.requestDelete }}" style="position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(255,123,123,0.35); background:rgba(7,8,10,0.65); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff7b7b" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  </button>
+                  </sc-if>
+                  <sc-if value="{{ it.selectMode }}" hint-placeholder-val="{{ false }}">
+                  <div style="{{ it.checkStyle }}">
+                    <sc-if value="{{ it.selected }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#04181c" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></sc-if>
+                  </div>
+                  </sc-if>
+                  <sc-if value="{{ it.noImage }}" hint-placeholder-val="{{ true }}"><span style="font-size:9px; color:#7d8c94;">render pending</span></sc-if>
+                </div>
+                <div onClick="{{ it.tap }}" style="padding:11px 12px; cursor:pointer;">
+                  <p style="margin:0; font-size:12px; color:#dff6fa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ it.name }}</p>
+                  <p style="margin:4px 0 0; font-size:10px; color:#5b6b73;">{{ it.meta }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        </sc-if>
+
+        <!-- ============ EXPLORE ============ -->
+        <sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
+        <section data-screen-label="Explore" style="padding:10px 22px 28px; animation:tbRise .4s ease both;">
+          <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// SIGNAL FEED</p>
+          <h1 style="margin:0 0 16px; font-family:'Chakra Petch'; font-weight:600; font-size:26px; color:#eafcff;">Explore</h1>
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:54px 24px; border-radius:18px; border:1px dashed rgba(0,229,255,0.2); background:rgba(12,17,23,0.4);">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2b6b78" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M16 8l-2.4 5.6L8 16l2.4-5.6z"/></svg>
+            <p style="margin:16px 0 4px; font-size:14px; color:#9fd9e3;">Community feed is on the way</p>
+            <p style="margin:0; font-size:11px; color:#5b6b73; max-width:230px;">Designs shared by the Threadbot community will show up here.</p>
+          </div>
+        </section>
+        </sc-if>
+
+        <!-- ============ SETTINGS ============ -->
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <section data-screen-label="Settings" style="padding:10px 22px 28px; animation:tbRise .4s ease both;">
+          <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// SYSTEM</p>
+          <h1 style="margin:0 0 18px; font-family:'Chakra Petch'; font-weight:600; font-size:26px; color:#eafcff;">Settings</h1>
+
+          <button onClick="{{ openProfile }}" style="width:100%; text-align:left; display:flex; align-items:center; gap:14px; padding:16px; border-radius:18px; border:1px solid rgba(0,229,255,0.22); background:linear-gradient(140deg, rgba(0,229,255,0.06), rgba(12,17,23,0.4)); margin-bottom:24px; cursor:pointer; font-family:inherit;">
+            <div style="width:54px; height:54px; border-radius:16px; border:1px solid rgba(255,212,0,0.4); display:flex; align-items:center; justify-content:center; color:#FFD400; font-family:'Chakra Petch'; font-weight:700; font-size:18px;">{{ profileInitials }}</div>
+            <div style="flex:1;">
+              <p style="margin:0; font-size:15px; color:#eafcff;">{{ profileName }}</p>
+              <p style="margin:4px 0 0; font-size:11px; color:#7d8c94;">{{ profileHandle }} · {{ designCount }} designs</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+
+          <sc-for list="{{ settingGroups }}" as="g" hint-placeholder-count="2">
+            <p style="margin:0 0 9px; font-size:11px; letter-spacing:2px; color:#5b6b73;">{{ g.label }}</p>
+            <div style="border-radius:16px; overflow:hidden; border:1px solid rgba(0,229,255,0.12); background:#0c1117; margin-bottom:18px;">
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+                <button onClick="{{ r.onClick }}" style="{{ r.style }}">
+                  <span style="font-size:13px; color:{{ r.nameColor }};">{{ r.name }}</span>
+                  <sc-if value="{{ r.isToggle }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ r.track }}"><div style="{{ r.knob }}"></div></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isAction }}" hint-placeholder-val="{{ true }}">
+                    <span style="display:flex; align-items:center; gap:7px; font-size:12px; color:#5b6b73;">{{ r.value }}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3f4d54" stroke-width="1.8"><path d="M9 18l6-6-6-6"/></svg></span>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <p style="text-align:center; font-size:10px; color:#3f4d54; margin:8px 0 0;">{{ versionLabel }}</p>
+        </section>
+        </sc-if>
+
+      </main>
+
+      <!-- ============ GENERATION OVERLAY ============ -->
+      <sc-if value="{{ isGenerating }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:30; background:radial-gradient(90% 70% at 50% 40%, #0a1822, #060a0e 80%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background-image:linear-gradient(rgba(0,229,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.07) 1px, transparent 1px); background-size:40px 40px; animation:tbGrid 1.6s linear infinite; mask-image:radial-gradient(70% 60% at 50% 45%, #000, transparent 80%);"></div>
+        <div style="position:absolute; left:0; right:0; height:160px; top:-10%; background:linear-gradient(180deg, transparent, rgba(0,229,255,0.10), transparent); animation:tbScan 2.4s linear infinite;"></div>
+        <div style="position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center; margin-bottom:38px;">
+          <div style="position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(0,229,255,0.4); border-top-color:#00E5FF; box-shadow:0 0 30px rgba(0,229,255,0.4); animation:tbRing 1.4s linear infinite;"></div>
+          <div style="position:absolute; inset:22px; border-radius:50%; border:1px solid rgba(255,212,0,0.3); border-bottom-color:#FFD400; animation:tbRing 2.2s linear infinite reverse;"></div>
+          <div style="font-family:'Chakra Petch'; font-weight:700; font-size:34px; color:#eafcff; text-shadow:0 0 20px rgba(0,229,255,0.6);">{{ genPct }}<span style="font-size:16px; color:#00E5FF;">%</span></div>
+        </div>
+        <p style="font-size:12px; letter-spacing:3px; color:#00E5FF; margin:0 0 10px;">SYNTHESIZING</p>
+        <p style="font-family:'Chakra Petch'; font-size:18px; color:#dff6fa; margin:0 0 26px; min-height:24px; text-align:center;">{{ genStatus }}<span style="animation:tbBlink 1s step-end infinite; color:#00E5FF;">_</span></p>
+        <div style="width:100%; max-width:280px; display:flex; flex-direction:column; gap:9px;">
+          <sc-for list="{{ genSteps }}" as="st" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:11px;">
+              <div style="{{ st.dot }}"></div>
+              <span style="font-size:12px; color:{{ st.color }};">{{ st.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ RESULTS OVERLAY ============ -->
+      <sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:30; background:#07080a; display:flex; flex-direction:column; animation:tbSlideUp .45s cubic-bezier(.2,.9,.2,1) both;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px 10px;">
+          <button onClick="{{ backToCreate }}" style="width:36px; height:36px; border-radius:11px; border:1px solid rgba(0,229,255,0.18); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="text-align:center;">
+            <p style="margin:0; font-size:10px; letter-spacing:2px; color:#00E5FF;">SYNTHESIS COMPLETE</p>
+            <p style="margin:3px 0 0; font-size:12px; color:#7d8c94; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ resultPrompt }}</p>
+          </div>
+          <button onClick="{{ saveDesign }}" style="{{ saveBtnStyle }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ saveIconFill }}" stroke="#FFD400" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          </button>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding:6px 20px 20px;">
+          <div style="{{ resultRender }}">
+            <sc-if value="{{ hasResultImage }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ resultImage }}" alt="render" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+            </sc-if>
+            <sc-if value="{{ noResultImage }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:11px; letter-spacing:1px; color:#3f4d54; text-align:center; padding:0 24px;">{{ resultPlaceholder }}</span>
+            </sc-if>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin:14px 0 4px;">
+            <sc-for list="{{ variationDots }}" as="d" hint-placeholder-count="4">
+              <button onClick="{{ d.select }}" style="{{ d.style }}"></button>
+            </sc-for>
+          </div>
+          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 18px;">{{ variationLabel }}</p>
+
+          <p style="margin:0 0 11px; font-size:11px; letter-spacing:2px; color:#7d8c94;">REFINE WITH AI</p>
+          <div style="display:flex; flex-wrap:wrap; gap:9px; margin-bottom:8px;">
+            <sc-for list="{{ refinements }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.apply }}" style="display:flex; align-items:center; gap:7px; padding:9px 13px; border-radius:11px; border:1px solid rgba(0,229,255,0.2); background:rgba(0,229,255,0.05); color:#bfeaf1; font-family:inherit; font-size:12px; cursor:pointer;">
+                <span style="width:5px; height:5px; border-radius:50%; background:#00E5FF; box-shadow:0 0 8px #00E5FF;"></span>{{ r.name }}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding:14px 20px 0;">
+          <button onClick="{{ openCheckout }}" style="width:100%; height:56px; border-radius:15px; border:0; background:linear-gradient(100deg,#FFD400,#ff9f43); color:#231a04; font-family:'Chakra Petch'; font-weight:700; font-size:15px; letter-spacing:2px; cursor:pointer; box-shadow:0 0 30px -6px rgba(255,212,0,0.55); display:flex; align-items:center; justify-content:center; gap:10px;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#231a04" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            ORDER · {{ priceLabel }}
+          </button>
+        </div>
+        <div style="display:flex; gap:10px; padding:14px 20px 22px; border-top:1px solid rgba(0,229,255,0.1); background:linear-gradient(0deg,#090d11,transparent);">
+          <button onClick="{{ remixDesign }}" style="flex:1; height:54px; border-radius:15px; border:1px solid rgba(0,229,255,0.25); background:rgba(13,20,26,0.7); color:#9fd9e3; font-family:'Chakra Petch'; font-weight:600; font-size:13px; letter-spacing:1px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="1.8"><path d="M3 12a9 9 0 0115-6.7L21 8M21 12a9 9 0 01-15 6.7L3 16"/><path d="M21 4v4h-4M3 20v-4h4"/></svg>
+            REMIX
+          </button>
+          <button onClick="{{ regenerate }}" style="flex:2; height:54px; border-radius:15px; border:0; background:linear-gradient(100deg,#00E5FF,#19f0c4); color:#04181c; font-family:'Chakra Petch'; font-weight:700; font-size:14px; letter-spacing:1px; cursor:pointer; box-shadow:0 0 28px -6px rgba(0,229,255,0.55); display:flex; align-items:center; justify-content:center; gap:9px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#04181c"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg>
+            VARIATIONS
+          </button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PROFILE EDITOR ============ -->
+      <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:40; background:rgba(4,6,8,0.78); backdrop-filter:blur(6px); display:flex; align-items:flex-end;">
+        <div style="width:100%; background:#0a0f14; border-top:1px solid rgba(0,229,255,0.22); border-radius:26px 26px 42px 42px; padding:22px 22px 30px; animation:tbSlideUp .35s cubic-bezier(.2,.9,.2,1) both; box-shadow:0 -20px 60px -20px rgba(0,229,255,0.3);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <h2 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:19px; color:#eafcff;">Edit Profile</h2>
+            <button onClick="{{ closeProfile }}" style="width:34px; height:34px; border-radius:11px; border:1px solid rgba(255,255,255,0.08); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:22px;">
+            <div style="width:62px; height:62px; border-radius:18px; border:1px solid rgba(255,212,0,0.4); display:flex; align-items:center; justify-content:center; color:#FFD400; font-family:'Chakra Petch'; font-weight:700; font-size:22px;">{{ draftInitials }}</div>
+            <p style="margin:0; font-size:11px; color:#5b6b73; line-height:1.5;">Stored locally on this device.<br>Synced to your account when signed in.</p>
+          </div>
+          <label style="display:block; font-size:11px; letter-spacing:1px; color:#7d8c94; margin-bottom:7px;">DISPLAY NAME</label>
+          <input value="{{ draftName }}" onInput="{{ onDraftName }}" placeholder="Your name" style="width:100%; height:48px; border-radius:13px; border:1px solid rgba(0,229,255,0.2); background:#0c1117; color:#dff6fa; font-family:'Share Tech Mono', monospace; font-size:15px; padding:0 14px; outline:0; margin-bottom:16px;">
+          <label style="display:block; font-size:11px; letter-spacing:1px; color:#7d8c94; margin-bottom:7px;">HANDLE</label>
+          <input value="{{ draftHandle }}" onInput="{{ onDraftHandle }}" placeholder="@handle" style="width:100%; height:48px; border-radius:13px; border:1px solid rgba(0,229,255,0.2); background:#0c1117; color:#dff6fa; font-family:'Share Tech Mono', monospace; font-size:15px; padding:0 14px; outline:0; margin-bottom:24px;">
+          <button onClick="{{ saveProfile }}" style="width:100%; height:54px; border-radius:15px; border:0; background:linear-gradient(100deg,#00E5FF,#19f0c4); color:#04181c; font-family:'Chakra Petch'; font-weight:700; font-size:14px; letter-spacing:2px; cursor:pointer; box-shadow:0 0 28px -6px rgba(0,229,255,0.55);">SAVE PROFILE</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CHECKOUT ============ -->
+      <sc-if value="{{ checkoutOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:45; background:rgba(4,6,8,0.8); backdrop-filter:blur(6px); display:flex; align-items:flex-end;">
+        <div style="width:100%; background:#0a0f14; border-top:1px solid rgba(255,212,0,0.25); border-radius:26px 26px 0 0; padding:22px 22px 30px; animation:tbSlideUp .35s cubic-bezier(.2,.9,.2,1) both; box-shadow:0 -20px 60px -20px rgba(255,212,0,0.25);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <h2 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:19px; color:#eafcff;">Order this tee</h2>
+            <button onClick="{{ closeCheckout }}" style="width:34px; height:34px; border-radius:11px; border:1px solid rgba(255,255,255,0.08); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+            <img src="{{ checkoutImage }}" alt="design" style="width:64px; height:64px; border-radius:14px; object-fit:cover; border:1px solid rgba(0,229,255,0.25);">
+            <div>
+              <p style="margin:0; font-size:14px; color:#eafcff; font-family:'Chakra Petch';">Gildan 5000 · Custom Tee</p>
+              <p style="margin:5px 0 0; font-size:14px; color:#FFD400; font-weight:700;">{{ priceLabel }}</p>
+            </div>
+          </div>
+          <label style="display:block; font-size:11px; letter-spacing:1px; color:#7d8c94; margin-bottom:9px;">SIZE</label>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+            <sc-for list="{{ checkoutSizes }}" as="z" hint-placeholder-count="6">
+              <button onClick="{{ z.select }}" style="{{ z.style }}">{{ z.label }}</button>
+            </sc-for>
+          </div>
+          <button onClick="{{ proceedCheckout }}" style="{{ checkoutBtnStyle }}">{{ checkoutBtnLabel }}</button>
+          <p style="margin:13px 0 0; text-align:center; font-size:10px; color:#5b6b73;">Secure payment via Stripe · ships in 3–7 days</p>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ DIALOG ============ -->
+      <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:50; background:rgba(4,6,8,0.8); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:30px;">
+        <div style="width:330px; max-width:92vw; background:#0a0f14; border:1px solid rgba(0,229,255,0.22); border-radius:22px; padding:22px; box-shadow:0 24px 70px -24px rgba(0,229,255,0.4); animation:tbRise .25s ease both;">
+          <h2 style="margin:0 0 10px; font-family:'Chakra Petch'; font-weight:700; font-size:18px; color:#eafcff;">{{ dialogTitle }}</h2>
+          <p style="margin:0 0 22px; font-size:13px; line-height:1.55; color:#bfeaf1;">{{ dialogBody }}</p>
+          <div style="display:flex; gap:10px;">
+            <button onClick="{{ dialogSecondary }}" style="flex:1; height:48px; border-radius:13px; border:1px solid rgba(255,255,255,0.12); background:transparent; color:#cfe9ee; font-family:'Chakra Petch'; font-weight:600; font-size:13px; cursor:pointer;">{{ dialogSecondaryLabel }}</button>
+            <button onClick="{{ dialogPrimary }}" style="{{ dialogPrimaryStyle }}">{{ dialogPrimaryLabel }}</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- bottom nav -->
+      <nav style="position:relative; z-index:20; display:flex; align-items:center; justify-content:space-around; padding:11px 14px calc(14px + env(safe-area-inset-bottom)); background:linear-gradient(0deg, rgba(8,11,14,0.96), rgba(8,11,14,0.7)); border-top:1px solid rgba(0,229,255,0.12); backdrop-filter:blur(8px);">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+          <button onClick="{{ n.select }}" style="display:flex; flex-direction:column; align-items:center; gap:5px; background:transparent; border:0; cursor:pointer; padding:4px 14px;">
+            <div style="{{ n.iconWrap }}">{{ n.icon }}</div>
+            <span style="font-size:9px; letter-spacing:1px; color:{{ n.color }};">{{ n.label }}</span>
+          </button>
+        </sc-for>
+      </nav>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:920}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'create',
+    phase: 'input',        // input | generating | results
+    prompt: '',
+    refImage: null,
+    closetTab: 'all',
+    exploreFilter: 'trending',
+    genPct: 0,
+    genStep: 0,
+    genStatus: 'Parsing design intent',
+    variation: 0,
+    results: null,
+    checkout: null,
+    designs: [],
+    profile: { name: 'Designer', handle: '@designer' },
+    profileOpen: false,
+    draftName: '',
+    draftHandle: '',
+    prefs: { motion: true, haptics: true },
+    saved: false,
+    selectMode: false,
+    selected: {},
+    dialog: null,
+  };
+
+  EXAMPLES = [
+    'Cybernetic wolf emblem on a matte black tactical vest',
+    'Luxury streetwear hoodie with Japanese cyberpunk type',
+    'Minimal futuristic basketball jersey, neon accents',
+    'Anime oversized graphic tee, dystopian city skyline',
+  ];
+  GEN = ['Parsing design intent','Building visual composition','Synthesizing garment structure','Rendering output'];
+  REFINE = ['Increase tactical styling','Add premium embroidery','Make more minimal','Enhance neon details','Boost contrast','Vary the palette'];
+
+  // ---- persistence ----
+  K = { designs:'tb_designs', profile:'tb_profile', prefs:'tb_prefs' };
+  CLOSET_MAX = 20;
+  load(key, fb){ try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch(e){ return fb; } }
+  store(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+
+  componentDidMount() {
+    this.setState({
+      designs: this.load(this.K.designs, []),
+      profile: this.load(this.K.profile, this.state.profile),
+      prefs: this.load(this.K.prefs, this.state.prefs),
+    });
+    this._ex = setInterval(() => {
+      if (this.state.phase === 'input' && !this.state.prompt) {
+        this._exIdx = ((this._exIdx||0) + 1) % this.EXAMPLES.length;
+        this.forceUpdate();
+      }
+    }, 3200);
+    // 2.5D parallax: react to device tilt (gyro), with a pointer-move fallback.
+    window.addEventListener('deviceorientation', this.onTilt, true);
+    window.addEventListener('mousemove', this.onPointerParallax);
+    // iOS 13+ only grants motion after a user gesture; Android needs no prompt.
+    window.addEventListener('touchend', this.enableTilt, { once: true });
+    window.addEventListener('click', this.enableTilt, { once: true });
+  }
+  componentWillUnmount(){
+    clearInterval(this._ex);
+    window.removeEventListener('deviceorientation', this.onTilt, true);
+    window.removeEventListener('mousemove', this.onPointerParallax);
+  }
+
+  // ---- 2.5D tilt parallax ----
+  pBackRef = (el) => { if (el) { (this._pl = this._pl || {}).back = el; } };
+  pMidRef = (el) => { if (el) { (this._pl = this._pl || {}).mid = el; } };
+  pFrontRef = (el) => { if (el) { (this._pl = this._pl || {}).front = el; } };
+  applyParallax = (nx, ny) => {
+    const pl = this._pl; if (!pl) return;
+    const set = (el, f) => { if (el) el.style.transform = `translate3d(${(-nx*f).toFixed(1)}px, ${(-ny*f).toFixed(1)}px, 0)`; };
+    set(pl.back, 7); set(pl.mid, 17); set(pl.front, 32);
+  };
+  _schedule = (nx, ny) => {
+    if (this._praf) return;
+    this._praf = requestAnimationFrame(() => { this._praf = 0; this.applyParallax(nx, ny); });
+  };
+  onTilt = (e) => {
+    if (!this.state.prefs.motion) { this.applyParallax(0, 0); return; }
+    const g = e.gamma, b = e.beta;
+    if (g == null || b == null) return;
+    const nx = Math.max(-1, Math.min(1, g / 25));        // left-right tilt, ~25deg range
+    const ny = Math.max(-1, Math.min(1, (b - 45) / 25)); // front-back; 45deg = natural hold
+    this._schedule(nx, ny);
+  };
+  onPointerParallax = (e) => {
+    if (!this.state.prefs.motion) return;
+    const w = window.innerWidth || 1, h = window.innerHeight || 1;
+    this._schedule((e.clientX / w - 0.5) * 2, (e.clientY / h - 0.5) * 2);
+  };
+  enableTilt = () => {
+    try {
+      const D = window.DeviceOrientationEvent;
+      if (D && typeof D.requestPermission === 'function') {
+        D.requestPermission().then((st) => { if (st === 'granted') window.addEventListener('deviceorientation', this.onTilt, true); }).catch(() => {});
+      }
+    } catch (e) {}
+  };
+
+  // Haptics — respects the Settings toggle; uses the WebView vibration API.
+  buzz = (ms = 12) => { try { if (this.state.prefs.haptics && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+  selTab = (t) => () => { this.buzz(8); this.setState({ tab:t, phase:'input', profileOpen:false }); };
+
+  // ---- image upload ----
+  fileRef = (el) => { this._file = el; };
+  pickImage = () => { if (this._file) this._file.click(); };
+  onFile = (e) => {
+    const f = e.target && e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => this.setState({ refImage: r.result });
+    r.readAsDataURL(f);
+    e.target.value = '';
+  };
+  clearImage = () => this.setState({ refImage: null });
+
+  // ---- synthesis (routes through window.ThreadbotAPI) ----
+  runSynthesis = (prompt, opts = {}) => {
+    const api = window.ThreadbotAPI;
+    this._genPrompt = prompt;
+    this.setState({ phase:'generating', genPct:0, genStep:0, genStatus:this.GEN[0], variation:0, saved:false });
+    if (!api || typeof api.generate !== 'function') {
+      console.error('ThreadbotAPI.generate not found — check threadbot-api.js');
+      this.setState({ phase:'input' });
+      return;
+    }
+    api.generate({
+      prompt,
+      refImage: this.state.refImage,
+      remix: !!opts.remix,
+      baseImage: opts.baseImage || null,
+      onProgress: (pct, label) => {
+        const idx = Math.max(0, this.GEN.indexOf(label));
+        this.setState({ genPct: pct, genStatus: label, genStep: idx });
+      },
+    }).then((res) => {
+      const variations = (res && res.variations) || [];
+      this.setState({ phase:'results', results: variations, variation:0, saved:false });
+    }).catch((err) => {
+      console.error('Threadbot synthesis failed', err);
+      this.setState({ phase:'input' });
+    });
+  };
+  initiate = () => {
+    const p = this.state.prompt.trim();
+    if (!p && !this.state.refImage) return;
+    this.buzz(18);
+    this.runSynthesis(p || 'Threadbot graphic tee concept');
+  };
+  // VARIATIONS — fresh re-roll from the same prompt
+  regenerate = () => this.runSynthesis(this._genPrompt || this.state.prompt.trim() || 'Threadbot concept');
+  // REMIX — mutate the render currently in view into adjacent directions
+  remixDesign = () => {
+    const v = this.currentVariation();
+    this.runSynthesis(this._genPrompt || this.state.prompt.trim() || 'Threadbot concept', { remix:true, baseImage: v ? v.image : null });
+  };
+  refine = (name) => () => this.runSynthesis(((this._genPrompt || this.state.prompt).trim() + ', ' + name.toLowerCase()).replace(/^,\s*/,''));
+
+  currentVariation = () => {
+    const r = this.state.results;
+    if (!r || !r.length) return null;
+    return r[Math.min(this.state.variation, r.length - 1)];
+  };
+
+  // ---- save / favorite ----
+  saveDesign = () => {
+    if (this.state.saved) return;
+    if (this.state.designs.length >= this.CLOSET_MAX) {
+      this.buzz(24);
+      this.setState({ dialog: {
+        title: "YOUR CLOSET'S BURSTING 🧺",
+        body: "Whoa there, design fiend — all " + this.CLOSET_MAX + " hangers are full. Even Threadbot needs a laundry day. Toss a few old fits to make room for this one.",
+        primaryLabel: 'Clean it out',
+        primaryAction: () => this.goCleanOut(),
+        secondaryLabel: 'Maybe later',
+        danger: false,
+      }});
+      return;
+    }
+    this.buzz(14);
+    const v = this.currentVariation();
+    const entry = { id:'d'+Date.now(), designId: v ? v.id : null, prompt:this._genPrompt || '', image: v ? v.image : null, ts: Date.now(), favorite:false };
+    const designs = [entry, ...this.state.designs];
+    this.store(this.K.designs, designs);
+    this.setState({ designs, saved:true });
+  };
+  toggleFav = (id) => (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const designs = this.state.designs.map(d => d.id === id ? { ...d, favorite: !d.favorite } : d);
+    this.store(this.K.designs, designs);
+    this.setState({ designs });
+  };
+  openDesign = (d) => () => {
+    this._genPrompt = d.prompt;
+    this.setState({ phase:'results', results:[{ id:d.designId||d.id, image:d.image }], variation:0, tab:'create', saved:true });
+  };
+
+  // ---- checkout / order ----
+  openCheckout = () => {
+    const v = this.currentVariation();
+    if (!v || !v.id) { this.buzz(24); return; }
+    this.buzz(14);
+    this.setState({ checkout: { size: 'L', busy: false } });
+  };
+  closeCheckout = () => this.setState({ checkout: null });
+  setCheckoutSize = (z) => () => { const c = this.state.checkout; if (c && !c.busy) this.setState({ checkout: { ...c, size: z } }); };
+  proceedCheckout = async () => {
+    const c = this.state.checkout;
+    if (!c || c.busy) return;
+    const v = this.currentVariation();
+    if (!v || !v.id) { this.closeCheckout(); return; }
+    const cfg = window.THREADBOT_CONFIG || {};
+    const base = (cfg.backendUrl || '').replace(/\/generate\/?$/, '');
+    if (!base) { this.setState({ checkout: null, dialog: { title:'Not connected', body:'No backend is configured for ordering yet.', primaryLabel:'OK' } }); return; }
+    this.setState({ checkout: { ...c, busy: true } });
+    try {
+      const res = await fetch(base + '/checkout', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type':'application/json' }, cfg.apiKey ? { 'Authorization':'Bearer '+cfg.apiKey } : {}),
+        body: JSON.stringify({ designId: v.id, size: c.size, quantity: 1 }),
+      });
+      if (!res.ok) throw new Error('Checkout failed (' + res.status + ')');
+      const data = await res.json();
+      if (!data || !data.url) throw new Error('No checkout URL returned');
+      const caps = (window.Capacitor && window.Capacitor.Plugins) || {};
+      if (caps.Browser && caps.Browser.open) await caps.Browser.open({ url: data.url });
+      else window.open(data.url, '_system');
+      this.setState({ checkout: null });
+    } catch (e) {
+      this.setState({ checkout: null, dialog: { title:'Checkout error', body:(e && e.message) || 'Could not start checkout. Please try again.', primaryLabel:'OK' } });
+    }
+  };
+
+  // ---- closet: delete / multi-select / dialogs ----
+  visibleDesigns = () => {
+    const s = this.state;
+    return s.closetTab === 'fav' ? s.designs.filter(d => d.favorite) : s.designs;
+  };
+  closeDialog = () => this.setState({ dialog: null });
+  dialogPrimary = () => {
+    const d = this.state.dialog;
+    this.setState({ dialog: null });
+    if (d && d.primaryAction) d.primaryAction();
+  };
+  removeDesigns = (ids) => {
+    const kill = new Set(ids);
+    const designs = this.state.designs.filter(d => !kill.has(d.id));
+    this.store(this.K.designs, designs);
+    this.setState({ designs, selected: {}, selectMode: false, dialog: null });
+    this.buzz(16);
+  };
+  requestDelete = (id) => (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this.setState({ dialog: {
+      title: 'Delete this design?',
+      body: "This permanently removes it from your closet — there's no undo.",
+      primaryLabel: 'Delete', danger: true, secondaryLabel: 'Cancel',
+      primaryAction: () => this.removeDesigns([id]),
+    }});
+  };
+  enterSelect = () => this.setState({ selectMode: true, selected: {} });
+  exitSelect = () => this.setState({ selectMode: false, selected: {} });
+  toggleSelectMode = () => this.state.selectMode ? this.exitSelect() : this.enterSelect();
+  toggleSelect = (id) => (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const selected = { ...this.state.selected };
+    if (selected[id]) delete selected[id]; else selected[id] = true;
+    this.setState({ selected });
+  };
+  selectAll = () => {
+    const visible = this.visibleDesigns();
+    const allOn = visible.length > 0 && visible.every(d => this.state.selected[d.id]);
+    const selected = {};
+    if (!allOn) visible.forEach(d => { selected[d.id] = true; });
+    this.setState({ selected });
+  };
+  requestBulkDelete = () => {
+    const ids = Object.keys(this.state.selected);
+    if (!ids.length) return;
+    const n = ids.length;
+    this.setState({ dialog: {
+      title: 'Delete ' + n + (n === 1 ? ' design?' : ' designs?'),
+      body: "These will be permanently removed from your closet — there's no undo.",
+      primaryLabel: 'Delete ' + n, danger: true, secondaryLabel: 'Cancel',
+      primaryAction: () => this.removeDesigns(ids),
+    }});
+  };
+  goCleanOut = () => this.setState({ tab: 'closet', phase: 'input', profileOpen: false, dialog: null, selectMode: true, selected: {} });
+
+  // ---- profile ----
+  openProfile = () => this.setState({ profileOpen:true, draftName:this.state.profile.name, draftHandle:this.state.profile.handle });
+  closeProfile = () => this.setState({ profileOpen:false });
+  saveProfile = () => {
+    let handle = (this.state.draftHandle || '').trim();
+    if (handle && handle[0] !== '@') handle = '@' + handle;
+    const profile = { name: (this.state.draftName||'').trim() || 'Designer', handle: handle || '@designer' };
+    this.store(this.K.profile, profile);
+    this.setState({ profile, profileOpen:false });
+  };
+
+  togglePref = (k) => () => {
+    const prefs = { ...this.state.prefs, [k]: !this.state.prefs[k] };
+    this.store(this.K.prefs, prefs);
+    this.setState({ prefs });
+  };
+
+  initialsOf = (name) => (name||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase() || 'TB';
+  relTime = (ts) => {
+    const s = Math.floor((Date.now()-ts)/1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s/60); if (m < 60) return m+'m ago';
+    const h = Math.floor(m/60); if (h < 24) return h+'h ago';
+    const d = Math.floor(h/24); if (d < 7) return d+'d ago';
+    return Math.floor(d/7)+'w ago';
+  };
+
+  renderVals() {
+    const s = this.state;
+    const accent = '#00E5FF';
+    const exIdx = this._exIdx || 0;
+
+    const navDef = [
+      { id:'create', label:'CREATE', d:'M12 5v14M5 12h14' },
+      { id:'closet', label:'CLOSET', d:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+      { id:'explore', label:'EXPLORE', d:'M12 22a10 10 0 100-20 10 10 0 000 20zM16 8l-2.5 5.5L8 16l2.5-5.5z' },
+      { id:'settings', label:'SETTINGS', d:'M4 7h10M18 7h2M4 17h2M10 17h10M14 7a2 2 0 104 0 2 2 0 10-4 0M6 17a2 2 0 104 0 2 2 0 10-4 0' },
+    ];
+    const navItems = navDef.map(n => {
+      const active = s.tab === n.id && s.phase === 'input' && !s.profileOpen;
+      return {
+        select: this.selTab(n.id),
+        label: n.label,
+        color: active ? accent : '#5b6b73',
+        iconWrap: `width:26px;height:26px;display:flex;align-items:center;justify-content:center;`,
+        icon: React.createElement('svg',{width:23,height:23,viewBox:'0 0 24 24',fill:'none',stroke:active?accent:'#7d8c94','strokeWidth':1.7,'strokeLinejoin':'round',style:active?{filter:'drop-shadow(0 0 6px rgba(0,229,255,0.7))'}:{}}, React.createElement('path',{d:n.d})),
+      };
+    });
+
+    // closet
+    const closetTabs = [['all','All'],['fav','Favorites']].map(([id,name])=>{
+      const active = s.closetTab===id;
+      return { name, select:()=>this.setState({closetTab:id}),
+        style:`padding:8px 14px;border-radius:11px;cursor:pointer;font-family:inherit;font-size:12px;border:1px solid ${active?'rgba(0,229,255,0.5)':'rgba(255,255,255,0.08)'};background:${active?'rgba(0,229,255,0.1)':'transparent'};color:${active?'#eafcff':'#7d8c94'};` };
+    });
+    let visible = s.designs;
+    if (s.closetTab === 'fav') visible = visible.filter(d => d.favorite);
+    const selMode = s.selectMode;
+    const closetItems = visible.map(d => {
+      const isSel = !!s.selected[d.id];
+      return {
+        tap: selMode ? this.toggleSelect(d.id) : this.openDesign(d),
+        toggleFav: this.toggleFav(d.id),
+        requestDelete: this.requestDelete(d.id),
+        showActions: !selMode,
+        selectMode: selMode,
+        selected: isSel,
+        name: d.prompt || 'Untitled design',
+        meta: this.relTime(d.ts),
+        noImage: !d.image,
+        favFill: d.favorite ? '#FFD400' : 'none',
+        favStroke: d.favorite ? '#FFD400' : '#9fd9e3',
+        favBorder: d.favorite ? 'rgba(255,212,0,0.4)' : 'rgba(0,229,255,0.2)',
+        card: `position:relative;border-radius:16px;overflow:hidden;background:#0c1117;border:1px solid ${isSel ? 'rgba(0,229,255,0.7)' : 'rgba(0,229,255,0.14)'};box-shadow:${isSel ? '0 0 22px -8px rgba(0,229,255,0.7)' : 'none'};`,
+        checkStyle: `position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:1px solid ${isSel ? '#00E5FF' : 'rgba(255,255,255,0.45)'};background:${isSel ? '#00E5FF' : 'rgba(7,8,10,0.65)'};`,
+        thumb: `position:relative;height:128px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(0,229,255,0.1);` + (d.image
+          ? `background-image:url(${d.image});background-size:cover;background-position:center;`
+          : `background:repeating-linear-gradient(135deg,#0e151c,#0e151c 9px,#0b1117 9px,#0b1117 18px);`),
+      };
+    });
+    const closetEmpty = visible.length === 0 && !selMode;
+    const closetEmptyTitle = s.closetTab === 'fav' ? 'No favorites yet' : 'Your closet is empty';
+    const selectedCount = Object.keys(s.selected).length;
+    const allVisibleSelected = visible.length > 0 && visible.every(d => s.selected[d.id]);
+    const closetCount = s.designs.length;
+
+    // explore — community feed not wired yet; the template shows an honest empty state.
+
+    // settings — real, persisted controls only
+    const toggleRow = (name, key) => {
+      const on = !!s.prefs[key];
+      return { name, onClick: this.togglePref(key), isToggle:true, isAction:false, nameColor:'#dff6fa',
+        style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;font-family:inherit;`,
+        track:`width:42px;height:24px;border-radius:13px;padding:2px;display:flex;justify-content:${on?'flex-end':'flex-start'};background:${on?'rgba(0,229,255,0.85)':'rgba(255,255,255,0.1)'};box-shadow:${on?'0 0 12px -2px rgba(0,229,255,0.7)':'none'};transition:all .2s;`,
+        knob:`width:20px;height:20px;border-radius:50%;background:${on?'#04181c':'#cfe9ee'};`,
+      };
+    };
+    const actionRow = (name, value, onClick) => ({
+      name, value: value||'', onClick: onClick||(()=>{}), isToggle:false, isAction:true, nameColor:'#dff6fa',
+      style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;font-family:inherit;`,
+    });
+    const settingGroups = [
+      { label:'ACCOUNT', rows:[
+        { ...actionRow('Edit Profile','', this.openProfile), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+      ]},
+      { label:'PREFERENCES', rows:[
+        { ...toggleRow('Ambient Motion','motion'), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+        toggleRow('Haptics','haptics'),
+      ]},
+    ];
+
+    // generation
+    const genSteps = this.GEN.map((label,i)=>{
+      const done = i < s.genStep, cur = i === s.genStep;
+      return { label, color: done?accent:cur?'#eafcff':'#46555c',
+        dot:`width:9px;height:9px;border-radius:50%;flex:none;background:${done?accent:cur?'#FFD400':'transparent'};border:1px solid ${done?accent:cur?'#FFD400':'rgba(255,255,255,0.2)'};box-shadow:${(done||cur)?'0 0 10px '+(cur?'rgba(255,212,0,0.7)':'rgba(0,229,255,0.7)'):'none'};${cur?'animation:tbPulse 1s ease infinite;':''}` };
+    });
+
+    // results
+    const results = s.results || [];
+    const cur = results.length ? results[Math.min(s.variation, results.length-1)] : null;
+    const variationDots = results.map((r,i)=>({
+      select:()=>this.setState({variation:i}),
+      style:`width:${i===s.variation?'22px':'7px'};height:7px;border-radius:4px;padding:0;border:0;cursor:pointer;background:${i===s.variation?accent:'rgba(255,255,255,0.18)'};box-shadow:${i===s.variation?'0 0 10px rgba(0,229,255,0.7)':'none'};transition:all .25s;`,
+    }));
+    const refinements = this.REFINE.map(name=>({ name, apply: this.refine(name) }));
+
+    return {
+      particlesBack: this._particles(s.prefs.motion).back,
+      particlesMid: this._particles(s.prefs.motion).mid,
+      particlesFront: this._particles(s.prefs.motion).front,
+      pBackRef: this.pBackRef, pMidRef: this.pMidRef, pFrontRef: this.pFrontRef,
+      isCreate: s.tab==='create' && s.phase==='input',
+      isCloset: s.tab==='closet' && s.phase==='input',
+      isExplore: s.tab==='explore' && s.phase==='input',
+      isSettings: s.tab==='settings' && s.phase==='input',
+      isGenerating: s.phase==='generating',
+      isResults: s.phase==='results',
+      profileOpen: s.profileOpen,
+
+      prompt: s.prompt,
+      onPrompt: (e)=> this.setState({ prompt: e.target.value.slice(0,240) }),
+      promptCount: s.prompt.length,
+      examplePrompt: 'e.g., ' + this.EXAMPLES[exIdx],
+      hasRefImage: !!s.refImage,
+      refImage: s.refImage,
+      pickImage: this.pickImage, fileRef: this.fileRef, onFile: this.onFile, clearImage: this.clearImage,
+      initiate: this.initiate,
+
+      navItems,
+      goCloset: this.selTab('closet'),
+      goCreate: this.selTab('create'),
+      openProfile: this.openProfile,
+
+      profileInitials: this.initialsOf(s.profile.name),
+      profileName: s.profile.name,
+      profileHandle: s.profile.handle,
+      designCount: s.designs.length,
+
+      closetTabs, closetItems, closetEmpty, closetEmptyTitle,
+      closetHasItems: closetCount > 0,
+      selectMode: selMode,
+      toggleSelectMode: this.toggleSelectMode,
+      closetSelectBtnLabel: selMode ? 'Done' : 'Clean Out',
+      closetSelectBtnStyle: `height:32px;padding:0 13px;border-radius:10px;cursor:pointer;font-family:'Chakra Petch';font-weight:600;font-size:12px;letter-spacing:.5px;border:1px solid ${selMode ? 'rgba(0,229,255,0.6)' : 'rgba(255,255,255,0.12)'};background:${selMode ? 'rgba(0,229,255,0.12)' : 'transparent'};color:${selMode ? '#eafcff' : '#9fd9e3'};`,
+      closetCountLabel: closetCount + ' / ' + this.CLOSET_MAX + ' designs saved' + (closetCount >= this.CLOSET_MAX ? ' · full' : ''),
+      closetCountColor: closetCount >= this.CLOSET_MAX ? '#ff9f43' : '#5b6b73',
+      selectAll: this.selectAll,
+      selectAllLabel: allVisibleSelected ? 'Clear all' : 'Select all',
+      selectedCount,
+      requestBulkDelete: this.requestBulkDelete,
+      bulkDeleteStyle: `display:flex;align-items:center;gap:7px;height:34px;padding:0 15px;border-radius:10px;border:0;font-family:'Chakra Petch';font-weight:700;font-size:12px;letter-spacing:.5px;cursor:${selectedCount ? 'pointer' : 'default'};color:${selectedCount ? '#2a0d0d' : '#7d8c94'};background:${selectedCount ? '#ff7b7b' : 'rgba(255,255,255,0.06)'};`,
+      settingGroups,
+      versionLabel: 'Threadbot · v0.2.0 · full-screen',
+
+      dialogOpen: !!s.dialog,
+      dialogTitle: s.dialog ? s.dialog.title : '',
+      dialogBody: s.dialog ? s.dialog.body : '',
+      dialogPrimaryLabel: s.dialog ? s.dialog.primaryLabel : 'OK',
+      dialogSecondaryLabel: s.dialog ? (s.dialog.secondaryLabel || 'Cancel') : 'Cancel',
+      dialogPrimary: this.dialogPrimary,
+      dialogSecondary: this.closeDialog,
+      dialogPrimaryStyle: `flex:1;height:48px;border-radius:13px;border:0;font-family:'Chakra Petch';font-weight:700;font-size:13px;letter-spacing:.5px;cursor:pointer;color:${s.dialog && s.dialog.danger ? '#2a0d0d' : '#04181c'};background:${s.dialog && s.dialog.danger ? '#ff7b7b' : 'linear-gradient(100deg,#00E5FF,#19f0c4)'};`,
+
+      genPct: s.genPct, genStatus: this.GEN[s.genStep], genSteps,
+
+      resultPrompt: this._genPrompt || '',
+      hasResultImage: !!(cur && cur.image),
+      noResultImage: !(cur && cur.image),
+      resultImage: cur ? cur.image : null,
+      resultPlaceholder: 'AWAITING RENDER · connect your synthesis backend in threadbot-api.js',
+      resultRender: `position:relative;width:100%;aspect-ratio:1/1.08;border-radius:20px;overflow:hidden;border:1px solid rgba(0,229,255,0.3);background:repeating-linear-gradient(135deg,#0d141b,#0d141b 11px,#0a0f15 11px,#0a0f15 22px);display:flex;align-items:center;justify-content:center;box-shadow:0 0 50px -16px rgba(0,229,255,0.5);`,
+      variationDots, variationLabel: results.length ? `Variation 0${s.variation+1} of 0${results.length}` : '',
+      refinements,
+      backToCreate: ()=> this.setState({ phase:'input', tab:'create' }),
+      saveDesign: this.saveDesign,
+      saveIconFill: s.saved ? '#FFD400' : 'none',
+      saveBtnStyle: `width:36px;height:36px;border-radius:11px;border:1px solid rgba(255,212,0,0.35);background:${s.saved?'rgba(255,212,0,0.18)':'rgba(255,212,0,0.07)'};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;`,
+      regenerate: this.regenerate,
+      remixDesign: this.remixDesign,
+
+      checkoutOpen: !!s.checkout,
+      openCheckout: this.openCheckout,
+      closeCheckout: this.closeCheckout,
+      proceedCheckout: this.proceedCheckout,
+      checkoutImage: cur ? cur.image : null,
+      priceLabel: '$29.99',
+      checkoutSizes: ['S','M','L','XL','2XL','3XL'].map(z => ({
+        label: z,
+        select: this.setCheckoutSize(z),
+        style: `min-width:50px;height:44px;padding:0 14px;border-radius:12px;cursor:pointer;font-family:'Chakra Petch';font-weight:700;font-size:14px;border:1px solid ${s.checkout && s.checkout.size===z ? '#FFD400' : 'rgba(0,229,255,0.2)'};background:${s.checkout && s.checkout.size===z ? 'rgba(255,212,0,0.15)' : 'rgba(0,229,255,0.05)'};color:${s.checkout && s.checkout.size===z ? '#FFD400' : '#bfeaf1'};`,
+      })),
+      checkoutBtnLabel: (s.checkout && s.checkout.busy) ? 'Starting checkout…' : 'Proceed to Payment',
+      checkoutBtnStyle: `width:100%;height:54px;border-radius:15px;border:0;cursor:${(s.checkout && s.checkout.busy) ? 'default' : 'pointer'};font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:1px;color:#231a04;background:${(s.checkout && s.checkout.busy) ? 'rgba(255,212,0,0.45)' : 'linear-gradient(100deg,#FFD400,#ff9f43)'};box-shadow:0 0 28px -6px rgba(255,212,0,0.5);`,
+
+      draftName: s.draftName, draftHandle: s.draftHandle,
+      draftInitials: this.initialsOf(s.draftName),
+      onDraftName: (e)=> this.setState({ draftName: e.target.value.slice(0,32) }),
+      onDraftHandle: (e)=> this.setState({ draftHandle: e.target.value.slice(0,24) }),
+      saveProfile: this.saveProfile,
+      closeProfile: this.closeProfile,
+    };
+  }
+
+  _particles(motion) {
+    if (this._pcache && this._pmotion === motion) return this._pcache;
+    const layers = { back: [], mid: [], front: [] };
+    let r = 12345;
+    const rnd = () => { r = (r*1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
+    for (let i=0;i<42;i++){
+      const depth = rnd();
+      const bucket = depth < 0.45 ? 'back' : depth < 0.78 ? 'mid' : 'front';
+      const dMul = bucket==='back' ? 0.7 : bucket==='front' ? 1.5 : 1.05;
+      const x=rnd()*100, y=rnd()*100, sz=(rnd()<0.15?3:1.5+rnd()*1.5)*dMul;
+      const yellow=rnd()<0.22;
+      const anim = motion ? `tbStar ${2.4+rnd()*3}s ease ${rnd()*3}s infinite, tbDrift ${7+rnd()*8}s ease ${rnd()*3}s infinite alternate` : 'none';
+      layers[bucket].push(React.createElement('div',{key:i,style:{position:'absolute',left:x+'%',top:y+'%',width:sz+'px',height:sz+'px',borderRadius: rnd()<0.3?'0':'50%',background: yellow?'#FFD400':'#00E5FF',opacity: Math.min(0.9,(0.12+rnd()*0.4)*dMul),boxShadow:`0 0 ${4+sz*2}px ${yellow?'rgba(255,212,0,0.5)':'rgba(0,229,255,0.5)'}`,animation:anim}}));
+    }
+    this._pcache = layers; this._pmotion = motion;
+    return layers;
+  }
+}
+</script>
+</body>
+</html>

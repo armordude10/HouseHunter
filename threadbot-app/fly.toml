@@ -1,0 +1,22 @@
+# Fly.io deploy:  fly launch --no-deploy  (then set secrets)  ->  fly deploy
+app = "threadbot-artinc-backend"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+# Secrets (set with `fly secrets set KEY=...`), never committed:
+#   PRINTFUL_API_KEY, PRINTFUL_STORE_ID, OPENAI_API_KEY,
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET,
+#   GENERATE_VARIATIONS (e.g. 2), STRIPE_SECRET_KEY (optional), STRIPE_WEBHOOK_SECRET (optional)

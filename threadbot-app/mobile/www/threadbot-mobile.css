@@ -1,0 +1,13 @@
+/* Threadbot mobile base: the app fills the device edge-to-edge. The fake-phone
+   frame and fake status bar were removed from index.html itself, so this is now a
+   real full-screen layout (header / scrollable <main> / fixed bottom tabs). */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #07080a;
+  overflow: hidden;            /* only <main> scrolls, never the whole page */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}

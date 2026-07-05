@@ -1,0 +1,102 @@
+name: iOS build (App Store)
+
+# Cloud macOS build for the Capacitor iOS app. iOS cannot be built on Linux, so this runs on a
+# GitHub-hosted macOS runner. By default it does an UNSIGNED compile to prove the app builds.
+# To produce a signed build for TestFlight / the App Store, add the Apple secrets listed at the
+# bottom and flip `signed` to true (see mobile/RELEASE.md for the full export steps).
+
+on:
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: "Produce a signed App Store build (requires Apple secrets configured)"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ["mobile/www/**", "mobile/package.json", ".github/workflows/ios-build.yml"]
+
+jobs:
+  ios:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install JS dependencies
+        run: npm install
+
+      - name: Generate / sync the iOS project
+        run: |
+          npx cap add ios || true
+          npx cap sync ios
+
+      - name: Register custom URL scheme (OAuth + Stripe checkout return)
+        run: |
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string org.artincpeoria.threadbot" "$PLIST" 2>/dev/null || true
+
+      - name: CocoaPods
+        run: cd ios/App && pod install
+
+      - name: Build (unsigned compile check)
+        if: ${{ !inputs.signed }}
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO clean build
+
+      # ---------------------------------------------------------------------------------------
+      # SIGNED App Store build. Enable by setting input `signed=true` AND adding these repo
+      # secrets (Settings → Secrets → Actions). Uses an App Store Connect API key (.p8):
+      #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_API_KEY_B64
+      # plus your Team ID. Requires an Apple Developer account and the bundle id
+      # `org.artincpeoria.threadbot` registered in App Store Connect.
+      # ---------------------------------------------------------------------------------------
+      - name: Archive + export IPA (signed)
+        if: ${{ inputs.signed }}
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_B64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$ASC_KEY_B64" | base64 --decode > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -sdk iphoneos -archivePath "$PWD/build/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+          cat > /tmp/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store</string>
+            <key>destination</key><string>upload</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$PWD/build/App.xcarchive" \
+            -exportOptionsPlist /tmp/ExportOptions.plist -exportPath "$PWD/build/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Upload build artifact
+        if: ${{ inputs.signed }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: threadbot-ios
+          path: mobile/ios/App/build/export/*.ipa
+          if-no-files-found: warn
