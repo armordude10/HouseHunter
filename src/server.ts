@@ -208,6 +208,79 @@ const server = createServer(async (req, res) => {
       if (!record) return json(res, 404, { error: "product not in catalog index" });
       return json(res, 200, record);
     }
+    // -------------------------------------------------------------------------
+    // Threadbot mobile app contract (the original frontend's ONE seam):
+    //   POST /generate { prompt, refImage?, refImages?, remix?, baseImage? }
+    //   -> { variations: [{ id, image }, ...] }
+    // Images arrive as data-URLs; they are hosted and fed to the express run
+    // as reference inputs. Variations are the OFFICIAL Printful mockup views.
+    // -------------------------------------------------------------------------
+    if (req.method === "POST" && url.pathname === "/generate") {
+      const raw = await readBody(req, 24_000_000);
+      let body: {
+        prompt?: unknown;
+        refImage?: unknown;
+        refImages?: unknown;
+        remix?: unknown;
+        baseImage?: unknown;
+      };
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON" });
+      }
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      const candidates: unknown[] = [
+        body.refImage,
+        ...(Array.isArray(body.refImages) ? body.refImages : []),
+        ...(body.remix === true ? [body.baseImage] : [])
+      ];
+      const imageUrls: string[] = [];
+      for (const candidate of candidates) {
+        if (typeof candidate !== "string" || !candidate) continue;
+        if (imageUrls.length >= MAX_CUSTOMER_IMAGES) break;
+        if (/^https?:\/\//.test(candidate)) {
+          imageUrls.push(candidate);
+        } else if (candidate.startsWith("data:image/")) {
+          const bytes = Buffer.from(candidate.replace(/^data:[^,]*,/, ""), "base64");
+          if (bytes.length && bytes.length <= UPLOAD_MAX_ONE_BYTES) {
+            const match = candidate.match(/^data:(image\/[a-z+.-]+)/i);
+            const id = putHostedImage(bytes, match?.[1] ?? "image/png");
+            imageUrls.push(`${publicBaseUrl(req)}/uploads/${id}`);
+          }
+        }
+      }
+      if (!prompt && !imageUrls.length) {
+        return json(res, 400, { error: "prompt or reference image required" });
+      }
+      const before = { ...usageTally };
+      const result = await runExpress({
+        input_as_text: prompt || "Design a product from the attached reference images.",
+        input_image_urls: imageUrls
+      });
+      const variations = [...new Set(result.mockups.map((m) => m.mockup_url))]
+        .slice(0, 4)
+        .map((mockupUrl, i) => ({ id: `${result.run_id}-${i}`, image: mockupUrl }));
+      if (result.status !== "completed" || !variations.length) {
+        return json(res, result.status === "refused" ? 422 : 502, {
+          error: result.message || "generation failed",
+          run_id: result.run_id,
+          status: result.status
+        });
+      }
+      return json(res, 200, {
+        variations,
+        run_id: result.run_id,
+        product: result.product,
+        message: result.message,
+        retail_usd: result.economics.retail_anchor_usd,
+        llm_usage: {
+          calls: usageTally.calls - before.calls,
+          input_tokens: usageTally.input_tokens - before.input_tokens,
+          output_tokens: usageTally.output_tokens - before.output_tokens
+        }
+      });
+    }
     if (req.method === "POST" && url.pathname === "/uploads") {
       const raw = await readBody(req, 9_000_000);
       let body: { data_base64?: unknown; content_type?: unknown };
