@@ -91,7 +91,7 @@ export interface ExpressDeps {
   truth: ProductTruth;
   renderMockups: typeof createAndWaitForMockups;
   /** Hosting hook for locally-composed pixels (layer engine output). */
-  hostImage?: (png: Buffer) => Promise<string>;
+  hostImage?: (bytes: Buffer, contentType?: string) => Promise<string>;
 }
 
 let sharedTruth: PrintfulTruth | null = null;
@@ -314,7 +314,9 @@ export const runExpress = async (
     const renderableSpecs = specs.filter((spec) => !/label/i.test(spec.placement));
     const layerProfile = getCalibrationProfile(product.productId);
     const hostImage =
-      resolved.hostImage ?? (async (png: Buffer) => hostedImageUrl(putHostedImage(png)));
+      resolved.hostImage ??
+      (async (bytes: Buffer, contentType = "image/png") =>
+        hostedImageUrl(putHostedImage(bytes, contentType)));
 
     // TYPOGRAPHY POLICY: text is ALWAYS generated (gpt-image-class lockups),
     // never code-rendered — flat SVG type is retired. Any "text" layer the
@@ -501,12 +503,16 @@ export const runExpress = async (
             calibration: layerProfile?.[placement] ?? layerProfile?.default
           });
           const base = await fetchPanelBytes(panel.file_url as string);
+          // JPEG discipline: a print-res PNG composite runs 90MB+ and hangs
+          // Printful's file fetch forever (the leggings timeout). The base
+          // art is opaque, so q92 JPEG is visually identical at ~5MB.
           const composed = await sharp(base)
             .resize(overlay.canvasW, overlay.canvasH, { fit: "fill" })
             .composite([{ input: overlay.buffer }])
-            .png()
+            .flatten({ background: "#ffffff" })
+            .jpeg({ quality: 92 })
             .toBuffer();
-          panel.file_url = await hostImage(composed);
+          panel.file_url = await hostImage(composed, "image/jpeg");
           panel.notes = `${panel.notes} Layered overlay applied: ${overlay.promptParts.join(" + ")} (grounded piece-space compositing).`;
           result.design_genome?.panels.push({
             job_id: `overlay_${placement}`,
@@ -541,12 +547,16 @@ export const runExpress = async (
 
     // 7. Official Printful mockups — the hard-coded final-output rule.
     // Style ids: primary placement's first, then any placement's (a few
-    // catalog products list styles on secondary placements only).
+    // catalog products list styles on secondary placements only). Task
+    // weight scales with styles x placements: heavy products get ONE style
+    // so Printful renders within our patience window (leggings proved 2
+    // styles x 3 placements can exceed 400s).
+    const styleBudget = activeSpecs.length >= 3 ? 1 : 2;
     const styleIds = (
       pickPrimaryPlacement(activeSpecs).styleIds.length
         ? pickPrimaryPlacement(activeSpecs).styleIds
         : [...new Set(activeSpecs.flatMap((spec) => spec.styleIds))]
-    ).slice(0, 2);
+    ).slice(0, styleBudget);
     const productOptions = optionNames.includes("stitch_color")
       ? { stitch_color: pickStitchColor(intent) }
       : undefined;
@@ -563,8 +573,9 @@ export const runExpress = async (
       format: "jpg",
       widthPx: 1000,
       // Multi-placement AOP tasks render slowly; proven live: a 6-panel
-      // hoodie needs >150s. Patience is free — regeneration is not.
-      maxAttempts: 80,
+      // hoodie needs >150s and 3-placement leggings exceeded 400s.
+      // Patience is free — regeneration is not.
+      maxAttempts: 100,
       intervalSeconds: 5
     });
 

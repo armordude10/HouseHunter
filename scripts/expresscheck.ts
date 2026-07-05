@@ -301,7 +301,10 @@ const main = async () => {
       payload.placements.length === 6 &&
         payload.placements.every((p) => p.technique === "cut-sew")
     );
-    check("style ids capped at 2 from primary placement", payload.styleIds.join(",") === "11,12");
+    check(
+      "heavy products (3+ placements) request ONE style to fit Printful's render window",
+      payload.styleIds.join(",") === "11"
+    );
     check(
       "stitch_color resolved deterministically (dark palette -> black)",
       payload.productOptions?.stitch_color === "black"

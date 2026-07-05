@@ -291,7 +291,12 @@ const server = createServer(async (req, res) => {
         return json(res, result.status === "refused" ? 422 : 502, {
           error: result.message || "generation failed",
           run_id: result.run_id,
-          status: result.status
+          status: result.status,
+          // Diagnostics: paid work must never be opaque — surface exactly
+          // what was produced and why the run stopped.
+          product: result.product,
+          panels: result.panels.map((p) => ({ placement: p.placement, status: p.status, file_url: p.file_url })),
+          failure_details: result.missing_required_placements
         });
       }
       // Checkout-sheet truth: real product name, price, and purchasable

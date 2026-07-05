@@ -55,7 +55,10 @@
           if (onProgress) onProgress(pct, label);
         }, 250);
         try {
-          const res = await fetch(backendUrl, {
+          // One automatic retry on pure network failures ("Failed to fetch"):
+          // a backend deploy/restart mid-request should cost the user a few
+          // seconds, not the whole run.
+          const doFetch = async () => fetch(backendUrl, {
             method: 'POST',
             headers: Object.assign(
               { 'Content-Type': 'application/json' },
@@ -66,6 +69,13 @@
             body: JSON.stringify({ prompt, refImage, remix, baseImage }),
             signal: ctrl.signal,
           });
+          let res;
+          try {
+            res = await doFetch();
+          } catch (netErr) {
+            await new Promise(function (r) { setTimeout(r, 3000); });
+            res = await doFetch();
+          }
           if (!res.ok) {
             // Surface the backend's actual reason (refusals, product issues)
             // instead of a bare status code.

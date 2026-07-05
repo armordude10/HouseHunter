@@ -292,7 +292,25 @@
             <button onClick="{{ fbUp }}" style="{{ fbUpStyle }}">👍 Nailed it</button>
             <button onClick="{{ fbDown }}" style="{{ fbDownStyle }}">👎 Something's off</button>
           </div>
-          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 16px;">{{ fbNote }}</p>
+          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 16px;">{{ fbStatusNote }}</p>
+
+          <sc-if value="{{ fbComposeOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed; inset:0; z-index:60; background:rgba(4,6,8,0.82); backdrop-filter:blur(6px); display:flex; align-items:flex-end;">
+            <div style="width:100%; background:#0a0f14; border-top:1px solid rgba(255,159,67,0.35); border-radius:26px 26px 0 0; padding:22px 22px 30px; animation:tbSlideUp .3s cubic-bezier(.2,.9,.2,1) both;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <h2 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:18px; color:#eafcff;">What went wrong?</h2>
+                <button onClick="{{ closeFbCompose }}" style="width:32px; height:32px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <p style="margin:0 0 10px; font-size:11px; color:#7d8c94;">Wrong product? Text misplaced? Seams off? Tell us — this goes straight to the design team with your prompt and the result attached.</p>
+              <div style="background:rgba(13,20,26,0.8); border:1px solid rgba(0,229,255,0.18); border-radius:14px; padding:12px;">
+                <textarea value="{{ fbNote }}" onInput="{{ onFbNote }}" placeholder="e.g. the text printed twice and the flowers only showed on one leg" style="width:100%; height:76px; resize:none; border:0; outline:0; background:transparent; color:#dff6fa; font-family:'Share Tech Mono', monospace; font-size:13px; line-height:1.5;"></textarea>
+              </div>
+              <button onClick="{{ submitFbCompose }}" style="margin-top:14px; width:100%; height:50px; border-radius:14px; border:0; background:linear-gradient(100deg,#FFD400,#ff9f43); color:#231a04; font-family:'Chakra Petch'; font-weight:700; font-size:14px; letter-spacing:1px; cursor:pointer;">SUBMIT FEEDBACK</button>
+            </div>
+          </div>
+          </sc-if>
 
           <p style="margin:0 0 11px; font-size:11px; letter-spacing:2px; color:#7d8c94;">REFINE WITH AI</p>
           <div style="display:flex; flex-wrap:wrap; gap:9px; margin-bottom:8px;">
@@ -579,11 +597,9 @@ class Component extends DCLogic {
     return r[Math.min(this.state.variation, r.length - 1)];
   };
 
-  // ---- feedback: user verdicts flow to design_feedback for pipeline review ----
-  submitFeedback = (verdict) => async () => {
-    if (this.state.fbSent) return;
-    this.buzz(12);
-    this.setState({ fbSent: verdict });
+  // ---- feedback: user verdicts + comments flow to design_feedback ----
+  sendFeedback = async (verdict, note) => {
+    this.setState({ fbSent: verdict, fbCompose: false });
     try {
       const sb = window.__tbSupabase;
       if (!sb) return;
@@ -592,18 +608,28 @@ class Component extends DCLogic {
       if (!uid) return;
       const v = this.currentVariation() || {};
       const c = this._commerce || {};
-      await sb.from('design_feedback').insert({
+      const r = await sb.from('design_feedback').insert({
         user_id: uid,
         run_id: this._runId || null,
         verdict,
+        note: (note || '').slice(0, 1000) || null,
         prompt: this._genPrompt || '',
         product_id: c.product_id || null,
         product_name: c.product_name || null,
         variant_id: c.variant_id || null,
         mockup_url: (v.image && /^https?:/.test(v.image)) ? v.image : null,
       });
-    } catch (e) { console.warn('feedback failed', e); }
+      if (r.error) throw r.error;
+    } catch (e) {
+      console.warn('feedback failed', e);
+      this.setState({ fbSent: null, dialog: { title:'Feedback not sent', body:(e && e.message) || 'Could not reach the feedback service.', primaryLabel:'OK' } });
+    }
   };
+  thumbsUp = () => { if (this.state.fbSent) return; this.buzz(12); this.sendFeedback('good', ''); };
+  openFbCompose = () => { if (this.state.fbSent) return; this.buzz(12); this.setState({ fbCompose: true, fbNote: '' }); };
+  closeFbCompose = () => this.setState({ fbCompose: false });
+  onFbNote = (e) => this.setState({ fbNote: e.target.value });
+  submitFbCompose = () => { this.buzz(14); this.sendFeedback('bad', this.state.fbNote); };
 
   // ---- save / favorite ----
   saveDesign = () => {
@@ -976,12 +1002,17 @@ class Component extends DCLogic {
       regenerate: this.regenerate,
       remixDesign: this.remixDesign,
 
-      fbUp: this.submitFeedback('good'),
-      fbDown: this.submitFeedback('bad'),
+      fbUp: this.thumbsUp,
+      fbDown: this.openFbCompose,
+      fbComposeOpen: !!s.fbCompose,
+      fbNote: s.fbNote || '',
+      onFbNote: this.onFbNote,
+      closeFbCompose: this.closeFbCompose,
+      submitFbCompose: this.submitFbCompose,
       fbUpStyle: `padding:9px 14px;border-radius:11px;font-family:inherit;font-size:12px;cursor:${s.fbSent?'default':'pointer'};border:1px solid ${s.fbSent==='good'?'#19f0c4':'rgba(0,229,255,0.2)'};background:${s.fbSent==='good'?'rgba(25,240,196,0.14)':'rgba(0,229,255,0.05)'};color:${s.fbSent==='good'?'#19f0c4':(s.fbSent?'#3f4d54':'#bfeaf1')};`,
       fbDownStyle: `padding:9px 14px;border-radius:11px;font-family:inherit;font-size:12px;cursor:${s.fbSent?'default':'pointer'};border:1px solid ${s.fbSent==='bad'?'#ff9f43':'rgba(0,229,255,0.2)'};background:${s.fbSent==='bad'?'rgba(255,159,67,0.13)':'rgba(0,229,255,0.05)'};color:${s.fbSent==='bad'?'#ff9f43':(s.fbSent?'#3f4d54':'#bfeaf1')};`,
-      fbNote: s.fbSent === 'bad'
-        ? 'Flagged for review — the design team sees this with full context.'
+      fbStatusNote: s.fbSent === 'bad'
+        ? 'Flagged for review — the design team sees this with your comment and full context.'
         : (s.fbSent === 'good' ? 'Thanks — noted for your style profile.' : 'Did we nail it? Your feedback tunes the engine.'),
 
       checkoutOpen: !!s.checkout,
