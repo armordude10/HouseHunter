@@ -72,17 +72,28 @@ export interface LayeredPanelResult {
   provenance: PanelProvenance;
 }
 
-export const compileLayeredPanel = async (params: {
+export interface LayerOverlay {
+  buffer: Buffer;
+  canvasW: number;
+  canvasH: number;
+  sourceUrls: string[];
+  promptParts: string[];
+}
+
+/**
+ * Render the layers into ONE transparent full-canvas overlay. Used standalone
+ * (layers ARE the design) and as a composite pass on top of generated
+ * artwork (layers_only=false: "AOP art + '745' across the chest").
+ */
+export const renderLayerOverlay = async (params: {
   media: MediaLike;
   spec: PlacementSpec;
   layers: DesignLayer[];
   imageUrls: string[];
   runId: string;
   calibration?: PlacementCalibration;
-  /** Hosting hook (defaults injected by the caller; tests use data URLs). */
-  host: (png: Buffer) => Promise<string>;
-}): Promise<LayeredPanelResult> => {
-  const { media, spec, imageUrls, runId, calibration, host } = params;
+}): Promise<LayerOverlay> => {
+  const { media, spec, imageUrls, runId, calibration } = params;
   const layers = [...params.layers]
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .slice(0, MAX_LAYERS);
@@ -162,7 +173,23 @@ export const compileLayeredPanel = async (params: {
     .composite(composites)
     .png()
     .toBuffer();
-  const fileUrl = await host(composed);
+  return { buffer: composed, canvasW, canvasH, sourceUrls, promptParts };
+};
+
+export const compileLayeredPanel = async (params: {
+  media: MediaLike;
+  spec: PlacementSpec;
+  layers: DesignLayer[];
+  imageUrls: string[];
+  runId: string;
+  calibration?: PlacementCalibration;
+  /** Hosting hook (defaults injected by the caller; tests use data URLs). */
+  host: (png: Buffer) => Promise<string>;
+}): Promise<LayeredPanelResult> => {
+  const { spec, runId, host } = params;
+  const overlay = await renderLayerOverlay(params);
+  const { canvasW, canvasH, sourceUrls, promptParts } = overlay;
+  const fileUrl = await host(overlay.buffer);
 
   return {
     panel: {

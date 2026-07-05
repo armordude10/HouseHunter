@@ -32,7 +32,8 @@ import { normalizeCustomerImages } from "../workflow.js";
 import { hostedImageUrl, putHostedImage } from "../hosting.js";
 import { DEFAULT_PRODUCT_ID, ExpressProduct, getExpressProduct, matchExpressProduct } from "./catalog.js";
 import { deriveIntent, DesignLayer, ExpressIntent, screenRequest } from "./intent.js";
-import { compileLayeredPanel, MAX_LAYERS } from "./layers.js";
+import sharp from "sharp";
+import { compileLayeredPanel, MAX_LAYERS, renderLayerOverlay } from "./layers.js";
 import { buildExpressMedia } from "./media.js";
 import { buildExpressJobs, pickPrimaryPlacement, pickStitchColor } from "./plan.js";
 import { PrintfulTruth, ProductTruth } from "./truth.js";
@@ -125,6 +126,13 @@ const meteredMedia = (media: MediaLike, meter: { generations: number; upscales: 
   },
   uploadImage: (image) => media.uploadImage(image)
 });
+
+const fetchPanelBytes = async (url: string): Promise<Buffer> => {
+  if (url.startsWith("data:")) return Buffer.from(url.replace(/^data:[^,]*,/, ""), "base64");
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`panel fetch failed (HTTP ${response.status})`);
+  return Buffer.from(await response.arrayBuffer());
+};
 
 const baseResult = (runId: string, product: ExpressProduct | null): ExpressResult => ({
   mode: "express",
@@ -239,8 +247,12 @@ export const runExpress = async (
   }
 
   // 4. Deterministic product choice (explicit picker id wins). Lay all-over
-  // language ("covered in...", "everywhere") upgrades to AOP products.
-  const preferAop = intent.all_over || intent.wants_repeat_pattern;
+  // language ("covered in...", "everywhere") upgrades to AOP products; the
+  // raw-text check backstops the model in case it misses industry terms.
+  const preferAop =
+    intent.all_over ||
+    intent.wants_repeat_pattern ||
+    /\baop\b|\ball[- ]?over\b|\bsublimation\b/i.test(text);
   const product =
     (input.product_id ? getExpressProduct(input.product_id) : undefined) ??
     (intent.product_query || text
@@ -298,23 +310,36 @@ export const runExpress = async (
       .join(". ");
     let activeSpecs;
 
-    if (intent.layers.length) {
+    // Shared layer plumbing (standalone and overlay modes).
+    const renderableSpecs = specs.filter((spec) => !/label/i.test(spec.placement));
+    const layerProfile = getCalibrationProfile(product.productId);
+    const hostImage =
+      resolved.hostImage ?? (async (png: Buffer) => hostedImageUrl(putHostedImage(png)));
+    const grouped = new Map<string, DesignLayer[]>();
+    for (const layer of intent.layers.slice(0, MAX_LAYERS)) {
+      const spec =
+        renderableSpecs.find((s) => s.placement === layer.placement) ??
+        pickPrimaryPlacement(renderableSpecs);
+      const list = grouped.get(spec.placement);
+      if (list) list.push(layer);
+      else grouped.set(spec.placement, [layer]);
+    }
+
+    // Layers ARE the whole design only when the intent says so AND there is
+    // no all-over/pattern artwork underneath them.
+    const layersStandalone =
+      intent.layers.length > 0 &&
+      intent.layers_only &&
+      !intent.all_over &&
+      !intent.wants_repeat_pattern &&
+      !preferAop;
+
+    if (layersStandalone) {
       // 6-pre. LAYERED COMPOSITION: the intent call planned grounded layers
       // (specific text/elements at specific piece positions); the engine
       // renders each as a transparent asset and composites at exact pixels.
-      const renderable = specs.filter((spec) => !/label/i.test(spec.placement));
-      const profile = getCalibrationProfile(product.productId);
-      const hostImage =
-        resolved.hostImage ?? (async (png: Buffer) => hostedImageUrl(putHostedImage(png)));
-      const grouped = new Map<string, DesignLayer[]>();
-      for (const layer of intent.layers.slice(0, MAX_LAYERS)) {
-        const spec =
-          renderable.find((s) => s.placement === layer.placement) ??
-          pickPrimaryPlacement(renderable);
-        const list = grouped.get(spec.placement);
-        if (list) list.push(layer);
-        else grouped.set(spec.placement, [layer]);
-      }
+      const renderable = renderableSpecs;
+      const profile = layerProfile;
       activeSpecs = [...grouped.keys()].map(
         (placement) => renderable.find((s) => s.placement === placement)!
       );
@@ -398,6 +423,52 @@ export const runExpress = async (
           "We couldn't finish generating every print panel for this design. Nothing was rendered; please try again.";
         finishEconomics(result, meter, llmCalls);
         return result;
+      }
+
+      // 6c. OVERLAY PASS: grounded layers composite ON TOP of the compiled
+      // artwork ("AOP grunge shirt with '745' across the chest" = master art
+      // on every panel, then the exact-placed layer over the chest).
+      if (intent.layers.length) {
+        for (const [placement, layerList] of grouped) {
+          const spec = renderableSpecs.find((s) => s.placement === placement)!;
+          const panel = result.panels.find(
+            (p) => p.placement === placement && p.status === "success" && p.file_url
+          );
+          if (!panel) continue; // layer targeted a placement outside this plan
+          const overlay = await renderLayerOverlay({
+            media: metered,
+            spec,
+            layers: layerList,
+            imageUrls,
+            runId,
+            calibration: layerProfile?.[placement] ?? layerProfile?.default
+          });
+          const base = await fetchPanelBytes(panel.file_url as string);
+          const composed = await sharp(base)
+            .resize(overlay.canvasW, overlay.canvasH, { fit: "fill" })
+            .composite([{ input: overlay.buffer }])
+            .png()
+            .toBuffer();
+          panel.file_url = await hostImage(composed);
+          panel.notes = `${panel.notes} Layered overlay applied: ${overlay.promptParts.join(" + ")} (grounded piece-space compositing).`;
+          result.design_genome?.panels.push({
+            job_id: `overlay_${placement}`,
+            placement,
+            strategy: "reference_derive",
+            model: null,
+            seed: null,
+            prompt: overlay.promptParts.join(" + "),
+            plane_rect_in: null,
+            crop_px: null,
+            tile_phase_px: null,
+            upscale_factor: null,
+            target_px: { width: overlay.canvasW, height: overlay.canvasH },
+            dpi: spec.dpi,
+            transparent: false,
+            source_urls: overlay.sourceUrls,
+            printful_file_id: null
+          });
+        }
       }
     }
 

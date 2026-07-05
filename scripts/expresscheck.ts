@@ -154,6 +154,17 @@ const TEE_SPECS: PlacementSpec[] = [
   { placement: "label_outside", technique: "dtg", widthIn: 3, heightIn: 3, dpi: 40, styleIds: [] }
 ];
 
+const AOP_TEE_SPECS: PlacementSpec[] = ["front", "back", "sleeve_left", "sleeve_right"].map(
+  (placement) => ({
+    placement,
+    technique: "cut-sew",
+    widthIn: 28,
+    heightIn: 30,
+    dpi: 24,
+    styleIds: placement === "front" ? [41, 42] : [41]
+  })
+);
+
 const MUG_SPECS: PlacementSpec[] = [
   { placement: "default", technique: "sublimation", widthIn: 9, heightIn: 3.5, dpi: 40, styleIds: [31] }
 ];
@@ -164,7 +175,7 @@ class StubTruth implements ProductTruth {
   async placementSpecs(productId: number): Promise<PlacementSpec[]> {
     if (productId === 388) return HOODIE_SPECS;
     if (productId === 71) return TEE_SPECS;
-    if (productId === 257) return TEE_SPECS;
+    if (productId === 257) return AOP_TEE_SPECS;
     if (productId === 19) return MUG_SPECS;
     throw new Error(`stub truth has no product ${productId}`);
   }
@@ -568,6 +579,7 @@ const main = async () => {
         const { deps, media } = makeDeps(
           intentFor({
             product_query: "t-shirt",
+            layers_only: true,
             layers: [
               {
                 ...layerBase,
@@ -616,6 +628,7 @@ const main = async () => {
         const { deps, media } = makeDeps(
           intentFor({
             product_query: "t-shirt",
+            layers_only: true,
             layers: [
               {
                 ...layerBase,
@@ -640,6 +653,7 @@ const main = async () => {
         const { deps, media } = makeDeps(
           intentFor({
             product_query: "t-shirt",
+            layers_only: true,
             layers: [
               {
                 ...layerBase,
@@ -673,6 +687,79 @@ const main = async () => {
           result.design_genome?.panels[0]?.source_urls.includes(customerImage) === true
         );
       }
+    }
+    console.log("\n== 12. THE 745 CASE: AOP inference + layers ON TOP of artwork ==");
+    {
+      const layerBase = { image_index: null, placement: "front", rotation_deg: 0, order: 0 };
+      {
+        // Exactly the reported failure: "AOP grungy rap metal shirt that says
+        // 745 across the chest" must give an AOP product, full master art on
+        // every panel, and the text grounded over the chest ON TOP of it.
+        const { deps, media, mockups } = makeDeps(
+          intentFor({
+            product_query: "aop shirt",
+            coverage: "full",
+            all_over: true,
+            layers_only: false,
+            artwork_brief: "grungy rap metal collage, distressed textures, dark chaotic energy",
+            image_prompt: "grunge rap-metal collage artwork, distressed ink, torn poster textures",
+            layers: [
+              { ...layerBase, kind: "text" as const, content: "745", cx_frac: 0.5, cy_frac: 0.22, width_frac: 0.6, color: "#00ff88" }
+            ]
+          })
+        );
+        const result = await runExpress(
+          { input_as_text: "an AOP grungy rap metal themed shirt that says 745 in grungy text across the chest" },
+          deps
+        );
+        check("745 run completed", result.status === "completed", result.message);
+        check("AOP product selected (257), not the plain tee", result.product.id === 257);
+        check("full multi-panel artwork (master_slice, 4 panels)", result.strategy === "master_slice" && result.panels.length === 4, `${result.strategy}/${result.panels.length}`);
+        check("one master generation only", media.generateCalls === 1);
+        const front = result.panels.find((p) => p.placement === "front")!;
+        check("front panel carries the layered overlay", /Layered overlay applied/.test(front.notes), front.notes.slice(0, 80));
+        check("all 4 panels submitted to mockups", mockups.calls[0]?.placements.length === 4);
+        // Pixel proof: count PURE-GREEN text pixels (#00ff88-ish) per band —
+        // the stub's art gradient never produces r<40 && g>240 pixels, so any
+        // hits are the code-rendered '745' ink itself.
+        const buffer = Buffer.from((front.file_url as string).split(",")[1], "base64");
+        const { data, info } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
+        const inkIn = (fromFrac: number, toFrac: number) => {
+          let hits = 0;
+          const y0 = Math.round(info.height * fromFrac);
+          const y1 = Math.round(info.height * toFrac);
+          for (let y = y0; y < y1; y++) {
+            for (let x = 0; x < info.width; x++) {
+              const i = (y * info.width + x) * info.channels;
+              if (data[i] < 40 && data[i + 1] > 240) hits++;
+            }
+          }
+          return hits;
+        };
+        const chest = inkIn(0.1, 0.35);
+        const hem = inkIn(0.6, 0.95);
+        check(
+          "745 ink grounded at the chest ON TOP of the art (pure-green pixels in chest band only)",
+          chest > 100 && hem === 0,
+          `chest ${chest} px vs hem ${hem} px`
+        );
+        check(
+          "overlay recorded in the genome",
+          result.design_genome?.panels.some((p) => p.job_id === "overlay_front") === true
+        );
+      }
+      {
+        const { deps } = makeDeps(intentFor({ product_query: "shirt", all_over: false }));
+        const result = await runExpress({ input_as_text: "an AOP skull shirt" }, deps);
+        check(
+          "raw-text 'AOP' backstops the model (intent said all_over=false, still 257)",
+          result.product.id === 257
+        );
+      }
+      check(
+        "heuristic reads bare 'AOP'",
+        heuristicIntent("an AOP grungy rap metal themed shirt").all_over === true
+      );
     }
     server.close();
   }

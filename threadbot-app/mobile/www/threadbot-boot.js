@@ -7,7 +7,7 @@
   var cfg = window.THREADBOT_CONFIG || (window.THREADBOT_CONFIG = {});
   if (!window.supabase) { console.error("Threadbot: supabase-js failed to load"); return; }
   var sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: "pkce" },
   });
   window.__tbSupabase = sb;
 
@@ -17,10 +17,15 @@
     document.body.appendChild(s);
   }
 
+  /* Device-local keys never mirrored to the account: the Supabase session
+     token must stay on-device, and syncing it also churned app_state. */
+  function skipSync(k) { return k.indexOf("sb-") === 0; }
+
   async function hydrate(userId) {
     try {
       var r = await sb.from("app_state").select("key,value").eq("user_id", userId);
       (r.data || []).forEach(function (row) {
+        if (skipSync(row.key)) return;
         try {
           localStorage.setItem(row.key, typeof row.value === "string" ? row.value : JSON.stringify(row.value));
         } catch (e) {}
@@ -32,17 +37,28 @@
     var orig = localStorage.setItem.bind(localStorage);
     var dirty = {}, timer = null;
     localStorage.setItem = function (k, v) {
-      orig(k, v); dirty[k] = 1; clearTimeout(timer); timer = setTimeout(flush, 800);
+      orig(k, v);
+      if (skipSync(k)) return;
+      dirty[k] = 1; clearTimeout(timer); timer = setTimeout(flush, 800);
     };
     async function flush() {
       var keys = Object.keys(dirty); dirty = {};
       if (!keys.length) return;
-      var rows = keys.map(function (k) {
+      /* One row per request so a single oversized/failed key can never sink
+         the whole batch (this is what silently ate closet saves). Failures
+         re-queue and retry on the next flush. */
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
         var raw = localStorage.getItem(k), val;
         try { val = JSON.parse(raw); } catch (_) { val = raw; }
-        return { user_id: userId, key: k, value: val };
-      });
-      try { await sb.from("app_state").upsert(rows); } catch (e) { console.warn("Threadbot sync failed", e); }
+        try {
+          var r = await sb.from("app_state").upsert({ user_id: userId, key: k, value: val });
+          if (r.error) throw r.error;
+        } catch (e) {
+          console.warn("Threadbot sync failed for " + k, e);
+          dirty[k] = 1; clearTimeout(timer); timer = setTimeout(flush, 5000);
+        }
+      }
     }
   }
 

@@ -281,6 +281,35 @@ const server = createServer(async (req, res) => {
         }
       });
     }
+    // Mirror proxy: lets the mobile app read Printful mockup images (no CORS
+    // on their S3) so it can persist them into the user's Supabase Storage.
+    // Restricted to Printful-owned hosts — this is NOT an open proxy.
+    if (req.method === "GET" && url.pathname === "/mirror") {
+      const src = url.searchParams.get("src") ?? "";
+      let host = "";
+      try {
+        host = new URL(src).hostname;
+      } catch {
+        return json(res, 400, { error: "src must be a URL" });
+      }
+      const allowed =
+        host === "printful-upload.s3-accelerate.amazonaws.com" ||
+        host.endsWith(".printful.com") ||
+        host === "files.cdn.printful.com";
+      if (!allowed) return json(res, 403, { error: "host not allowed" });
+      const upstream = await fetch(src);
+      if (!upstream.ok) return json(res, 502, { error: `upstream HTTP ${upstream.status}` });
+      const bytes = Buffer.from(await upstream.arrayBuffer());
+      if (bytes.length > 15_000_000) return json(res, 502, { error: "image too large" });
+      res.writeHead(200, {
+        "Content-Type": upstream.headers.get("content-type") ?? "image/jpeg",
+        "Content-Length": bytes.length,
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=3600"
+      });
+      res.end(bytes);
+      return;
+    }
     if (req.method === "POST" && url.pathname === "/uploads") {
       const raw = await readBody(req, 9_000_000);
       let body: { data_base64?: unknown; content_type?: unknown };

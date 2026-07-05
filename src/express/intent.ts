@@ -104,7 +104,12 @@ export const ExpressIntentSchema = z.object({
    * elements/text at specific positions/scales; empty for whole-artwork
    * requests (those use the master/pattern engines).
    */
-  layers: z.array(LayerSchema)
+  layers: z.array(LayerSchema),
+  /**
+   * true = the layers ARE the whole design (blank garment beneath);
+   * false = the layers composite ON TOP of the full generated artwork.
+   */
+  layers_only: z.boolean()
 });
 
 export type ExpressIntent = z.infer<typeof ExpressIntentSchema>;
@@ -151,7 +156,7 @@ Return JSON with:
 - refusal_reason: short customer-safe sentence when allowed=false, else null.
 - product_query: the product type they want in plain lowercase words ("hoodie", "t-shirt", "leggings", "mug"). Empty if unstated.
 - coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
-- all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe") — they will never say "AOP"; that translation is your job.
+- all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe") OR use the industry terms "AOP", "all-over print", "all over print", "sublimation". Translating vague coverage language into this flag is your job.
 - artwork_brief: one rich paragraph describing the artwork — subject, composition, mood — faithful to their words and the reference captions.
 - image_prompt: a fully-engineered image-generation prompt: subject with concrete visual detail, composition and framing, art style/technique, lighting, color palette, texture and finish quality terms. Faithful to the customer; add professional craft they didn't articulate. NEVER mention garments, panels, seams, mockups, or printing.
 - style_terms / palette / mood_terms: short descriptor arrays (may be empty).
@@ -167,7 +172,8 @@ Return JSON with:
    * "element_reference" — incorporate only specific element(s) named in \`instruction\`, not the whole image.
   Default when the text gives no directive: "style_reference" for style-only mentions, else "edit_subject" with instruction "feature this subject faithfully in the design".
   instruction: precise plain-language directive for that image, always non-empty.
-- layers: a grounded layout plan, ONLY when the customer names specific elements or exact text at specific positions/sizes ("my name small across the chest", "an anchor on the left sleeve", "this photo big in the middle"). Each layer: kind "text" (content = the EXACT string), "element" (content = a rich standalone generation prompt for that one object, described isolated), or "customer_image" (image_index set); placement ("front" unless they say otherwise); cx_frac/cy_frac = the layer's center within the visible piece (0.5,0.5 = center of chest; 0.5,0.2 = high chest); width_frac = its width as a fraction of the piece width (small logo ~0.25, across-the-chest text ~0.7); rotation_deg (usually 0); color for text; order (background elements lower). Leave layers EMPTY for whole-scene artwork requests.
+- layers: a grounded layout plan, ONLY when the customer names specific elements or exact text at specific positions/sizes ("my name small across the chest", "an anchor on the left sleeve", "this photo big in the middle"). Each layer: kind "text" (content = the EXACT string) ONLY for clean/plain typography; when the customer wants STYLED or decorative text (grungy, graffiti, metal, distressed, neon, gothic, hand-drawn...), use kind "element" instead with content like: the text "745" rendered as distressed grunge metal typography, cracked ink, rough edges — always quoting the exact string inside the prompt. "element" content is otherwise a rich standalone generation prompt for one isolated object. "customer_image" uses image_index. placement ("front" unless they say otherwise); cx_frac/cy_frac = the layer's center within the visible piece (0.5,0.5 = center of chest; 0.5,0.2 = high chest); width_frac = its width as a fraction of the piece width (small logo ~0.25, across-the-chest text ~0.7); rotation_deg (usually 0); color for plain text; order (background elements lower). Leave layers EMPTY for whole-scene artwork requests.
+- layers_only: true when the design is NOTHING BUT the placed layers on the blank garment; false when the layers sit ON TOP of full artwork (e.g. "an AOP grunge shirt with '745' across the chest" = full artwork brief PLUS a layer, layers_only=false).
 Return only JSON.`;
 
 export const heuristicIntent = (text: string): ExpressIntent => ({
@@ -186,13 +192,14 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
   forbidden_text: [],
   wants_repeat_pattern: /\bpattern\b|\brepeating\b|\btiled\b|\bseamless\b/i.test(text),
   all_over:
-    /\ball[- ]?over\b|\beverywhere\b|\bentire (shirt|hoodie|garment)\b|\bcovered (in|with)\b|\bwrap(ping|s)? around\b/i.test(
+    /\baop\b|\ball[- ]?over\b|\bsublimation\b|\beverywhere\b|\bentire (shirt|hoodie|garment)\b|\bcovered (in|with)\b|\bwrap(ping|s)? around\b/i.test(
       text
     ),
   garment_color: "",
   size_preference: "",
   image_plan: [],
-  layers: []
+  layers: [],
+  layers_only: false
 });
 
 export const deriveIntent = async (

@@ -585,6 +585,33 @@ class Component extends DCLogic {
     const designs = [entry, ...this.state.designs];
     this.store(this.K.designs, designs);
     this.setState({ designs, saved:true });
+    this.persistDesignImage(entry.id, entry.image);
+  };
+  // Mockup URLs from the render service are temporary; copy the image into
+  // the account's Supabase Storage so closet items survive forever. Falls
+  // back silently to the original URL if anything is unavailable.
+  persistDesignImage = async (entryId, url) => {
+    try {
+      const sb = window.__tbSupabase;
+      if (!sb || !url || !/^https?:/.test(url)) return;
+      const base = ((window.THREADBOT_CONFIG && window.THREADBOT_CONFIG.backendUrl) || '').replace(/\/generate\/?$/, '');
+      if (!base) return;
+      const res = await fetch(base + '/mirror?src=' + encodeURIComponent(url));
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const u = await sb.auth.getUser();
+      const uid = u && u.data && u.data.user && u.data.user.id;
+      if (!uid) return;
+      const path = uid + '/' + entryId + '.jpg';
+      const up = await sb.storage.from('designs').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+      if (up.error) throw up.error;
+      const pub = sb.storage.from('designs').getPublicUrl(path);
+      const durable = pub && pub.data && pub.data.publicUrl;
+      if (!durable) return;
+      const designs = this.state.designs.map(d => d.id === entryId ? { ...d, image: durable } : d);
+      this.store(this.K.designs, designs);
+      this.setState({ designs });
+    } catch (e) { console.warn('design image persist failed', e); }
   };
   toggleFav = (id) => (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
