@@ -6,6 +6,12 @@
 
 import sharp, { type OverlayOptions } from "sharp";
 
+// Print-res panels decode to 90-140MB; sharp's default cache holds recent
+// buffers and pushes a memory-capped container toward OOM during the
+// slice/overlay passes (the "nothing came back" failure on 4-panel AOP).
+// Throughput is bounded by generation latency, not raster cache hits.
+sharp.cache({ memory: 64, files: 0, items: 32 });
+
 export interface RasterImage {
   buffer: Buffer;
   width: number;

@@ -55,6 +55,7 @@ class StubMedia implements MediaLike {
   uploads = new Map<string, Buffer>();
   generateCalls = 0;
   removeBackgroundCalls = 0;
+  prompts: string[] = [];
   lastGenerate: {
     positivePrompt: string;
     referenceImages?: unknown[];
@@ -69,6 +70,7 @@ class StubMedia implements MediaLike {
     transparentBackground?: boolean;
   }) {
     this.generateCalls++;
+    this.prompts.push(params.positivePrompt);
     this.lastGenerate = {
       positivePrompt: params.positivePrompt,
       referenceImages: params.referenceImages,
@@ -599,7 +601,13 @@ const main = async () => {
           deps
         );
         check("layered text run completed", result.status === "completed", result.message);
-        check("code-rendered text costs ZERO generations", media.generateCalls === 0);
+        check(
+          "text becomes GENERATED typography (1 gen, native alpha, exact string quoted)",
+          media.generateCalls === 1 &&
+            (media.lastGenerate as { transparentBackground?: boolean } | null)?.transparentBackground === true &&
+            media.prompts[0].includes('"THREADBOT"'),
+          media.prompts[0]?.slice(0, 80)
+        );
         const buffer = Buffer.from((result.panels[0].file_url as string).split(",")[1], "base64");
         const meta = await sharp(buffer).metadata();
         const band = async (fromFrac: number, toFrac: number) => {
@@ -682,7 +690,11 @@ const main = async () => {
           deps
         );
         check("photo + caption composition completed", result.status === "completed", result.message);
-        check("two layers, zero generations", media.generateCalls === 0 && result.panels.length === 1);
+        check(
+          "photo costs zero gens; caption is one typography gen",
+          media.generateCalls === 1 && result.panels.length === 1,
+          `${media.generateCalls} gens`
+        );
         check(
           "genome records the customer photo as layer source",
           result.design_genome?.panels[0]?.source_urls.includes(customerImage) === true
@@ -716,33 +728,20 @@ const main = async () => {
         check("745 run completed", result.status === "completed", result.message);
         check("an AOP shirt selected, not the plain tee", getCatalogRecord(result.product.id)?.aop === true, result.product.name);
         check("full multi-panel artwork (master_slice, 4 panels)", result.strategy === "master_slice" && result.panels.length === 4, `${result.strategy}/${result.panels.length}`);
-        check("one master generation only", media.generateCalls === 1);
+        check("master + typography lockup = exactly 2 generations", media.generateCalls === 2, `${media.generateCalls}`);
         const front = result.panels.find((p) => p.placement === "front")!;
         check("front panel carries the layered overlay", /Layered overlay applied/.test(front.notes), front.notes.slice(0, 80));
         check("all 4 panels submitted to mockups", mockups.calls[0]?.placements.length === 4);
-        // Pixel proof: count PURE-GREEN text pixels (#00ff88-ish) per band —
-        // the stub's art gradient never produces r<40 && g>240 pixels, so any
-        // hits are the code-rendered '745' ink itself.
-        const buffer = Buffer.from((front.file_url as string).split(",")[1], "base64");
-        const { data, info } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
-        const inkIn = (fromFrac: number, toFrac: number) => {
-          let hits = 0;
-          const y0 = Math.round(info.height * fromFrac);
-          const y1 = Math.round(info.height * toFrac);
-          for (let y = y0; y < y1; y++) {
-            for (let x = 0; x < info.width; x++) {
-              const i = (y * info.width + x) * info.channels;
-              if (data[i] > 240 && data[i + 1] < 40 && data[i + 2] > 240) hits++;
-            }
-          }
-          return hits;
-        };
-        const chest = inkIn(0.1, 0.35);
-        const hem = inkIn(0.6, 0.95);
+        const overlayProv = result.design_genome?.panels.find((p) => p.job_id === "overlay_front");
         check(
-          "745 ink grounded at the chest ON TOP of the art (magenta pixels in chest band only)",
-          chest > 100 && hem === 0,
-          `chest ${chest} px vs hem ${hem} px`
+          "typography element recorded as the overlay's generated source",
+          (overlayProv?.source_urls.length ?? 0) === 1 && /745/.test(overlayProv?.prompt ?? ""),
+          overlayProv?.prompt?.slice(0, 60)
+        );
+        check(
+          "master prompt does NOT carry the text (no double-print)",
+          !media.prompts[0].includes("745"),
+          media.prompts[0]?.slice(0, 70)
         );
         check(
           "overlay recorded in the genome",
@@ -762,6 +761,53 @@ const main = async () => {
         "heuristic reads bare 'AOP'",
         heuristicIntent("an AOP grungy rap metal themed shirt").all_over === true
       );
+      {
+        // THE ARNDT WEDDING CASE: AOP + exact text, NO layers from intent.
+        // Text must never ride the master (cut-line risk) — the pipeline
+        // auto-synthesizes a grounded typography layer on the primary panel.
+        const { deps, media, mockups } = makeDeps(
+          intentFor({
+            product_query: "all over print shirt",
+            coverage: "full",
+            all_over: true,
+            layers_only: false,
+            artwork_brief: "a bouquet of sunflowers, red roses and dark blue roses",
+            image_prompt: "lush painted bouquet of sunflowers, crimson roses, deep navy roses",
+            required_text: ["The Arndt Wedding"]
+          })
+        );
+        const result = await runExpress(
+          {
+            input_as_text:
+              "an all over print shirt that has a bouquet of sunflowers, red roses, and dark blue roses that said \"The Arndt Wedding\""
+          },
+          deps
+        );
+        check("Arndt Wedding run completed", result.status === "completed", result.message);
+        check(
+          "AOP product, all panels",
+          getCatalogRecord(result.product.id)?.aop === true && result.panels.length === 4,
+          `${result.product.name} / ${result.panels.length}`
+        );
+        check(
+          "text auto-synthesized as grounded typography (master + lockup = 2 gens)",
+          media.generateCalls === 2,
+          `${media.generateCalls}`
+        );
+        check(
+          "master prompt carries NO text (cut-line safety)",
+          !media.prompts[0]?.includes("Arndt"),
+          media.prompts[0]?.slice(0, 70)
+        );
+        check(
+          "typography prompt quotes the exact string",
+          media.prompts[1]?.includes('"The Arndt Wedding"') === true,
+          media.prompts[1]?.slice(0, 80)
+        );
+        const frontPanel = result.panels.find((p) => /Layered overlay applied/.test(p.notes));
+        check("lockup composited onto exactly one grounded panel", Boolean(frontPanel), frontPanel?.placement);
+        check("all 4 panels still submitted", mockups.calls[0]?.placements.length === 4);
+      }
     }
 
     console.log("\n== 13. THE PILLOW CASE: real-record e2e for the reported product ==");
@@ -842,6 +888,7 @@ const main = async () => {
         ["a coffee cup with a cat", /mug/i],
         ["a wine glass", /wine/i],
         ["a leash for my dog", /leash/i],
+        ["a dog bowl that says Gunner", /pet bowl/i],
         ["a collar for my cat", /collar/i],
         ["a doormat that says welcome", /doormat/i],
         ["a rug for my room", /rug/i],

@@ -482,19 +482,26 @@ export const scoreIndexed = (
   derived: Set<string> = new Set()
 ): number => {
   recordIndex(); // ensure DF table exists
-  let score = 0;
-  let matchedWeight = 0;
+  const hits: Array<{ base: number; qt: string }> = [];
   for (const qt of queryTokens) {
     let base = 0;
     if (entry.tokens.includes(qt)) base = 3 + qt.length;
     else if (entry.tokens.some((rt) => nearMatch(qt, rt))) base = 2 + Math.floor(qt.length / 2);
-    if (!base) continue;
-    let weight = (TOKEN_DF!.get(qt) ?? 1) >= 2 ? 1 : 0.35;
+    if (base) hits.push({ base, qt });
+  }
+  if (!hits.length) return 0;
+  let score = 0;
+  let matchedWeight = 0;
+  for (const { base, qt } of hits) {
+    // Singleton muting exists to stop artwork words hitting incidental
+    // model names ("Mountain Lodge"). A record matching >=2 query words is
+    // a corroborated product match — unique product nouns ("bowl", "flag")
+    // then count at full strength.
+    let weight = (TOKEN_DF!.get(qt) ?? 1) >= 2 || hits.length >= 2 ? 1 : 0.35;
     if (derived.has(qt)) weight *= 0.6;
     score += base * weight;
     matchedWeight += Math.min(1, weight);
   }
-  if (!matchedWeight) return 0;
   // Coverage: favor records explaining MORE of the query (so "oversized
   // hoodie" beats plain "hoodie" products), and shorter names on ties.
   score += (matchedWeight / queryTokens.length) * 12;

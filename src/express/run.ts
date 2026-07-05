@@ -315,20 +315,49 @@ export const runExpress = async (
     const layerProfile = getCalibrationProfile(product.productId);
     const hostImage =
       resolved.hostImage ?? (async (png: Buffer) => hostedImageUrl(putHostedImage(png)));
-    const grouped = new Map<string, DesignLayer[]>();
-    for (const layer of intent.layers.slice(0, MAX_LAYERS)) {
-      const spec =
-        renderableSpecs.find((s) => s.placement === layer.placement) ??
-        pickPrimaryPlacement(renderableSpecs);
-      const list = grouped.get(spec.placement);
-      if (list) list.push(layer);
-      else grouped.set(spec.placement, [layer]);
-    }
+
+    // TYPOGRAPHY POLICY: text is ALWAYS generated (gpt-image-class lockups),
+    // never code-rendered — flat SVG type is retired. Any "text" layer the
+    // intent emits becomes a generated-typography element.
+    const typographyPrompt = (content: string, color: string) =>
+      `the exact text "${content.slice(0, 80)}" rendered as beautiful ` +
+      `${(intent.style_terms.slice(0, 3).join(" ") || "clean modern").slice(0, 60)} typography, ` +
+      `${color ? `${color.slice(0, 24)} lettering, ` : ""}single isolated text lockup, ` +
+      `perfect spelling, high contrast print-ready lettering`;
+    const effectiveLayers: DesignLayer[] = intent.layers.slice(0, MAX_LAYERS).map((layer) =>
+      layer.kind === "text"
+        ? { ...layer, kind: "element" as const, content: typographyPrompt(layer.content, layer.color) }
+        : layer
+    );
+
+    // ANTI-DUPLICATION: text carried by a layer must not ALSO ride the
+    // master/panel prompts (the double-print bug). Strip covered strings.
+    const layerText = new Set(
+      intent.layers.filter((l) => l.kind === "text").map((l) => l.content.toLowerCase().trim())
+    );
+    let requiredText = intent.required_text.filter((t) => {
+      const low = t.toLowerCase().trim();
+      if (layerText.has(low)) return false;
+      return !effectiveLayers.some((l) => l.content.toLowerCase().includes(`"${low}"`));
+    });
+
+    const groupLayers = (layers: DesignLayer[]) => {
+      const grouped = new Map<string, DesignLayer[]>();
+      for (const layer of layers.slice(0, MAX_LAYERS)) {
+        const spec =
+          renderableSpecs.find((s) => s.placement === layer.placement) ??
+          pickPrimaryPlacement(renderableSpecs);
+        const list = grouped.get(spec.placement);
+        if (list) list.push(layer);
+        else grouped.set(spec.placement, [layer]);
+      }
+      return grouped;
+    };
 
     // Layers ARE the whole design only when the intent says so AND there is
     // no all-over/pattern artwork underneath them.
     const layersStandalone =
-      intent.layers.length > 0 &&
+      effectiveLayers.length > 0 &&
       intent.layers_only &&
       !intent.all_over &&
       !intent.wants_repeat_pattern &&
@@ -340,6 +369,7 @@ export const runExpress = async (
       // renders each as a transparent asset and composites at exact pixels.
       const renderable = renderableSpecs;
       const profile = layerProfile;
+      const grouped = groupLayers(effectiveLayers);
       activeSpecs = [...grouped.keys()].map(
         (placement) => renderable.find((s) => s.placement === placement)!
       );
@@ -394,12 +424,38 @@ export const runExpress = async (
       // 6b. Deterministic surface plan + panel compilation (one master).
       const built = buildExpressJobs(product, specs, intent);
       activeSpecs = built.activeSpecs;
+
+      // PANEL CONTROL FOR TEXT: on multi-panel products, text in the master
+      // could straddle a cut line or land on the wrong panel. It therefore
+      // NEVER rides the master prompt — it becomes a generated-typography
+      // layer grounded on the primary panel at piece coordinates. On
+      // single-panel products the text stays in the generation prompt
+      // (the model composes it into the art beautifully there).
+      if (requiredText.length && activeSpecs.length > 1) {
+        const primary = pickPrimaryPlacement(activeSpecs);
+        requiredText.slice(0, 2).forEach((text, i) => {
+          effectiveLayers.push({
+            kind: "element",
+            content: typographyPrompt(text, ""),
+            image_index: null,
+            placement: primary.placement,
+            cx_frac: 0.5,
+            cy_frac: 0.3 + i * 0.25,
+            width_frac: 0.55,
+            rotation_deg: 0,
+            color: "",
+            order: 50 + i
+          });
+        });
+        requiredText = [];
+      }
+
       const design: DesignSpec = {
         artwork_brief: brief,
         style_terms: intent.style_terms,
         palette: intent.palette,
         mood_terms: intent.mood_terms,
-        required_text: intent.required_text,
+        required_text: requiredText,
         forbidden_text: intent.forbidden_text,
         base_product_color: intent.garment_color || undefined,
         customer_image_urls: referenceUrls,
@@ -428,7 +484,8 @@ export const runExpress = async (
       // 6c. OVERLAY PASS: grounded layers composite ON TOP of the compiled
       // artwork ("AOP grunge shirt with '745' across the chest" = master art
       // on every panel, then the exact-placed layer over the chest).
-      if (intent.layers.length) {
+      if (effectiveLayers.length) {
+        const grouped = groupLayers(effectiveLayers);
         for (const [placement, layerList] of grouped) {
           const spec = renderableSpecs.find((s) => s.placement === placement)!;
           const panel = result.panels.find(
