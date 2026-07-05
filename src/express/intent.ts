@@ -45,6 +45,38 @@ export const ImagePlanSchema = z.object({
   instruction: z.string()
 });
 
+/**
+ * A grounded design layer: the intent model plans WHAT goes WHERE (an
+ * LLM-as-layout-planner, per Ranni arXiv:2311.17002 / RPG arXiv:2401.11708),
+ * and the layer engine places it with exact pixel math (box grounding per
+ * GLIGEN arXiv:2301.07093, executed as deterministic compositing instead of
+ * attention steering). Text layers are code-rendered — perfect spelling by
+ * construction, where diffusion typography (AnyText arXiv:2311.03054) still
+ * gambles. Element layers are generated with native alpha
+ * (LayerDiffuse-class transparency, arXiv:2402.17113).
+ */
+export const LayerSchema = z.object({
+  kind: z.enum(["text", "element", "customer_image"]),
+  /** Text string to set, or the element's generation prompt ("" for customer_image). */
+  content: z.string(),
+  /** 0-based attached-image index for kind=customer_image, else null. */
+  image_index: z.number().nullable(),
+  /** Target placement ("front", "back", "sleeve_left"...); "front" default. */
+  placement: z.string(),
+  /** Layer center within the VISIBLE piece, fractions 0..1 (0.5,0.5 = center of chest). */
+  cx_frac: z.number(),
+  cy_frac: z.number(),
+  /** Layer width as a fraction of the piece width (0..1). */
+  width_frac: z.number(),
+  rotation_deg: z.number(),
+  /** Text color (CSS color) for kind=text; "" for default near-black. */
+  color: z.string(),
+  /** Composite order; lower renders first (underneath). */
+  order: z.number()
+});
+
+export type DesignLayer = z.infer<typeof LayerSchema>;
+
 export const ExpressIntentSchema = z.object({
   allowed: z.boolean(),
   refusal_reason: z.string().nullable(),
@@ -66,7 +98,13 @@ export const ExpressIntentSchema = z.object({
   /** Stated size preference ("XL") or empty string. */
   size_preference: z.string(),
   /** Per-attached-image handling directives (empty when no images). */
-  image_plan: z.array(ImagePlanSchema)
+  image_plan: z.array(ImagePlanSchema),
+  /**
+   * Grounded layer layout — ONLY when the customer asks for specific
+   * elements/text at specific positions/scales; empty for whole-artwork
+   * requests (those use the master/pattern engines).
+   */
+  layers: z.array(LayerSchema)
 });
 
 export type ExpressIntent = z.infer<typeof ExpressIntentSchema>;
@@ -129,6 +167,7 @@ Return JSON with:
    * "element_reference" — incorporate only specific element(s) named in \`instruction\`, not the whole image.
   Default when the text gives no directive: "style_reference" for style-only mentions, else "edit_subject" with instruction "feature this subject faithfully in the design".
   instruction: precise plain-language directive for that image, always non-empty.
+- layers: a grounded layout plan, ONLY when the customer names specific elements or exact text at specific positions/sizes ("my name small across the chest", "an anchor on the left sleeve", "this photo big in the middle"). Each layer: kind "text" (content = the EXACT string), "element" (content = a rich standalone generation prompt for that one object, described isolated), or "customer_image" (image_index set); placement ("front" unless they say otherwise); cx_frac/cy_frac = the layer's center within the visible piece (0.5,0.5 = center of chest; 0.5,0.2 = high chest); width_frac = its width as a fraction of the piece width (small logo ~0.25, across-the-chest text ~0.7); rotation_deg (usually 0); color for text; order (background elements lower). Leave layers EMPTY for whole-scene artwork requests.
 Return only JSON.`;
 
 export const heuristicIntent = (text: string): ExpressIntent => ({
@@ -152,7 +191,8 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
     ),
   garment_color: "",
   size_preference: "",
-  image_plan: []
+  image_plan: [],
+  layers: []
 });
 
 export const deriveIntent = async (

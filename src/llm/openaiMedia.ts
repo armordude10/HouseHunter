@@ -20,7 +20,8 @@ import { MediaLike } from "../engine/panelCompiler.js";
 import { hostedImageUrl, putHostedImage } from "../hosting.js";
 
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-const IMAGE_MODEL = () => process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1";
+/** gpt-image-1.5: native transparent-background output for layered assets. */
+const IMAGE_MODEL = () => process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1.5";
 const IMAGE_QUALITY = () => process.env.OPENAI_IMAGE_QUALITY ?? "medium";
 
 /** gpt-image-1 generates at fixed sizes; we pick by aspect and resample. */
@@ -49,6 +50,7 @@ export class OpenAIMedia implements MediaLike {
     height: number;
     referenceImages?: Array<{ image: string; role?: string } | string>;
     seed?: number;
+    transparentBackground?: boolean;
   }): Promise<{ imageURL: string }> {
     // No negative-prompt channel: fold it into the prompt.
     const prompt = [
@@ -71,6 +73,10 @@ export class OpenAIMedia implements MediaLike {
       form.append("prompt", prompt.slice(0, 4000));
       form.append("size", pickSize(params.width, params.height));
       form.append("quality", IMAGE_QUALITY());
+      if (params.transparentBackground) {
+        form.append("background", "transparent");
+        form.append("output_format", "png");
+      }
       for (const [i, url] of references.entries()) {
         const response = await fetch(url);
         if (!response.ok) continue;
@@ -85,7 +91,10 @@ export class OpenAIMedia implements MediaLike {
           model: IMAGE_MODEL(),
           prompt: prompt.slice(0, 4000),
           size: pickSize(params.width, params.height),
-          quality: IMAGE_QUALITY()
+          quality: IMAGE_QUALITY(),
+          ...(params.transparentBackground
+            ? { background: "transparent", output_format: "png" }
+            : {})
         })
       );
     }

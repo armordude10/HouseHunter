@@ -106,6 +106,8 @@ export interface MediaLike {
     height: number;
     referenceImages?: Array<{ image: string; role?: string } | string>;
     seed?: number;
+    /** Request native alpha output (LayerDiffuse-class transparency). */
+    transparentBackground?: boolean;
   }): Promise<{ imageURL: string }>;
   removeBackground(imageUrl: string): Promise<{ imageURL: string }>;
   upscale(image: string, factor: 2 | 3 | 4): Promise<{ imageURL: string }>;

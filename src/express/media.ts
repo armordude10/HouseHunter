@@ -60,8 +60,9 @@ export const buildExpressMedia = async (): Promise<MediaLike> => {
   const runware = async () => new (await import("../runware/media.js")).RunwareMedia();
   const openai = async () => new (await import("../llm/openaiMedia.js")).OpenAIMedia();
 
-  if (preference === "openai" || (!hasRunware && hasOpenAI)) return openai();
+  if (preference === "openai" || !hasRunware) return openai();
   if (preference === "runware" || !hasOpenAI) return runware();
-  // Default: FLUX.2 flex first, OpenAI safety net. One instance per run.
-  return new FallbackMedia(await runware(), await openai());
+  // Default: gpt-image-1.5 first (native transparent layers for the layered
+  // composition engine), FLUX.2 flex as the safety net. One instance per run.
+  return new FallbackMedia(await openai(), await runware());
 };

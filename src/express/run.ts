@@ -29,8 +29,10 @@ import {
 } from "../integrations/printfulMockups.js";
 import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 import { normalizeCustomerImages } from "../workflow.js";
+import { hostedImageUrl, putHostedImage } from "../hosting.js";
 import { DEFAULT_PRODUCT_ID, ExpressProduct, getExpressProduct, matchExpressProduct } from "./catalog.js";
-import { deriveIntent, ExpressIntent, screenRequest } from "./intent.js";
+import { deriveIntent, DesignLayer, ExpressIntent, screenRequest } from "./intent.js";
+import { compileLayeredPanel, MAX_LAYERS } from "./layers.js";
 import { buildExpressMedia } from "./media.js";
 import { buildExpressJobs, pickPrimaryPlacement, pickStitchColor } from "./plan.js";
 import { PrintfulTruth, ProductTruth } from "./truth.js";
@@ -87,6 +89,8 @@ export interface ExpressDeps {
   media: MediaLike;
   truth: ProductTruth;
   renderMockups: typeof createAndWaitForMockups;
+  /** Hosting hook for locally-composed pixels (layer engine output). */
+  hostImage?: (png: Buffer) => Promise<string>;
 }
 
 let sharedTruth: PrintfulTruth | null = null;
@@ -294,7 +298,51 @@ export const runExpress = async (
       .join(". ");
     let activeSpecs;
 
-    if (verbatimEntry) {
+    if (intent.layers.length) {
+      // 6-pre. LAYERED COMPOSITION: the intent call planned grounded layers
+      // (specific text/elements at specific piece positions); the engine
+      // renders each as a transparent asset and composites at exact pixels.
+      const renderable = specs.filter((spec) => !/label/i.test(spec.placement));
+      const profile = getCalibrationProfile(product.productId);
+      const hostImage =
+        resolved.hostImage ?? (async (png: Buffer) => hostedImageUrl(putHostedImage(png)));
+      const grouped = new Map<string, DesignLayer[]>();
+      for (const layer of intent.layers.slice(0, MAX_LAYERS)) {
+        const spec =
+          renderable.find((s) => s.placement === layer.placement) ??
+          pickPrimaryPlacement(renderable);
+        const list = grouped.get(spec.placement);
+        if (list) list.push(layer);
+        else grouped.set(spec.placement, [layer]);
+      }
+      activeSpecs = [...grouped.keys()].map(
+        (placement) => renderable.find((s) => s.placement === placement)!
+      );
+      result.strategy = "direct";
+      result.coverage = "single";
+      const provenance = [];
+      for (const spec of activeSpecs) {
+        const compiledLayer = await compileLayeredPanel({
+          media: metered,
+          spec,
+          layers: grouped.get(spec.placement)!,
+          imageUrls,
+          runId,
+          calibration: profile?.[spec.placement] ?? profile?.default,
+          host: hostImage
+        });
+        result.panels.push(compiledLayer.panel);
+        provenance.push(compiledLayer.provenance);
+      }
+      result.design_genome = {
+        version: "threadbot-genome/1",
+        run_id: runId,
+        strategy: "direct",
+        master_artwork_url: null,
+        pattern_tile_url: null,
+        panels: provenance
+      };
+    } else if (verbatimEntry) {
       // 6a. VERBATIM: the uploaded image IS the artwork — zero generations,
       // pixel-faithful placement on the primary print area.
       const renderable = specs.filter((spec) => !/label/i.test(spec.placement));

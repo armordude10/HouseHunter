@@ -55,16 +55,25 @@ class StubMedia implements MediaLike {
   uploads = new Map<string, Buffer>();
   generateCalls = 0;
   removeBackgroundCalls = 0;
-  lastGenerate: { positivePrompt: string; referenceImages?: unknown[] } | null = null;
+  lastGenerate: {
+    positivePrompt: string;
+    referenceImages?: unknown[];
+    transparentBackground?: boolean;
+  } | null = null;
 
   async generateImage(params: {
     positivePrompt: string;
     width: number;
     height: number;
     referenceImages?: Array<{ image: string } | string>;
+    transparentBackground?: boolean;
   }) {
     this.generateCalls++;
-    this.lastGenerate = { positivePrompt: params.positivePrompt, referenceImages: params.referenceImages };
+    this.lastGenerate = {
+      positivePrompt: params.positivePrompt,
+      referenceImages: params.referenceImages,
+      transparentBackground: params.transparentBackground
+    };
     return { imageURL: toDataUrl(await gradientPng(params.width, params.height)) };
   }
   async removeBackground(imageUrl: string) {
@@ -203,7 +212,8 @@ const makeDeps = (
     provider,
     media,
     truth,
-    renderMockups: mockups.render
+    renderMockups: mockups.render,
+    hostImage: async (png) => toDataUrl(png)
   };
   return { deps, provider, media, mockups, truth };
 };
@@ -544,6 +554,125 @@ const main = async () => {
         "heuristic detects all-over wording",
         heuristicIntent("a shirt covered in koi fish everywhere").all_over === true
       );
+    }
+    console.log("\n== 11. Layered composition: grounded text/element placement ==");
+    {
+      const layerBase = {
+        image_index: null,
+        placement: "front",
+        rotation_deg: 0,
+        color: "",
+        order: 0
+      };
+      {
+        const { deps, media } = makeDeps(
+          intentFor({
+            product_query: "t-shirt",
+            layers: [
+              {
+                ...layerBase,
+                kind: "text" as const,
+                content: "THREADBOT",
+                cx_frac: 0.5,
+                cy_frac: 0.2,
+                width_frac: 0.6,
+                color: "#00ff88"
+              }
+            ]
+          })
+        );
+        const result = await runExpress(
+          { input_as_text: "put THREADBOT in green across the high chest of a tee" },
+          deps
+        );
+        check("layered text run completed", result.status === "completed", result.message);
+        check("code-rendered text costs ZERO generations", media.generateCalls === 0);
+        const buffer = Buffer.from((result.panels[0].file_url as string).split(",")[1], "base64");
+        const meta = await sharp(buffer).metadata();
+        const band = async (fromFrac: number, toFrac: number) => {
+          const region = await sharp(buffer)
+            .extract({
+              left: 0,
+              top: Math.round((meta.height ?? 1) * fromFrac),
+              width: meta.width ?? 1,
+              height: Math.max(1, Math.round((meta.height ?? 1) * (toFrac - fromFrac)))
+            })
+            .ensureAlpha()
+            .png()
+            .toBuffer();
+          const stats = await sharp(region).stats();
+          return stats.channels[3].mean;
+        };
+        const inkAtTarget = await band(0.1, 0.3);
+        const inkFarAway = await band(0.6, 0.95);
+        check(
+          "GROUNDED PLACEMENT: ink exactly in the planned band (cy 0.2), nowhere else",
+          inkAtTarget > 1 && inkFarAway === 0,
+          `target band alpha ${inkAtTarget.toFixed(1)}, far band ${inkFarAway.toFixed(1)}`
+        );
+        check("panel is transparent PNG (layerable)", result.panels[0].transparent_background === true);
+      }
+      {
+        const { deps, media } = makeDeps(
+          intentFor({
+            product_query: "t-shirt",
+            layers: [
+              {
+                ...layerBase,
+                kind: "element" as const,
+                content: "a vintage brass anchor, engraved detail",
+                cx_frac: 0.5,
+                cy_frac: 0.5,
+                width_frac: 0.3
+              }
+            ]
+          })
+        );
+        const result = await runExpress({ input_as_text: "small anchor centered on a tee" }, deps);
+        check("layered element run completed", result.status === "completed", result.message);
+        check("element generated once with native-alpha request", media.generateCalls === 1 && (media.lastGenerate as { transparentBackground?: boolean } | null)?.transparentBackground === true);
+        check(
+          "opaque asset detected and repaired via background removal",
+          media.removeBackgroundCalls === 1
+        );
+      }
+      {
+        const { deps, media } = makeDeps(
+          intentFor({
+            product_query: "t-shirt",
+            layers: [
+              {
+                ...layerBase,
+                kind: "customer_image" as const,
+                content: "",
+                image_index: 0,
+                cx_frac: 0.5,
+                cy_frac: 0.4,
+                width_frac: 0.5
+              },
+              {
+                ...layerBase,
+                kind: "text" as const,
+                content: "EST. 2026",
+                cx_frac: 0.5,
+                cy_frac: 0.8,
+                width_frac: 0.3,
+                order: 1
+              }
+            ]
+          })
+        );
+        const result = await runExpress(
+          { input_as_text: "my photo centered with EST. 2026 under it", input_image_urls: [customerImage] },
+          deps
+        );
+        check("photo + caption composition completed", result.status === "completed", result.message);
+        check("two layers, zero generations", media.generateCalls === 0 && result.panels.length === 1);
+        check(
+          "genome records the customer photo as layer source",
+          result.design_genome?.panels[0]?.source_urls.includes(customerImage) === true
+        );
+      }
     }
     server.close();
   }
