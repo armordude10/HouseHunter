@@ -31,9 +31,19 @@ export const buildExpressJobs = (
   specs: PlacementSpec[],
   intent: ExpressIntent
 ): { jobs: CompileJob[]; activeSpecs: PlacementSpec[] } => {
-  const renderable = specs.filter((spec) => !isLabelPlacement(spec.placement));
+  let renderable = specs.filter((spec) => !isLabelPlacement(spec.placement));
   if (!renderable.length) {
     throw new Error(`product ${product.productId} has no renderable placements`);
+  }
+
+  // Placement semantics differ by technique family: cut-sew placements are
+  // sewn PANELS (additive — front+back+sleeves), but sublimation products
+  // that expose a "default" placement (mugs, posters, blankets) list the
+  // others as ALTERNATIVE print modes of the same surface. Planning "all"
+  // there would double-print one surface; "default" IS the full coverage.
+  const defaultSpec = renderable.find((spec) => spec.placement === "default");
+  if (defaultSpec && !renderable.some((spec) => spec.technique === "cut-sew")) {
+    renderable = [defaultSpec];
   }
 
   const fullCoverage = product.aop && intent.coverage === "full";

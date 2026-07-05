@@ -19,11 +19,17 @@ import sharp from "sharp";
 import { MediaLike } from "../src/engine/panelCompiler.js";
 import { LlmProvider, StructuredParams } from "../src/llm/provider.js";
 import { ChatCompletionParams, ChatCompletionResult } from "../src/runware/client.js";
-import { matchExpressProduct } from "../src/express/catalog.js";
+import {
+  catalogSize,
+  getCatalogRecord,
+  getExpressProduct,
+  matchExpressProduct,
+  searchCatalog
+} from "../src/express/catalog.js";
 import { ExpressIntent, heuristicIntent, screenRequest } from "../src/express/intent.js";
-import { pickStitchColor } from "../src/express/plan.js";
+import { buildExpressJobs, pickStitchColor } from "../src/express/plan.js";
 import { runExpress, ExpressDeps } from "../src/express/run.js";
-import { PlacementSpec, ProductTruth } from "../src/express/truth.js";
+import { PlacementSpec, PrintfulTruth, ProductTruth } from "../src/express/truth.js";
 import { createAndWaitForMockups } from "../src/integrations/printfulMockups.js";
 
 // -----------------------------------------------------------------------------
@@ -331,7 +337,93 @@ const main = async () => {
     check("no invented mockup urls", result.mockups.length === 0);
   }
 
-  console.log("\n== 7. Deterministic helpers ==");
+  console.log("\n== 7. FULL CATALOG: every indexed product plans cleanly ==");
+  {
+    const size = catalogSize();
+    check("catalog index loaded (>=400 products)", size >= 400, `${size} products`);
+    const fullIntent = intentFor({ coverage: "full" });
+    let structural = 0;
+    let planned = 0;
+    let multiPanel = 0;
+    const problems: string[] = [];
+    for (const row of searchCatalog("", 100000)) {
+      const record = getCatalogRecord(row.id)!;
+      const structOk =
+        record.baseCostUsd > 0 &&
+        record.retailUsd > record.baseCostUsd &&
+        record.defaultVariantId > 0 &&
+        record.placements.length > 0 &&
+        record.placements.every((p) => p.widthIn > 0 && p.heightIn > 0 && p.dpi > 0) &&
+        new Set(record.placements.map((p) => p.placement)).size === record.placements.length;
+      if (structOk) structural++;
+      else problems.push(`${record.id} structural`);
+      try {
+        const product = getExpressProduct(record.id)!;
+        const { jobs } = buildExpressJobs(product, record.placements, fullIntent);
+        const jobsOk =
+          jobs.length >= 1 &&
+          jobs.every(
+            (job) =>
+              (job.geometry_contract?.width_px ?? 0) >= 16 &&
+              (job.geometry_contract?.height_px ?? 0) >= 16
+          );
+        if (jobsOk) planned++;
+        else problems.push(`${record.id} degenerate geometry`);
+        if (jobs.length > 1) multiPanel++;
+      } catch (error) {
+        problems.push(`${record.id}: ${(error as Error).message}`);
+      }
+    }
+    check(`every product structurally sound (${structural}/${size})`, structural === size, problems.slice(0, 3).join("; "));
+    check(`every product yields a valid plan (${planned}/${size})`, planned === size, problems.slice(0, 3).join("; "));
+    check("multi-panel AOP plans exist at scale (>80 products)", multiPanel > 80, `${multiPanel}`);
+    const mug = getCatalogRecord(19)!;
+    const mugJobs = buildExpressJobs(getExpressProduct(19)!, mug.placements, fullIntent).jobs;
+    check(
+      "sublimation 'default' rule: mug plans ONE surface (no double-print)",
+      mugJobs.length === 1 && mugJobs[0].placement === "default",
+      mugJobs.map((job) => job.placement).join(",")
+    );
+    check("'fleece blanket' resolves to a blanket", /blanket/i.test(matchExpressProduct("a cozy fleece blanket").name), matchExpressProduct("a cozy fleece blanket").name);
+    check("'bucket hat' resolves to a hat", /hat/i.test(matchExpressProduct("a bucket hat").name), matchExpressProduct("a bucket hat").name);
+    check("'duvet' resolves to bedding", /duvet|bedding/i.test(matchExpressProduct("a duvet cover").name), matchExpressProduct("a duvet cover").name);
+  }
+
+  console.log("\n== 8. Real-catalog e2e (file-backed truth, stub media, $0) ==");
+  {
+    const { deps, media } = makeDeps(intentFor({ product_query: "mug", coverage: "full" }));
+    deps.truth = new PrintfulTruth(); // answers from the committed index; zero network
+    const result = await runExpress({ input_as_text: "a watercolor fox mug" }, deps);
+    check("mug e2e completed on real record", result.status === "completed", result.message);
+    check(
+      "variant came from the committed index",
+      result.product.variant_id === getCatalogRecord(19)!.defaultVariantId
+    );
+    check("single surface, single generation", media.generateCalls === 1 && result.panels.length === 1);
+    check(
+      "no product options for optionless product",
+      !getCatalogRecord(19)!.productOptions.includes("stitch_color")
+    );
+  }
+  {
+    const { deps, mockups } = makeDeps(intentFor({ product_query: "hoodie", coverage: "full" }));
+    deps.truth = new PrintfulTruth();
+    const result = await runExpress({ input_as_text: "aurora borealis hoodie" }, deps);
+    check("hoodie e2e completed on real record (real 40x40 canvases)", result.status === "completed", result.message);
+    const record = getCatalogRecord(388)!;
+    const renderableCount = record.placements.filter((p) => !/label/i.test(p.placement)).length;
+    check(
+      `all ${renderableCount} real renderable hoodie placements submitted`,
+      mockups.calls[0]?.placements.length === renderableCount,
+      `${mockups.calls[0]?.placements.length}`
+    );
+    check(
+      "stitch_color truth-gated from index",
+      mockups.calls[0]?.productOptions?.stitch_color === "black"
+    );
+  }
+
+  console.log("\n== 9. Deterministic helpers ==");
   {
     check("'all-over tee' matches 257 (longest keyword wins)", matchExpressProduct("an all-over tee").productId === 257);
     check("'tee' matches 71", matchExpressProduct("a cool tee").productId === 71);

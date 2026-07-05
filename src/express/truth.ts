@@ -17,6 +17,8 @@
  *     (the stitch_color requirement gate used in the MCP patch)
  */
 
+import { dedupePlacements, getCatalogRecord } from "./catalog.js";
+
 const PRINTFUL_API_BASE = process.env.PRINTFUL_API_BASE ?? "https://api.printful.com";
 
 export interface PlacementSpec {
@@ -76,6 +78,11 @@ export class PrintfulTruth implements ProductTruth {
   private options = new Cached<string[]>();
 
   async placementSpecs(productId: number): Promise<PlacementSpec[]> {
+    // Static-first: the committed full-catalog index answers with zero
+    // network; live Printful reads are the fallback for products indexed
+    // after the last build.
+    const record = getCatalogRecord(productId);
+    if (record?.placements.length) return record.placements;
     return this.specs.get(productId, async () => {
       const body = (await getJson(
         `${PRINTFUL_API_BASE}/v2/catalog-products/${productId}/mockup-styles?limit=100`,
@@ -105,11 +112,16 @@ export class PrintfulTruth implements ProductTruth {
       if (!specs.length) {
         throw new Error(`Printful lists no mockup placements for product ${productId}`);
       }
-      return specs;
+      // mockup-styles repeats a placement once per style group.
+      return dedupePlacements(specs);
     });
   }
 
   async resolveVariant(productId: number, pick?: string): Promise<number> {
+    // The committed index is authoritative when present (zero network, and
+    // its default variant was chosen with the same white/medium preference).
+    const record = getCatalogRecord(productId);
+    if (record?.defaultVariantId) return record.defaultVariantId;
     const variants = await this.variants.get(productId, async () => {
       const body = (await getJson(`${PRINTFUL_API_BASE}/products/${productId}`)) as {
         result?: { variants?: Array<{ id?: number; name?: string }> };
@@ -128,6 +140,8 @@ export class PrintfulTruth implements ProductTruth {
   }
 
   async productOptionNames(productId: number): Promise<string[]> {
+    const record = getCatalogRecord(productId);
+    if (record) return record.productOptions;
     return this.options.get(productId, async () => {
       const body = (await getJson(
         `${PRINTFUL_API_BASE}/v2/catalog-products/${productId}`,

@@ -17,8 +17,12 @@
 
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
 import { runExpress } from "./express/run.js";
+import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
+import { hostedImages, putHostedImage } from "./hosting.js";
 import { activeProviderName, usageTally } from "./llm/provider.js";
 
 type RunMode = "express" | "agents";
@@ -107,14 +111,17 @@ const json = (res: import("node:http").ServerResponse, status: number, body: unk
   res.end(payload);
 };
 
-const readBody = (req: import("node:http").IncomingMessage): Promise<string> =>
+const readBody = (
+  req: import("node:http").IncomingMessage,
+  maxBytes = 1_000_000
+): Promise<string> =>
   new Promise((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > 1_000_000) {
-        reject(new Error("request body exceeds 1MB"));
+      if (size > maxBytes) {
+        reject(new Error(`request body exceeds ${Math.round(maxBytes / 1_000_000)}MB`));
         req.destroy();
         return;
       }
@@ -123,6 +130,41 @@ const readBody = (req: import("node:http").IncomingMessage): Promise<string> =>
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
+
+// -----------------------------------------------------------------------------
+// Customer image uploads + generated-panel hosting: shared in-memory store
+// (src/hosting.ts) served at /uploads/:id. The app sends local photos as
+// base64; the OpenAI media adapter hosts generated print files here too.
+// -----------------------------------------------------------------------------
+
+const UPLOAD_MAX_ONE_BYTES = 6_000_000;
+
+const publicBaseUrl = (req: import("node:http").IncomingMessage): string => {
+  const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
+  const host = (req.headers["x-forwarded-host"] as string) ?? req.headers.host ?? "localhost";
+  return `${proto}://${host}`;
+};
+
+// -----------------------------------------------------------------------------
+// Built-in frontend: served by the same service so the UI can never drift
+// from the API it talks to.
+// -----------------------------------------------------------------------------
+
+const loadFrontend = (): string | null => {
+  const candidates = [
+    path.resolve(process.cwd(), "frontend/index.html"),
+    new URL("../frontend/index.html", import.meta.url).pathname
+  ];
+  for (const file of candidates) {
+    try {
+      return readFileSync(file, "utf8");
+    } catch {
+      // try next
+    }
+  }
+  return null;
+};
+let frontendHtml: string | null = null;
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -137,8 +179,68 @@ const server = createServer(async (req, res) => {
         llm_provider: activeProviderName(),
         artwork: process.env.THREADBOT_ARTWORK_MCP_URL ? "hosted-artwork-mcp" : "runware-local",
         default_mode: defaultMode(),
+        catalog_products: catalogSize(),
         max_customer_images: MAX_CUSTOMER_IMAGES
       });
+    }
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+      if (frontendHtml === null) frontendHtml = loadFrontend();
+      if (frontendHtml) {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(frontendHtml);
+        return;
+      }
+      return json(res, 200, { service: "threadbot-agentic-pipeline", ui: "not bundled" });
+    }
+    if (req.method === "GET" && url.pathname === "/catalog") {
+      const query = url.searchParams.get("q") ?? "";
+      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? 50) || 50));
+      return json(res, 200, { count: catalogSize(), products: searchCatalog(query, limit) });
+    }
+    const catalogMatch = url.pathname.match(/^\/catalog\/(\d{1,6})$/);
+    if (req.method === "GET" && catalogMatch) {
+      const record = getCatalogRecord(Number(catalogMatch[1]));
+      if (!record) return json(res, 404, { error: "product not in catalog index" });
+      return json(res, 200, record);
+    }
+    if (req.method === "POST" && url.pathname === "/uploads") {
+      const raw = await readBody(req, 9_000_000);
+      let body: { data_base64?: unknown; content_type?: unknown };
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON { data_base64, content_type }" });
+      }
+      const data = typeof body.data_base64 === "string" ? body.data_base64 : "";
+      const contentType =
+        typeof body.content_type === "string" && /^image\//.test(body.content_type)
+          ? body.content_type
+          : "image/jpeg";
+      if (!data) return json(res, 400, { error: "data_base64 required" });
+      let bytes: Buffer;
+      try {
+        bytes = Buffer.from(data.replace(/^data:[^,]*,/, ""), "base64");
+      } catch {
+        return json(res, 400, { error: "data_base64 is not valid base64" });
+      }
+      if (!bytes.length || bytes.length > UPLOAD_MAX_ONE_BYTES) {
+        return json(res, 400, { error: `image must be 1 byte to ${UPLOAD_MAX_ONE_BYTES} bytes` });
+      }
+      const id = putHostedImage(bytes, contentType);
+      return json(res, 201, { upload_id: id, url: `${publicBaseUrl(req)}/uploads/${id}` });
+    }
+    const uploadMatch = url.pathname.match(/^\/uploads\/([0-9a-f-]{36})$/);
+    if (req.method === "GET" && uploadMatch) {
+      const record = hostedImages.get(uploadMatch[1]);
+      if (!record) return json(res, 404, { error: "upload not found or expired" });
+      res.writeHead(200, {
+        "Content-Type": record.contentType,
+        "Content-Length": record.bytes.length,
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*"
+      });
+      res.end(record.bytes);
+      return;
     }
     if (req.method === "POST" && url.pathname === "/runs") {
       const raw = await readBody(req);

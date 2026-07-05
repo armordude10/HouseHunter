@@ -80,11 +80,20 @@ export interface ExpressDeps {
 let sharedTruth: PrintfulTruth | null = null;
 
 const defaultDeps = async (): Promise<ExpressDeps> => {
-  const { RunwareMedia } = await import("../runware/media.js");
   if (!sharedTruth) sharedTruth = new PrintfulTruth();
+  // Media backend: Runware when credited (cheapest per image), else the
+  // OpenAI adapter (gpt-image-1 + local $0 upscale/hosting). Overridable
+  // with THREADBOT_MEDIA=openai|runware.
+  const preference = (process.env.THREADBOT_MEDIA ?? "").toLowerCase();
+  const useOpenAI =
+    preference === "openai" ||
+    (preference !== "runware" && !process.env.RUNWARE_API_KEY && !!process.env.OPENAI_API_KEY);
+  const media = useOpenAI
+    ? new (await import("../llm/openaiMedia.js")).OpenAIMedia()
+    : new (await import("../runware/media.js")).RunwareMedia();
   return {
     provider: getLlmProvider(),
-    media: new RunwareMedia(),
+    media,
     truth: sharedTruth,
     renderMockups: createAndWaitForMockups
   };
