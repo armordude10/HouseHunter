@@ -249,8 +249,150 @@ export const getExpressProduct = (productId: number): ExpressProduct | undefined
 const STOPWORDS = new Set([
   "the", "and", "for", "with", "that", "this", "make", "made", "want", "like",
   "design", "print", "printed", "custom", "cool", "please", "front", "back",
-  "all", "over", "one", "art", "artwork", "put", "get", "very", "some"
+  "all", "over", "one", "art", "artwork", "put", "get", "very", "some", "new",
+  "unisex"
 ]);
+
+/**
+ * Lay-language synonym expansion: customers know neither the supplier nor
+ * its vocabulary. Deterministic and free — expands query tokens into the
+ * words catalog names actually use. Multi-word keys match as phrases.
+ */
+const SYNONYMS: Record<string, string[]> = {
+  onesie: ["bodysuit", "one", "piece", "baby"],
+  romper: ["bodysuit", "baby"],
+  tee: ["t-shirt"],
+  tshirt: ["t-shirt"],
+  shirt: ["t-shirt", "shirt"],
+  hoody: ["hoodie"],
+  hoodies: ["hoodie"],
+  jumper: ["sweatshirt", "sweater"],
+  sweater: ["sweatshirt", "sweater", "knitted"],
+  crewneck: ["crew", "neck", "sweatshirt"],
+  joggers: ["sweatpants", "joggers"],
+  "sweat pants": ["sweatpants"],
+  cap: ["cap", "hat"],
+  hat: ["hat", "cap"],
+  snapback: ["snapback"],
+  beanie: ["beanie"],
+  sneakers: ["shoes", "canvas"],
+  sneaker: ["shoes", "canvas"],
+  kicks: ["shoes"],
+  trainers: ["shoes"],
+  sandals: ["slides", "flip", "flops"],
+  crocs: ["slides"],
+  poster: ["poster"],
+  "wall art": ["poster", "canvas"],
+  painting: ["canvas"],
+  "canvas print": ["canvas"],
+  purse: ["crossbody", "bag"],
+  "fanny pack": ["fanny", "pack"],
+  "bum bag": ["fanny", "pack"],
+  "laptop case": ["laptop", "sleeve"],
+  "phone case": ["case", "iphone", "samsung"],
+  iphone: ["iphone", "case"],
+  samsung: ["samsung", "case"],
+  galaxy: ["samsung", "case"],
+  airpods: ["airpods", "case"],
+  cup: ["mug"],
+  "coffee mug": ["mug"],
+  "water bottle": ["water", "bottle"],
+  thermos: ["tumbler", "bottle", "insulated"],
+  blanket: ["blanket", "throw"],
+  throw: ["throw", "blanket"],
+  towel: ["towel"],
+  swimsuit: ["swimsuit", "one-piece", "bikini"],
+  "bathing suit": ["swimsuit", "bikini", "swim"],
+  "swim trunks": ["swim", "trunks"],
+  boardshorts: ["board", "shorts"],
+  "board shorts": ["board", "shorts"],
+  trunks: ["swim", "trunks", "shorts"],
+  leggins: ["leggings"],
+  "yoga pants": ["leggings", "yoga"],
+  tights: ["leggings"],
+  dress: ["dress"],
+  skirt: ["skirt"],
+  "tank top": ["tank", "top"],
+  singlet: ["tank", "top"],
+  "long sleeve": ["long", "sleeve"],
+  longsleeve: ["long", "sleeve"],
+  socks: ["socks"],
+  apron: ["apron"],
+  candle: ["candle"],
+  puzzle: ["jigsaw", "puzzle"],
+  rug: ["rug", "area"],
+  carpet: ["rug"],
+  doormat: ["doormat"],
+  "door mat": ["doormat"],
+  "mouse pad": ["mouse", "pad"],
+  mousepad: ["mouse", "pad"],
+  stickers: ["sticker"],
+  decal: ["decals", "sticker"],
+  magnet: ["magnets"],
+  journal: ["journal", "notebook"],
+  diary: ["journal", "notebook"],
+  ornament: ["ornament"],
+  "pet leash": ["pet", "leash"],
+  "dog leash": ["pet", "leash"],
+  "dog collar": ["pet", "collar"],
+  "cat collar": ["pet", "collar"],
+  "dog bowl": ["pet", "bowl"],
+  windbreaker: ["windbreaker"],
+  "track jacket": ["track", "jacket"],
+  "zip up": ["zip", "hoodie"],
+  vest: ["vest"],
+  polo: ["polo"],
+  jersey: ["jersey"],
+  "sports bra": ["sports", "bra"],
+  scrunchie: ["scrunchie"],
+  bandana: ["bandana"],
+  "neck gaiter": ["neck", "gaiter"],
+  gaiter: ["neck", "gaiter"],
+  "flip flops": ["flip", "flops"],
+  "flip-flops": ["flip", "flops"],
+  "shower curtain": ["shower", "curtain"],
+  tapestry: ["tapestry"],
+  coaster: ["coaster"],
+  "pint glass": ["pint", "glass"],
+  "wine glass": ["wine", "glass"],
+  "shot glass": ["rocks", "glass"],
+  "playing cards": ["poker", "playing", "cards"],
+  "greeting card": ["greeting", "card"],
+  postcard: ["postcard"],
+  calendar: ["calendar"],
+  "yoga mat": ["yoga", "mat"],
+  "gym bag": ["gym", "bag"],
+  "duffle bag": ["duffle", "bag"],
+  duffel: ["duffle"],
+  suitcase: ["suitcase"],
+  luggage: ["suitcase"],
+  "teddy bear": ["teddy", "bear"],
+  "license plate": ["license", "plate"],
+  pillowcase: ["pillow", "case"],
+  cushion: ["pillow"],
+  "crop top": ["crop", "top"],
+  croptop: ["crop", "top"],
+  anorak: ["anorak", "windbreaker"],
+  cardigan: ["cardigan"],
+  "letterman jacket": ["letterman", "jacket"],
+  "bomber jacket": ["bomber", "jacket"],
+  "trucker hat": ["trucker"],
+  "dad hat": ["dad", "hat"],
+  "bucket hat": ["bucket", "hat"],
+  visor: ["visor"],
+  headband: ["headband"],
+  "baby tee": ["baby", "tee", "rib"],
+  toddler: ["toddler"],
+  youth: ["youth", "kids"],
+  kids: ["kids", "youth"],
+  kid: ["kids", "youth"],
+  baby: ["baby"],
+  infant: ["baby"],
+  oversized: ["oversized"],
+  "high tops": ["high", "top", "shoes"],
+  "slip on": ["slip-on", "shoes"],
+  "slip-ons": ["slip-on", "shoes"]
+};
 
 const tokenize = (text: string): string[] => [
   ...new Set(
@@ -261,17 +403,103 @@ const tokenize = (text: string): string[] => [
   )
 ];
 
-const scoreRecord = (record: CatalogRecord, tokens: string[]): number => {
-  const name = record.name.toLowerCase();
-  const type = record.type_name.toLowerCase();
-  const extra = `${record.brand ?? ""} ${record.model ?? ""}`.toLowerCase();
-  let score = 0;
-  for (const token of tokens) {
-    if (name.includes(token)) score += token.length * 2;
-    if (type.includes(token)) score += token.length * 3;
-    if (extra.includes(token)) score += token.length;
+/** Tokens + phrase-aware synonym expansion (word-boundary matched — "that"
+ *  must never trigger the "hat" synonym). Derived tokens are tracked so the
+ *  scorer can weight the customer's own words above expansions. */
+export const expandQueryDetailed = (
+  text: string
+): { tokens: string[]; derived: Set<string> } => {
+  const lower = ` ${text.toLowerCase().replace(/[^a-z0-9-]+/g, " ")} `;
+  const explicit = new Set(tokenize(text));
+  const derived = new Set<string>();
+  for (const [phrase, additions] of Object.entries(SYNONYMS)) {
+    if (lower.includes(` ${phrase} `)) {
+      for (const term of additions) if (!explicit.has(term)) derived.add(term);
+    }
   }
-  return score;
+  return { tokens: [...explicit, ...derived], derived };
+};
+
+export const expandQuery = (text: string): string[] => expandQueryDetailed(text).tokens;
+
+/** Damerau-lite: edit distance <= 1 for typo'd tokens ("hoddie" ~ "hoodie"). */
+const nearMatch = (a: string, b: string): boolean => {
+  if (a === b) return true;
+  if (a.length < 5 || Math.abs(a.length - b.length) > 1 || a[0] !== b[0]) return false;
+  if (a.length === b.length) {
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && ++diff > 1) {
+      // allow one adjacent transposition
+      return a.slice(0, i) + a[i + 1] + a[i] + a.slice(i + 2) === b;
+    }
+    return true;
+  }
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  for (let i = 0; i < long.length; i++) {
+    if (short === long.slice(0, i) + long.slice(i + 1)) return true;
+  }
+  return false;
+};
+
+export interface IndexedRecord {
+  record: CatalogRecord;
+  tokens: string[];
+  haystack: string;
+}
+
+let RECORD_INDEX: IndexedRecord[] | null = null;
+let TOKEN_DF: Map<string, number> | null = null;
+
+export const recordIndex = (): IndexedRecord[] => {
+  if (!RECORD_INDEX) {
+    RECORD_INDEX = Object.values(FULL_CATALOG).map((record) => {
+      const haystack = `${record.name} ${record.type_name} ${record.brand ?? ""} ${record.model ?? ""}`
+        .toLowerCase()
+        .replace(/[®™|]/g, " ");
+      return { record, tokens: tokenize(haystack), haystack };
+    });
+    TOKEN_DF = new Map();
+    for (const entry of RECORD_INDEX) {
+      for (const token of new Set(entry.tokens)) {
+        TOKEN_DF.set(token, (TOKEN_DF.get(token) ?? 0) + 1);
+      }
+    }
+  }
+  return RECORD_INDEX;
+};
+
+/**
+ * Threadbot prompts are mostly ARTWORK words with one product noun buried
+ * inside ("a poster of a mountain sunrise"). Weight hits by catalog
+ * document-frequency: tokens shared by >=3 products are product-type
+ * vocabulary (poster, hoodie, case); singletons are incidental model naming
+ * ("Mountain Lodge") that artwork words collide with — nearly mute them.
+ * Synonym-derived tokens count less than words the customer actually typed.
+ */
+export const scoreIndexed = (
+  entry: IndexedRecord,
+  queryTokens: string[],
+  derived: Set<string> = new Set()
+): number => {
+  recordIndex(); // ensure DF table exists
+  let score = 0;
+  let matchedWeight = 0;
+  for (const qt of queryTokens) {
+    let base = 0;
+    if (entry.tokens.includes(qt)) base = 3 + qt.length;
+    else if (entry.tokens.some((rt) => nearMatch(qt, rt))) base = 2 + Math.floor(qt.length / 2);
+    if (!base) continue;
+    let weight = (TOKEN_DF!.get(qt) ?? 1) >= 2 ? 1 : 0.35;
+    if (derived.has(qt)) weight *= 0.6;
+    score += base * weight;
+    matchedWeight += Math.min(1, weight);
+  }
+  if (!matchedWeight) return 0;
+  // Coverage: favor records explaining MORE of the query (so "oversized
+  // hoodie" beats plain "hoodie" products), and shorter names on ties.
+  score += (matchedWeight / queryTokens.length) * 12;
+  score -= Math.min(4, Math.floor(entry.tokens.length / 8));
+  return Math.round(score * 10) / 10;
 };
 
 /**
@@ -283,46 +511,54 @@ const AOP_UPGRADES: Record<number, number> = {
 };
 
 /**
- * Deterministic product match, cheapest first:
- *   1. curated hero keyword hit (longest keyword wins; upgraded to its AOP
- *      sibling when the customer described all-over coverage)
- *   2. full-catalog token scoring over name/type/brand (AOP-boosted when
- *      all-over coverage was described)
- *   3. safe default (71)
+ * Deterministic full-catalog product match. EVERY indexed product is
+ * reachable from lay language: query tokens are synonym-expanded (customers
+ * don't know supplier vocabulary), matched exactly or typo-tolerantly
+ * against every product's name/type/brand, coverage-weighted (so "oversized
+ * hoodie" beats plain hoodies), AOP-boosted when the design demands full
+ * coverage, with curated best-sellers acting only as TIEBREAK bonuses for
+ * generic words — never as shortcuts that hide the rest of the catalog.
  */
 export const matchExpressProduct = (
   text: string,
   options?: { preferAop?: boolean }
 ): ExpressProduct => {
   const preferAop = options?.preferAop === true;
+  const { tokens: queryTokens, derived } = expandQueryDetailed(text);
   const haystack = ` ${text.toLowerCase()} `;
-  let hero: { product: ExpressProduct; score: number } | null = null;
-  for (const product of HERO_CATALOG) {
-    for (const keyword of product.keywords) {
-      if (!haystack.includes(keyword)) continue;
-      if (!hero || keyword.length > hero.score) hero = { product, score: keyword.length };
-    }
-  }
-  if (hero) {
-    let chosen = hero.product;
-    if (preferAop && !chosen.aop && AOP_UPGRADES[chosen.productId]) {
-      chosen = HERO_CATALOG.find((p) => p.productId === AOP_UPGRADES[chosen.productId]) ?? chosen;
-    }
-    return withRecordTruth(chosen);
-  }
-
-  const tokens = tokenize(text);
-  if (tokens.length) {
-    let best: { record: CatalogRecord; score: number } | null = null;
-    for (const record of Object.values(FULL_CATALOG)) {
-      let score = scoreRecord(record, tokens);
-      if (preferAop && record.aop) score = Math.round(score * 1.6);
-      if (score > 0 && (!best || score > best.score || (score === best.score && record.id < best.record.id))) {
-        best = { record, score };
+  let best: { record: CatalogRecord; score: number } | null = null;
+  let bestAop: { record: CatalogRecord; score: number } | null = null;
+  if (queryTokens.length) {
+    const phrase = ` ${text.toLowerCase().replace(/[^a-z0-9-]+/g, " ").trim()} `;
+    for (const entry of recordIndex()) {
+      let score = scoreIndexed(entry, queryTokens, derived);
+      if (!score) continue;
+      // Exact-phrase presence in the product name is the strongest signal.
+      if (phrase.trim().length >= 6 && ` ${entry.haystack} `.includes(phrase)) score += 6;
+      // Curated best-sellers get a small TIEBREAK nudge for generic words —
+      // never enough to beat a product that matches more of the query.
+      const hero = HERO_CATALOG.find((product) => product.productId === entry.record.id);
+      if (hero && hero.keywords.some((keyword) => haystack.includes(keyword))) score += 3;
+      if (!best || score > best.score || (score === best.score && entry.record.id < best.record.id)) {
+        best = { record: entry.record, score };
+      }
+      if (
+        entry.record.aop &&
+        (!bestAop || score > bestAop.score || (score === bestAop.score && entry.record.id < bestAop.record.id))
+      ) {
+        bestAop = { record: entry.record, score };
       }
     }
-    if (best) return productFromRecord(best.record);
   }
+  // All-over designs demand an all-over product: take the best AOP candidate
+  // whenever one plausibly matches the request at all.
+  if (preferAop && bestAop && (!best || !best.record.aop)) {
+    if (!best || bestAop.score >= best.score * 0.5) best = bestAop;
+    else if (AOP_UPGRADES[best.record.id]) {
+      return getExpressProduct(AOP_UPGRADES[best.record.id]) ?? productFromRecord(best.record);
+    }
+  }
+  if (best) return productFromRecord(best.record);
   return getExpressProduct(DEFAULT_PRODUCT_ID) ?? productFromRecord(Object.values(FULL_CATALOG)[0]);
 };
 
@@ -350,19 +586,19 @@ const toSearchRow = (record: CatalogRecord): CatalogSearchRow => ({
   techniques: record.techniques
 });
 
-/** Product picker feed: same table the planner uses. */
+/** Product picker feed: same table + same scorer the planner uses. */
 export const searchCatalog = (query: string, limit = 50): CatalogSearchRow[] => {
   const records = Object.values(FULL_CATALOG);
-  const tokens = tokenize(query);
-  if (!tokens.length) {
+  const { tokens: queryTokens, derived } = expandQueryDetailed(query);
+  if (!queryTokens.length) {
     // Default browse order: curated heroes first, then the rest by id.
     const heroIds = new Set(HERO_CATALOG.map((product) => product.productId));
     const heroes = records.filter((record) => heroIds.has(record.id));
     const rest = records.filter((record) => !heroIds.has(record.id)).sort((a, b) => a.id - b.id);
     return [...heroes, ...rest].slice(0, limit).map(toSearchRow);
   }
-  return records
-    .map((record) => ({ record, score: scoreRecord(record, tokens) }))
+  return recordIndex()
+    .map((entry) => ({ record: entry.record, score: scoreIndexed(entry, queryTokens, derived) }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score || a.record.id - b.record.id)
     .slice(0, limit)

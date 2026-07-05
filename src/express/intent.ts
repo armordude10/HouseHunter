@@ -97,6 +97,12 @@ export const ExpressIntentSchema = z.object({
   garment_color: z.string(),
   /** Stated size preference ("XL") or empty string. */
   size_preference: z.string(),
+  /**
+   * Variant-selecting detail beyond color/size: device model ("iphone 15
+   * pro max", "samsung s24"), capacity ("15 oz"), dimensions ("18x24"),
+   * or any wording that picks WHICH version of the product. Empty if none.
+   */
+  variant_hint: z.string(),
   /** Per-attached-image handling directives (empty when no images). */
   image_plan: z.array(ImagePlanSchema),
   /**
@@ -155,7 +161,8 @@ The input may end with a bracketed "[Platform taste hints ...]" block summarizin
 Return JSON with:
 - allowed: false ONLY for requests seeking protected trademarks/characters/logos, hate content, sexual content involving minors, or other unprintable material; otherwise true.
 - refusal_reason: short customer-safe sentence when allowed=false, else null.
-- product_query: the product type they want in plain lowercase words ("hoodie", "t-shirt", "leggings", "mug"). Empty if unstated.
+- product_query: the product type they want in plain lowercase supplier-neutral words, typos fixed. The catalog spans far beyond shirts — apparel (tees, long sleeves, oversized tees/hoodies, sweatshirts, zip hoodies, polos, tanks, crop tops, dresses, skirts, leggings, shorts, sweatpants/joggers, swimwear/bikinis/trunks/rash guards, jerseys, socks, shoes/slides/flip-flops, jackets/windbreakers/vests, hats/caps/beanies/visors), kids/toddler/baby everything, bags (tote, backpack, fanny pack, duffle, crossbody, drawstring, laptop sleeve, gym), phone/AirPods cases (iPhone, Samsung), home (posters, framed posters, canvas, blankets, pillows, towels, shower curtains, rugs, mats, tapestries, candles, ornaments, mugs, glasses, bottles, tumblers, aprons, coasters), stationery (stickers, cards, notebooks, journals, calendars, magnets, puzzles, playing cards, mouse pads), pet gear (collars, leashes, bowls, bandanas). Name the type they MEAN ("wall art of..." -> "poster" or "canvas"; "onesie" -> "baby bodysuit"). Empty if truly unstated.
+- variant_hint: wording that selects WHICH version of the product: device model ("iphone 15 pro max", "samsung galaxy s24"), capacity ("15 oz"), print dimensions ("18x24"), pack counts. Empty if none.
 - coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
 - all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe"), use the industry terms "AOP"/"all-over print"/"sublimation" (including typo'd forms), OR the concept itself inherently demands continuous full-surface coverage even if they never say so: repeating patterns, tie-dye, camo, galaxy/space wash, gradients, "make it look like it's made of flames/water/fur", full-scene artwork. Translating what the DESIGN needs into this flag is your job.
 - artwork_brief: one rich paragraph describing the artwork — subject, composition, mood — faithful to their words and the reference captions.
@@ -198,6 +205,7 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
     ),
   garment_color: "",
   size_preference: "",
+  variant_hint: "",
   image_plan: [],
   layers: [],
   layers_only: false

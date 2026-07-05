@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-07-05T04:51:56.072Z",
+ "generated_at": "2026-07-05T21:13:45.574Z",
  "products": {
   "1": {
    "id": 1,
@@ -21336,6 +21336,118 @@
     }
    ]
   },
+  "625": {
+   "id": 625,
+   "name": "Men's Columbia Fleece Vest | 212488",
+   "brand": "Columbia",
+   "model": "212488",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 47.3,
+   "retailUsd": 54.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 15996,
+   "defaultVariantName": "Columbia Men's Fleece Vest (Black / M)",
+   "variantCount": 18,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_chest_right",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      4270,
+      4271,
+      4272,
+      4273,
+      4275,
+      4278,
+      4280,
+      4282
+     ]
+    },
+    {
+     "placement": "embroidery_chest_left",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      4270,
+      4271,
+      4272,
+      4273,
+      4275,
+      4278,
+      4280,
+      4282
+     ]
+    }
+   ]
+  },
+  "626": {
+   "id": 626,
+   "name": "Women's Columbia Fleece Vest | 212471",
+   "brand": "Columbia",
+   "model": "212471",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 47.31,
+   "retailUsd": 54.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 16014,
+   "defaultVariantName": "Columbia Women's Fleece Vest (Black / M)",
+   "variantCount": 4,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_chest_right",
+     "technique": "embroidery",
+     "widthIn": 3,
+     "heightIn": 2.5,
+     "dpi": 300,
+     "styleIds": [
+      4292,
+      4293,
+      4294,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299
+     ]
+    },
+    {
+     "placement": "embroidery_chest_left",
+     "technique": "embroidery",
+     "widthIn": 3,
+     "heightIn": 2.5,
+     "dpi": 300,
+     "styleIds": [
+      4292,
+      4293,
+      4294,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299
+     ]
+    }
+   ]
+  },
   "627": {
    "id": 627,
    "name": "Foam Trucker Hat | Otto Cap 39-165",
@@ -25758,6 +25870,96 @@
     }
    ]
   },
+  "707": {
+   "id": 707,
+   "name": "Unisex Columbia Fleece Jacket | 147667",
+   "brand": "Columbia",
+   "model": "147667",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 61.32,
+   "retailUsd": 70.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 17433,
+   "defaultVariantName": "Columbia Fleece Jacket 147667 (Black / M)",
+   "variantCount": 15,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_chest_right",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      9008,
+      9009,
+      9010,
+      9011,
+      9012,
+      9013,
+      9015,
+      9016
+     ]
+    },
+    {
+     "placement": "embroidery_wrist_left",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      9008,
+      9009,
+      9010,
+      9011,
+      9012,
+      9013,
+      9015,
+      9016
+     ]
+    },
+    {
+     "placement": "embroidery_wrist_right",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      9008,
+      9009,
+      9010,
+      9011,
+      9012,
+      9013,
+      9015,
+      9016
+     ]
+    },
+    {
+     "placement": "embroidery_chest_left",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      9008,
+      9009,
+      9010,
+      9011,
+      9012,
+      9013,
+      9015,
+      9016
+     ]
+    }
+   ]
+  },
   "708": {
    "id": 708,
    "name": "Cloth Napkin Set (4)",
@@ -28983,6 +29185,62 @@
     }
    ]
   },
+  "763": {
+   "id": 763,
+   "name": "Men’s Columbia Short Sleeve Button Shirt | PFG Tamiami",
+   "brand": "Columbia",
+   "model": "PFG Tamiami",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 57.73,
+   "retailUsd": 66.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 19603,
+   "defaultVariantName": "Men's Columbia Short Sleeve Button Shirt (Black / M)",
+   "variantCount": 12,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_sleeve_right_top",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      22416,
+      22424,
+      22426,
+      22427,
+      22428,
+      22458,
+      22459,
+      22460
+     ]
+    },
+    {
+     "placement": "embroidery_chest_top_right",
+     "technique": "embroidery",
+     "widthIn": 3,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      22416,
+      22424,
+      22426,
+      22427,
+      22428,
+      22458,
+      22459,
+      22460
+     ]
+    }
+   ]
+  },
   "764": {
    "id": 764,
    "name": "Can Cooler",
@@ -29384,6 +29642,108 @@
     }
    ]
   },
+  "767": {
+   "id": 767,
+   "name": "Unisex Adidas Sport Polo Shirt | A430",
+   "brand": "Adidas",
+   "model": "A430",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 40.8,
+   "retailUsd": 46.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery",
+    "dtfilm"
+   ],
+   "defaultVariantId": 19558,
+   "defaultVariantName": "Adidas A430 (White / M)",
+   "variantCount": 35,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_chest_left",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      22442,
+      22443,
+      22444,
+      22445,
+      22446,
+      22447,
+      22450,
+      22451
+     ]
+    },
+    {
+     "placement": "embroidery_sleeve_left_top",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      22442,
+      22443,
+      22444,
+      22445,
+      22446,
+      22447,
+      22450,
+      22451
+     ]
+    },
+    {
+     "placement": "short_sleeve_left_dtf",
+     "technique": "dtfilm",
+     "widthIn": 4,
+     "heightIn": 3.5,
+     "dpi": 150,
+     "styleIds": [
+      22442,
+      22443,
+      22444,
+      22445,
+      22446,
+      22447
+     ]
+    },
+    {
+     "placement": "back_large_dtf",
+     "technique": "dtfilm",
+     "widthIn": 15,
+     "heightIn": 18,
+     "dpi": 150,
+     "styleIds": [
+      22442,
+      22443,
+      22444,
+      22445,
+      22446,
+      22447
+     ]
+    },
+    {
+     "placement": "chest_left_dtf",
+     "technique": "dtfilm",
+     "widthIn": 3,
+     "heightIn": 3,
+     "dpi": 150,
+     "styleIds": [
+      22442,
+      22443,
+      22444,
+      22445,
+      22446,
+      22447
+     ]
+    }
+   ]
+  },
   "769": {
    "id": 769,
    "name": "Unisex Classic Fit Knitted Crew neck Sweater",
@@ -29653,6 +30013,45 @@
       22346,
       22347,
       22351
+     ]
+    }
+   ]
+  },
+  "772": {
+   "id": 772,
+   "name": "Bora Bora Booney Hat | Columbia 212477",
+   "brand": "Columbia",
+   "model": "212477",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 30.39,
+   "retailUsd": 34.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 19656,
+   "defaultVariantName": "Columbia Booney Hat (Grill)",
+   "variantCount": 4,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_front",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 1.75,
+     "dpi": 300,
+     "styleIds": [
+      22396,
+      22397,
+      22398,
+      22399,
+      22430,
+      22431,
+      22432,
+      22433
      ]
     }
    ]
@@ -30872,6 +31271,116 @@
     }
    ]
   },
+  "789": {
+   "id": 789,
+   "name": "Yard Sign",
+   "brand": null,
+   "model": "Yard Sign",
+   "type_name": "PHONE-CASE",
+   "baseCostUsd": 16.83,
+   "retailUsd": 20.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "uv"
+   ],
+   "defaultVariantId": 20180,
+   "defaultVariantName": "Yard Sign (One-sided)",
+   "variantCount": 2,
+   "productOptions": [],
+   "placements": [
+    {
+     "placement": "front",
+     "technique": "uv",
+     "widthIn": 24.133333333333333,
+     "heightIn": 18.133333333333333,
+     "dpi": 300,
+     "styleIds": [
+      22866,
+      22875,
+      22954,
+      22956,
+      22958,
+      22959,
+      22961,
+      22963
+     ]
+    }
+   ]
+  },
+  "790": {
+   "id": 790,
+   "name": "Men's Columbia Soft Shell Jacket | Ascender 212483",
+   "brand": "Columbia",
+   "model": "Ascender",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 94.68,
+   "retailUsd": 108.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 20210,
+   "defaultVariantName": "Unisex Columbia Soft Shell Jacket (Black / M)",
+   "variantCount": 20,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_chest_right",
+     "technique": "embroidery",
+     "widthIn": 4,
+     "heightIn": 4,
+     "dpi": 300,
+     "styleIds": [
+      23163,
+      23164,
+      23165,
+      23166,
+      23168,
+      23169,
+      23170,
+      23171
+     ]
+    },
+    {
+     "placement": "embroidery_wrist_left",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      23163,
+      23164,
+      23165,
+      23166,
+      23168,
+      23169,
+      23170,
+      23171
+     ]
+    },
+    {
+     "placement": "embroidery_wrist_right",
+     "technique": "embroidery",
+     "widthIn": 2,
+     "heightIn": 3,
+     "dpi": 300,
+     "styleIds": [
+      23163,
+      23164,
+      23165,
+      23166,
+      23168,
+      23169,
+      23170,
+      23171
+     ]
+    }
+   ]
+  },
   "791": {
    "id": 791,
    "name": "Men's All-Over Print Slim Fit Polo Shirt",
@@ -31316,6 +31825,45 @@
       23904,
       23913,
       23914
+     ]
+    }
+   ]
+  },
+  "800": {
+   "id": 800,
+   "name": "Winter Blur Pom-Pom Cuffed Beanie | Columbia 186210",
+   "brand": "Columbia",
+   "model": "186210",
+   "type_name": "EMBROIDERY",
+   "baseCostUsd": 36.59,
+   "retailUsd": 42.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "embroidery"
+   ],
+   "defaultVariantId": 20426,
+   "defaultVariantName": "Columbia Pom-Pom Beanie (Chalk / One size)",
+   "variantCount": 1,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "embroidery_front",
+     "technique": "embroidery",
+     "widthIn": 5,
+     "heightIn": 1.75,
+     "dpi": 300,
+     "styleIds": [
+      23652,
+      23653,
+      23654,
+      23655,
+      23660,
+      23661,
+      23662,
+      23663
      ]
     }
    ]
@@ -41506,6 +42054,42 @@
      "dpi": 150,
      "styleIds": [
       29046
+     ]
+    }
+   ]
+  },
+  "934": {
+   "id": 934,
+   "name": "Doormat",
+   "brand": null,
+   "model": "",
+   "type_name": "SUBLIMATION",
+   "baseCostUsd": 25.76,
+   "retailUsd": 29.99,
+   "currency": "USD",
+   "aop": false,
+   "techniques": [
+    "sublimation"
+   ],
+   "defaultVariantId": 23879,
+   "defaultVariantName": "24\" x 16\"",
+   "variantCount": 1,
+   "productOptions": [
+    "notes"
+   ],
+   "placements": [
+    {
+     "placement": "front",
+     "technique": "sublimation",
+     "widthIn": 24.25,
+     "heightIn": 16.25,
+     "dpi": 300,
+     "styleIds": [
+      27330,
+      27332,
+      27333,
+      27334,
+      27335
      ]
     }
    ]

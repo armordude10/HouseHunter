@@ -289,7 +289,7 @@ export const runExpress = async (
     // 5. Product truth (free, cached) BEFORE any paid image work.
     // Variant: stated color/size preferences win (one free cached read);
     // otherwise the committed index default.
-    const variantHints = [intent.garment_color, intent.size_preference]
+    const variantHints = [intent.variant_hint, intent.garment_color, intent.size_preference]
       .filter(Boolean)
       .join(" ")
       .trim();

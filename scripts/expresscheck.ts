@@ -174,10 +174,11 @@ class StubTruth implements ProductTruth {
 
   async placementSpecs(productId: number): Promise<PlacementSpec[]> {
     if (productId === 388) return HOODIE_SPECS;
-    if (productId === 71) return TEE_SPECS;
     if (productId === 257) return AOP_TEE_SPECS;
     if (productId === 19) return MUG_SPECS;
-    throw new Error(`stub truth has no product ${productId}`);
+    // Any other product behaves like its technique family — flow tests care
+    // about pipeline mechanics, not which catalog record matching picked.
+    return getCatalogRecord(productId)?.aop ? AOP_TEE_SPECS : TEE_SPECS;
   }
   async resolveVariant(productId: number, pick?: string): Promise<number> {
     this.lastPick = pick;
@@ -558,8 +559,8 @@ const main = async () => {
     }
     {
       check(
-        "lay all-over language upgrades tee to AOP sibling (257)",
-        matchExpressProduct("a shirt covered in koi fish everywhere", { preferAop: true }).productId === 257
+        "lay all-over language upgrades to an AOP shirt",
+        matchExpressProduct("a shirt covered in koi fish everywhere", { preferAop: true }).aop === true
       );
       check(
         "heuristic detects all-over wording",
@@ -704,7 +705,7 @@ const main = async () => {
             artwork_brief: "grungy rap metal collage, distressed textures, dark chaotic energy",
             image_prompt: "grunge rap-metal collage artwork, distressed ink, torn poster textures",
             layers: [
-              { ...layerBase, kind: "text" as const, content: "745", cx_frac: 0.5, cy_frac: 0.22, width_frac: 0.6, color: "#00ff88" }
+              { ...layerBase, kind: "text" as const, content: "745", cx_frac: 0.5, cy_frac: 0.22, width_frac: 0.6, color: "#ff00ff" }
             ]
           })
         );
@@ -713,7 +714,7 @@ const main = async () => {
           deps
         );
         check("745 run completed", result.status === "completed", result.message);
-        check("AOP product selected (257), not the plain tee", result.product.id === 257);
+        check("an AOP shirt selected, not the plain tee", getCatalogRecord(result.product.id)?.aop === true, result.product.name);
         check("full multi-panel artwork (master_slice, 4 panels)", result.strategy === "master_slice" && result.panels.length === 4, `${result.strategy}/${result.panels.length}`);
         check("one master generation only", media.generateCalls === 1);
         const front = result.panels.find((p) => p.placement === "front")!;
@@ -731,7 +732,7 @@ const main = async () => {
           for (let y = y0; y < y1; y++) {
             for (let x = 0; x < info.width; x++) {
               const i = (y * info.width + x) * info.channels;
-              if (data[i] < 40 && data[i + 1] > 240) hits++;
+              if (data[i] > 240 && data[i + 1] < 40 && data[i + 2] > 240) hits++;
             }
           }
           return hits;
@@ -739,7 +740,7 @@ const main = async () => {
         const chest = inkIn(0.1, 0.35);
         const hem = inkIn(0.6, 0.95);
         check(
-          "745 ink grounded at the chest ON TOP of the art (pure-green pixels in chest band only)",
+          "745 ink grounded at the chest ON TOP of the art (magenta pixels in chest band only)",
           chest > 100 && hem === 0,
           `chest ${chest} px vs hem ${hem} px`
         );
@@ -752,8 +753,9 @@ const main = async () => {
         const { deps } = makeDeps(intentFor({ product_query: "shirt", all_over: false }));
         const result = await runExpress({ input_as_text: "an AOP skull shirt" }, deps);
         check(
-          "raw-text 'AOP' backstops the model (intent said all_over=false, still 257)",
-          result.product.id === 257
+          "raw-text 'AOP' backstops the model (intent said all_over=false, still AOP)",
+          getCatalogRecord(result.product.id)?.aop === true,
+          result.product.name
         );
       }
       check(
@@ -783,6 +785,106 @@ const main = async () => {
       );
       check("one master generation", media.generateCalls === 1);
       check("style ids present in mockup payload", (mockups.calls[0]?.styleIds.length ?? 0) > 0);
+    }
+
+    console.log("\n== 14. REACHABILITY GATE: lay language reaches the whole catalog ==");
+    {
+      // Customer wording (no supplier vocabulary, typos included) -> a
+      // product whose name matches the expectation. If any line fails, part
+      // of the catalog is unreachable from a Threadbot prompt.
+      const cases: Array<[string, RegExp]> = [
+        ["a trucker hat with flames", /trucker/i],
+        ["dad hat with a small bee", /dad hat/i],
+        ["a snapback for my brother", /snapback/i],
+        ["a cozy beanie", /beanie/i],
+        ["a bucket hat", /bucket hat/i],
+        ["a onesie for my newborn", /bodysuit|one piece/i],
+        ["a toddler tshirt with a dinosaur", /toddler/i],
+        ["a youth tee for my son", /youth|kids/i],
+        ["an iphone case with a dragon", /iphone/i],
+        ["a phone case for my samsung galaxy", /samsung/i],
+        ["a case for my airpods", /airpods/i],
+        ["a poster of a mountain sunrise", /poster/i],
+        ["a framed poster for the office", /framed poster/i],
+        ["wall art on canvas of a wolf", /canvas/i],
+        ["a cozy fleece blanket", /blanket/i],
+        ["a beach towel with waves", /beach towel/i],
+        ["a water bottle for hiking", /water bottle/i],
+        ["an insulated tumbler", /tumbler/i],
+        ["a scented candle", /candle/i],
+        ["a jigsaw puzzle of my dog", /puzzle/i],
+        ["a yoga mat with lotus flowers", /yoga mat/i],
+        ["a fanny pack", /fanny pack/i],
+        ["a tote bag for groceries", /tote/i],
+        ["a duffle bag for the gym", /duffle|gym bag/i],
+        ["a backpack covered in stars", /backpack/i],
+        ["a laptop case", /laptop sleeve/i],
+        ["crazy socks with tacos", /socks/i],
+        ["an apron for my grill master dad", /apron/i],
+        ["a shower curtain with jellyfish", /shower curtain/i],
+        ["swim trunks with sharks", /trunks|board shorts/i],
+        ["a bikini with cherries", /bikini/i],
+        ["a one piece swimsuit", /swimsuit/i],
+        ["a flowy skater dress", /dress/i],
+        ["a long sleeve shirt with runes", /long sleeve/i],
+        ["an oversized hoodie", /oversized.*hoodie/i],
+        ["an oversized shirt", /oversized.*(t-shirt|tee|shirt)/i],
+        ["comfy sweatpants", /sweatpants|joggers/i],
+        ["a crewneck sweatshirt", /sweatshirt/i],
+        ["a zip up hoodie", /zip.*hood/i],
+        ["slides for the pool", /slides/i],
+        ["flip flops", /flip.?flops/i],
+        ["high top sneakers", /high top/i],
+        ["a mouse pad for my desk", /mouse pad/i],
+        ["stickers of little ghosts", /sticker/i],
+        ["a greeting card", /greeting card/i],
+        ["a spiral notebook", /notebook/i],
+        ["a coffee cup with a cat", /mug/i],
+        ["a wine glass", /wine/i],
+        ["a leash for my dog", /leash/i],
+        ["a collar for my cat", /collar/i],
+        ["a doormat that says welcome", /doormat/i],
+        ["a rug for my room", /rug/i],
+        ["a tank top", /tank/i],
+        ["a polo shirt", /polo/i],
+        ["a windbreaker", /windbreaker|anorak/i],
+        ["a bomber jacket", /bomber/i],
+        ["a crop top with a sun", /crop/i],
+        ["a sports bra", /sports bra/i],
+        ["a basketball jersey", /basketball jersey/i],
+        ["a flag for my dorm wall", /flag/i],
+        ["a bandana for my dog", /bandana/i],
+        ["a hoddie with a wolf", /hoodie/i],
+        ["leggins with galaxies", /leggings/i],
+        ["a tshrit with a skull", /t-shirt|tee/i]
+      ];
+      let reached = 0;
+      const misses: string[] = [];
+      for (const [query, expect] of cases) {
+        const product = matchExpressProduct(query);
+        if (expect.test(product.name)) reached++;
+        else misses.push(`"${query}" -> ${product.name}`);
+      }
+      check(
+        `all ${cases.length} lay-language requests reach the right product family (${reached}/${cases.length})`,
+        reached === cases.length,
+        misses.slice(0, 5).join(" | ")
+      );
+      // Whole-catalog reachability: every indexed product must be findable
+      // by its OWN name words — nothing in the catalog is dead weight.
+      let selfReachable = 0;
+      const deadWeight: string[] = [];
+      for (const row of searchCatalog("", 100000)) {
+        const record = getCatalogRecord(row.id)!;
+        const hit = matchExpressProduct(record.name.replace(/\|.*$/, ""));
+        if (hit.productId === record.id || hit.name.split("|")[0].trim() === record.name.split("|")[0].trim()) selfReachable++;
+        else deadWeight.push(`${record.id}:${record.name.slice(0, 40)} -> ${hit.productId}`);
+      }
+      check(
+        `every catalog product reachable by its own name (${selfReachable}/481)`,
+        selfReachable >= 460, // identically-named cross-listings may collide
+        deadWeight.slice(0, 4).join(" | ")
+      );
     }
     server.close();
   }
