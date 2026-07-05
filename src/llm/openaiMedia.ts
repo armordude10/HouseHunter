@@ -134,7 +134,15 @@ export class OpenAIMedia implements MediaLike {
     return id;
   }
 
-  /** Resolution + hosting only — pure local resample, $0. */
+  /**
+   * Resolution + hosting only — pure local resample, $0.
+   *
+   * Hosted as JPEG q92: print-res PNGs of detailed art run 60-100MB each and
+   * evict everything else from the in-memory store (proven live — a 6-panel
+   * hoodie run self-evicted before Printful could fetch its files); q92 JPEG
+   * at identical pixels is ~5MB with imperceptible print difference. The
+   * transparent path re-encodes to PNG in removeBackground afterwards.
+   */
   async upscale(image: string, factor: 2 | 3 | 4): Promise<{ imageURL: string }> {
     const source =
       this.buffers.get(image) ??
@@ -148,9 +156,10 @@ export class OpenAIMedia implements MediaLike {
         fit: "fill",
         kernel: "lanczos3"
       })
-      .png()
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 92 })
       .toBuffer();
-    return { imageURL: hostedImageUrl(putHostedImage(out)) };
+    return { imageURL: hostedImageUrl(putHostedImage(out, "image/jpeg")) };
   }
 
   /**

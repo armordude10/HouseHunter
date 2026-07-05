@@ -295,7 +295,11 @@ export const runExpress = async (
       styleIds,
       productOptions,
       format: "jpg",
-      widthPx: 1000
+      widthPx: 1000,
+      // Multi-placement AOP tasks render slowly; proven live: a 6-panel
+      // hoodie needs >150s. Patience is free — regeneration is not.
+      maxAttempts: 80,
+      intervalSeconds: 5
     });
 
     if (rendered.status === "completed" && rendered.mockups.length) {
@@ -306,9 +310,17 @@ export const runExpress = async (
         `panel(s) generated and rendered on official product mockups.`;
     } else {
       result.status = "mockup_failed";
+      const reasons = JSON.stringify(
+        (rendered.raw as { failure_reasons?: unknown[] } | null)?.failure_reasons ?? rendered.status
+      ).slice(0, 400);
+      console.error(`[express] mockup task did not complete: ${reasons}`);
       result.message =
         "Your print files were generated, but the product preview service didn't return mockups. " +
         "The design is saved; previews can be retried without regenerating artwork.";
+      result.missing_required_placements = [
+        ...result.missing_required_placements,
+        { placement: "mockup", reason: reasons }
+      ];
     }
   } catch (error) {
     result.status = "failed";

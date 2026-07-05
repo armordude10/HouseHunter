@@ -192,6 +192,11 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 200, { service: "threadbot-agentic-pipeline", ui: "not bundled" });
     }
+    if (req.method === "GET" && url.pathname === "/debug/hosting") {
+      let total = 0;
+      for (const record of hostedImages.values()) total += record.bytes.length;
+      return json(res, 200, { images: hostedImages.size, total_mb: Math.round(total / 1e6) });
+    }
     if (req.method === "GET" && url.pathname === "/catalog") {
       const query = url.searchParams.get("q") ?? "";
       const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? 50) || 50));
@@ -230,7 +235,9 @@ const server = createServer(async (req, res) => {
       return json(res, 201, { upload_id: id, url: `${publicBaseUrl(req)}/uploads/${id}` });
     }
     const uploadMatch = url.pathname.match(/^\/uploads\/([0-9a-f-]{36})$/);
-    if (req.method === "GET" && uploadMatch) {
+    // HEAD must work: Printful preflights print files with HEAD before
+    // downloading — a GET-only route made it read live files as missing.
+    if ((req.method === "GET" || req.method === "HEAD") && uploadMatch) {
       const record = hostedImages.get(uploadMatch[1]);
       if (!record) return json(res, 404, { error: "upload not found or expired" });
       res.writeHead(200, {
@@ -239,7 +246,7 @@ const server = createServer(async (req, res) => {
         "Cache-Control": "public, max-age=86400",
         "Access-Control-Allow-Origin": "*"
       });
-      res.end(record.bytes);
+      res.end(req.method === "HEAD" ? undefined : record.bytes);
       return;
     }
     if (req.method === "POST" && url.pathname === "/runs") {
