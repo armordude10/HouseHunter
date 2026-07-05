@@ -31,8 +31,10 @@ import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 import { normalizeCustomerImages } from "../workflow.js";
 import { DEFAULT_PRODUCT_ID, ExpressProduct, getExpressProduct, matchExpressProduct } from "./catalog.js";
 import { deriveIntent, ExpressIntent, screenRequest } from "./intent.js";
+import { buildExpressMedia } from "./media.js";
 import { buildExpressJobs, pickPrimaryPlacement, pickStitchColor } from "./plan.js";
 import { PrintfulTruth, ProductTruth } from "./truth.js";
+import { buildVerbatimPanel } from "./verbatim.js";
 
 export interface ExpressInput {
   input_as_text: string;
@@ -91,19 +93,11 @@ let sharedTruth: PrintfulTruth | null = null;
 
 const defaultDeps = async (): Promise<ExpressDeps> => {
   if (!sharedTruth) sharedTruth = new PrintfulTruth();
-  // Media backend: Runware when credited (cheapest per image), else the
-  // OpenAI adapter (gpt-image-1 + local $0 upscale/hosting). Overridable
-  // with THREADBOT_MEDIA=openai|runware.
-  const preference = (process.env.THREADBOT_MEDIA ?? "").toLowerCase();
-  const useOpenAI =
-    preference === "openai" ||
-    (preference !== "runware" && !process.env.RUNWARE_API_KEY && !!process.env.OPENAI_API_KEY);
-  const media = useOpenAI
-    ? new (await import("../llm/openaiMedia.js")).OpenAIMedia()
-    : new (await import("../runware/media.js")).RunwareMedia();
   return {
     provider: getLlmProvider(),
-    media,
+    // FLUX.2 flex first, OpenAI safety net; fresh instance per run so the
+    // sticky engine fallback resets between runs.
+    media: await buildExpressMedia(),
     truth: sharedTruth,
     renderMockups: createAndWaitForMockups
   };
@@ -240,11 +234,13 @@ export const runExpress = async (
     return result;
   }
 
-  // 4. Deterministic product choice (explicit picker id wins).
+  // 4. Deterministic product choice (explicit picker id wins). Lay all-over
+  // language ("covered in...", "everywhere") upgrades to AOP products.
+  const preferAop = intent.all_over || intent.wants_repeat_pattern;
   const product =
     (input.product_id ? getExpressProduct(input.product_id) : undefined) ??
     (intent.product_query || text
-      ? matchExpressProduct(`${intent.product_query} ${text}`)
+      ? matchExpressProduct(`${intent.product_query} ${text}`, { preferAop })
       : getExpressProduct(DEFAULT_PRODUCT_ID)!);
 
   const result = baseResult(runId, product);
@@ -252,51 +248,113 @@ export const runExpress = async (
   result.degraded_intent = degraded;
   result.coverage = product.aop ? intent.coverage : "single";
 
+  // 4b. Image directives: verbatim images bypass generation entirely; the
+  // rest guide it (edits, style, elements) via references + brief notes.
+  const plan = intent.image_plan.filter(
+    (entry) => Number.isInteger(entry.index) && entry.index >= 0 && entry.index < imageUrls.length
+  );
+  const verbatimEntry = plan.find(
+    (entry) => entry.role === "use_verbatim" || entry.role === "verbatim_remove_background"
+  );
+  const referenceUrls = imageUrls.filter(
+    (_, i) =>
+      !plan.some(
+        (entry) =>
+          entry.index === i &&
+          (entry.role === "use_verbatim" || entry.role === "verbatim_remove_background")
+      )
+  );
+  const planNotes = plan
+    .filter((entry) => entry.role !== "use_verbatim" && entry.role !== "verbatim_remove_background")
+    .map((entry) => `Reference image ${entry.index + 1}: ${entry.instruction.slice(0, 200)}`)
+    .join(". ");
+
   try {
     // 5. Product truth (free, cached) BEFORE any paid image work.
+    // Variant: stated color/size preferences win (one free cached read);
+    // otherwise the committed index default.
+    const variantHints = [intent.garment_color, intent.size_preference]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
     const [specs, variantId, optionNames] = await Promise.all([
       resolved.truth.placementSpecs(product.productId),
       input.variant_id
         ? Promise.resolve(input.variant_id)
-        : resolved.truth.resolveVariant(product.productId, product.variantPick),
+        : // Only a CUSTOMER preference justifies a live variant lookup; the
+          // committed index default already prefers white/medium.
+          resolved.truth.resolveVariant(product.productId, variantHints || undefined),
       resolved.truth.productOptionNames(product.productId)
     ]);
     result.product.variant_id = variantId;
 
-    // 6. Deterministic surface plan + panel compilation (one master image).
-    const { jobs, activeSpecs } = buildExpressJobs(product, specs, intent);
-    const design: DesignSpec = {
-      artwork_brief: intent.artwork_brief || text,
-      style_terms: intent.style_terms,
-      palette: intent.palette,
-      mood_terms: intent.mood_terms,
-      required_text: intent.required_text,
-      forbidden_text: intent.forbidden_text,
-      customer_image_urls: imageUrls,
-      customer_image_captions: captions
-    };
-    const compiler = new PanelCompiler(meteredMedia(resolved.media, meter));
-    const compiled = await compiler.compile(
-      runId,
-      jobs,
-      design,
-      getCalibrationProfile(product.productId)
-    );
-    result.strategy = compiled.strategy;
-    result.panels = compiled.panels;
-    result.design_genome = compiled.genome;
-    result.missing_required_placements = compiled.missing_required_placements;
+    const metered = meteredMedia(resolved.media, meter);
+    const brief = [intent.image_prompt || intent.artwork_brief || text, planNotes]
+      .filter(Boolean)
+      .join(". ");
+    let activeSpecs;
 
-    if (!compiled.all_required_succeeded) {
-      result.status = "failed";
-      result.message =
-        "We couldn't finish generating every print panel for this design. Nothing was rendered; please try again.";
-      finishEconomics(result, meter, llmCalls);
-      return result;
+    if (verbatimEntry) {
+      // 6a. VERBATIM: the uploaded image IS the artwork — zero generations,
+      // pixel-faithful placement on the primary print area.
+      const renderable = specs.filter((spec) => !/label/i.test(spec.placement));
+      const primary = pickPrimaryPlacement(renderable);
+      activeSpecs = [primary];
+      result.coverage = "single";
+      result.strategy = "direct";
+      const { panel, provenance } = await buildVerbatimPanel(
+        metered,
+        primary,
+        imageUrls[verbatimEntry.index],
+        verbatimEntry.role === "verbatim_remove_background"
+      );
+      result.panels = [panel];
+      result.design_genome = {
+        version: "threadbot-genome/1",
+        run_id: runId,
+        strategy: "direct",
+        master_artwork_url: null,
+        pattern_tile_url: null,
+        panels: [provenance]
+      };
+    } else {
+      // 6b. Deterministic surface plan + panel compilation (one master).
+      const built = buildExpressJobs(product, specs, intent);
+      activeSpecs = built.activeSpecs;
+      const design: DesignSpec = {
+        artwork_brief: brief,
+        style_terms: intent.style_terms,
+        palette: intent.palette,
+        mood_terms: intent.mood_terms,
+        required_text: intent.required_text,
+        forbidden_text: intent.forbidden_text,
+        base_product_color: intent.garment_color || undefined,
+        customer_image_urls: referenceUrls,
+        customer_image_captions: captions
+      };
+      const compiler = new PanelCompiler(metered);
+      const compiled = await compiler.compile(
+        runId,
+        built.jobs,
+        design,
+        getCalibrationProfile(product.productId)
+      );
+      result.strategy = compiled.strategy;
+      result.panels = compiled.panels;
+      result.design_genome = compiled.genome;
+      result.missing_required_placements = compiled.missing_required_placements;
+
+      if (!compiled.all_required_succeeded) {
+        result.status = "failed";
+        result.message =
+          "We couldn't finish generating every print panel for this design. Nothing was rendered; please try again.";
+        finishEconomics(result, meter, llmCalls);
+        return result;
+      }
     }
 
     const techniqueByPlacement = new Map(activeSpecs.map((spec) => [spec.placement, spec.technique]));
-    result.submitted_placements = compiled.panels
+    result.submitted_placements = result.panels
       .filter((panel) => panel.status === "success" && panel.file_url && panel.must_render_in_mockup)
       .map((panel) => ({
         placement: panel.placement,

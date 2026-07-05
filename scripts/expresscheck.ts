@@ -54,12 +54,21 @@ const toDataUrl = (buffer: Buffer) => `data:image/png;base64,${buffer.toString("
 class StubMedia implements MediaLike {
   uploads = new Map<string, Buffer>();
   generateCalls = 0;
+  removeBackgroundCalls = 0;
+  lastGenerate: { positivePrompt: string; referenceImages?: unknown[] } | null = null;
 
-  async generateImage(params: { positivePrompt: string; width: number; height: number }) {
+  async generateImage(params: {
+    positivePrompt: string;
+    width: number;
+    height: number;
+    referenceImages?: Array<{ image: string } | string>;
+  }) {
     this.generateCalls++;
+    this.lastGenerate = { positivePrompt: params.positivePrompt, referenceImages: params.referenceImages };
     return { imageURL: toDataUrl(await gradientPng(params.width, params.height)) };
   }
   async removeBackground(imageUrl: string) {
+    this.removeBackgroundCalls++;
     return { imageURL: imageUrl };
   }
   async upscale(image: string, factor: 2 | 3 | 4) {
@@ -141,13 +150,17 @@ const MUG_SPECS: PlacementSpec[] = [
 ];
 
 class StubTruth implements ProductTruth {
+  lastPick: string | undefined;
+
   async placementSpecs(productId: number): Promise<PlacementSpec[]> {
     if (productId === 388) return HOODIE_SPECS;
     if (productId === 71) return TEE_SPECS;
+    if (productId === 257) return TEE_SPECS;
     if (productId === 19) return MUG_SPECS;
     throw new Error(`stub truth has no product ${productId}`);
   }
-  async resolveVariant(productId: number): Promise<number> {
+  async resolveVariant(productId: number, pick?: string): Promise<number> {
+    this.lastPick = pick;
     return productId * 1000 + 1;
   }
   async productOptionNames(productId: number): Promise<string[]> {
@@ -185,13 +198,14 @@ const makeDeps = (
   provider.failStructured = options.failLLM ?? false;
   const media = new StubMedia();
   const mockups = makeMockupStub(options.mockupOutcome ?? "completed");
+  const truth = new StubTruth();
   const deps: ExpressDeps = {
     provider,
     media,
-    truth: new StubTruth(),
+    truth,
     renderMockups: mockups.render
   };
-  return { deps, provider, media, mockups };
+  return { deps, provider, media, mockups, truth };
 };
 
 const intentFor = (overrides: Partial<ExpressIntent>): ExpressIntent => ({
@@ -436,6 +450,102 @@ const main = async () => {
       "dark palette -> black stitches",
       pickStitchColor(intentFor({ palette: ["black", "crimson"] })) === "black"
     );
+  }
+
+  console.log("\n== 10. Image directives: verbatim / edits / references ==");
+  {
+    // Serve a real image over http (customer image URLs must be http/https).
+    const { createServer } = await import("node:http");
+    const png = await gradientPng(64, 64);
+    const server = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "image/png" });
+      res.end(png);
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const port = (server.address() as { port: number }).port;
+    const customerImage = `http://127.0.0.1:${port}/sketch.png`;
+
+    {
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "t-shirt",
+          image_plan: [{ index: 0, role: "use_verbatim", instruction: "print exactly as uploaded" }]
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "put my logo on a t-shirt exactly as uploaded", input_image_urls: [customerImage] },
+        deps
+      );
+      check("verbatim run completed", result.status === "completed", result.message);
+      check("verbatim spent ZERO generations", media.generateCalls === 0, `${media.generateCalls}`);
+      check(
+        "verbatim panel is derived, not generated",
+        result.panels[0]?.generation_mode === "derived" && result.panels.length === 1
+      );
+      check("verbatim genome records the source image", result.design_genome?.panels[0]?.source_urls[0] === customerImage);
+    }
+    {
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "t-shirt",
+          image_plan: [
+            { index: 0, role: "verbatim_remove_background", instruction: "as is, background removed" }
+          ]
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "my sticker on a tee, just remove the background", input_image_urls: [customerImage] },
+        deps
+      );
+      check("verbatim+bg-removal completed", result.status === "completed", result.message);
+      check("background removal invoked once, zero generations", media.removeBackgroundCalls === 1 && media.generateCalls === 0);
+    }
+    {
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "hoodie",
+          image_prompt: "ENGINEERED_PROMPT_TOKEN luminous koi, ukiyo-e linework, midnight palette",
+          image_plan: [
+            { index: 0, role: "edit_subject", instruction: "turn the person into a cartoon but keep the face recognizable" }
+          ]
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "cartoon me on a hoodie", input_image_urls: [customerImage] },
+        deps
+      );
+      check("edit-subject run completed", result.status === "completed", result.message);
+      check(
+        "reference image passed to the generator",
+        (media.lastGenerate?.referenceImages?.length ?? 0) === 1
+      );
+      check(
+        "enhanced image_prompt drives generation",
+        media.lastGenerate?.positivePrompt.includes("ENGINEERED_PROMPT_TOKEN") === true
+      );
+      check(
+        "per-image instruction folded into the brief",
+        media.lastGenerate?.positivePrompt.includes("cartoon but keep the face") === true
+      );
+    }
+    {
+      const { deps, truth } = makeDeps(
+        intentFor({ product_query: "hoodie", garment_color: "black", size_preference: "XL" })
+      );
+      await runExpress({ input_as_text: "black koi hoodie in XL" }, deps);
+      check("color+size preference reaches variant resolution", truth.lastPick === "black XL", String(truth.lastPick));
+    }
+    {
+      check(
+        "lay all-over language upgrades tee to AOP sibling (257)",
+        matchExpressProduct("a shirt covered in koi fish everywhere", { preferAop: true }).productId === 257
+      );
+      check(
+        "heuristic detects all-over wording",
+        heuristicIntent("a shirt covered in koi fish everywhere").all_over === true
+      );
+    }
+    server.close();
   }
 
   console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} CHECK(S) FAILED`}\n`);

@@ -118,10 +118,20 @@ export class PrintfulTruth implements ProductTruth {
   }
 
   async resolveVariant(productId: number, pick?: string): Promise<number> {
-    // The committed index is authoritative when present (zero network, and
-    // its default variant was chosen with the same white/medium preference).
+    // With no customer preference, the committed index is authoritative
+    // (zero network; its default was chosen with a white/medium preference).
+    // A stated color/size preference is worth one free cached catalog read.
     const record = getCatalogRecord(productId);
-    if (record?.defaultVariantId) return record.defaultVariantId;
+    if (record?.defaultVariantId && !pick) return record.defaultVariantId;
+    try {
+      return await this.matchVariant(productId, pick);
+    } catch (error) {
+      if (record?.defaultVariantId) return record.defaultVariantId;
+      throw error;
+    }
+  }
+
+  private async matchVariant(productId: number, pick?: string): Promise<number> {
     const variants = await this.variants.get(productId, async () => {
       const body = (await getJson(`${PRINTFUL_API_BASE}/products/${productId}`)) as {
         result?: { variants?: Array<{ id?: number; name?: string }> };
@@ -133,8 +143,18 @@ export class PrintfulTruth implements ProductTruth {
       return list;
     });
     if (pick) {
-      const match = variants.find((variant) => variant.name.includes(pick));
-      if (match) return match.id;
+      // Token match, case-insensitive: "black xl" -> "... (Black / XL)".
+      // All tokens first, then the most tokens, then exact substring.
+      const tokens = pick.toLowerCase().split(/\s+/).filter(Boolean);
+      let best: { id: number; hits: number } | null = null;
+      for (const variant of variants) {
+        const name = variant.name.toLowerCase();
+        const hits = tokens.filter((token) => name.includes(token)).length;
+        if (hits > 0 && (!best || hits > best.hits)) best = { id: variant.id, hits };
+      }
+      if (best) return best.id;
+      const exact = variants.find((variant) => variant.name.includes(pick));
+      if (exact) return exact.id;
     }
     return variants[0].id;
   }

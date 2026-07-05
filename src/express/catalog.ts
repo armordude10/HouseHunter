@@ -253,12 +253,26 @@ const scoreRecord = (record: CatalogRecord, tokens: string[]): number => {
 };
 
 /**
+ * Customers never say "AOP" — when intent detects all-over language, ambiguous
+ * words upgrade to the all-over sibling of the matched hero.
+ */
+const AOP_UPGRADES: Record<number, number> = {
+  71: 257 // Bella tee -> AOP crew tee
+};
+
+/**
  * Deterministic product match, cheapest first:
- *   1. curated hero keyword hit (longest keyword wins)
- *   2. full-catalog token scoring over name/type/brand
+ *   1. curated hero keyword hit (longest keyword wins; upgraded to its AOP
+ *      sibling when the customer described all-over coverage)
+ *   2. full-catalog token scoring over name/type/brand (AOP-boosted when
+ *      all-over coverage was described)
  *   3. safe default (71)
  */
-export const matchExpressProduct = (text: string): ExpressProduct => {
+export const matchExpressProduct = (
+  text: string,
+  options?: { preferAop?: boolean }
+): ExpressProduct => {
+  const preferAop = options?.preferAop === true;
   const haystack = ` ${text.toLowerCase()} `;
   let hero: { product: ExpressProduct; score: number } | null = null;
   for (const product of HERO_CATALOG) {
@@ -267,13 +281,20 @@ export const matchExpressProduct = (text: string): ExpressProduct => {
       if (!hero || keyword.length > hero.score) hero = { product, score: keyword.length };
     }
   }
-  if (hero) return withRecordTruth(hero.product);
+  if (hero) {
+    let chosen = hero.product;
+    if (preferAop && !chosen.aop && AOP_UPGRADES[chosen.productId]) {
+      chosen = HERO_CATALOG.find((p) => p.productId === AOP_UPGRADES[chosen.productId]) ?? chosen;
+    }
+    return withRecordTruth(chosen);
+  }
 
   const tokens = tokenize(text);
   if (tokens.length) {
     let best: { record: CatalogRecord; score: number } | null = null;
     for (const record of Object.values(FULL_CATALOG)) {
-      const score = scoreRecord(record, tokens);
+      let score = scoreRecord(record, tokens);
+      if (preferAop && record.aop) score = Math.round(score * 1.6);
       if (score > 0 && (!best || score > best.score || (score === best.score && record.id < best.record.id))) {
         best = { record, score };
       }

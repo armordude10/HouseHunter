@@ -25,21 +25,52 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { LlmProvider } from "../llm/provider.js";
 import { LLM } from "../runware/models.js";
 
+/** How each attached reference image should be used, decided by intent. */
+export const ImagePlanSchema = z.object({
+  /** 0-based index into the attached image list. */
+  index: z.number(),
+  role: z.enum([
+    /** The image IS the artwork: apply pixel-faithful, no regeneration. */
+    "use_verbatim",
+    /** Verbatim but with the background removed first. */
+    "verbatim_remove_background",
+    /** Regenerate guided by this image per `instruction` (cartoonify, change pose not face, add/remove clothing, restyle...). */
+    "edit_subject",
+    /** Borrow the visual style/palette only. */
+    "style_reference",
+    /** Incorporate specific element(s) named in `instruction`, not the whole image. */
+    "element_reference"
+  ]),
+  /** What to do with/keep from this image, in plain words. */
+  instruction: z.string()
+});
+
 export const ExpressIntentSchema = z.object({
   allowed: z.boolean(),
   refusal_reason: z.string().nullable(),
   product_query: z.string(),
   coverage: z.enum(["full", "single"]),
   artwork_brief: z.string(),
+  /** Fully-engineered image-generation prompt (the enhancement step). */
+  image_prompt: z.string(),
   style_terms: z.array(z.string()),
   palette: z.array(z.string()),
   mood_terms: z.array(z.string()),
   required_text: z.array(z.string()),
   forbidden_text: z.array(z.string()),
-  wants_repeat_pattern: z.boolean()
+  wants_repeat_pattern: z.boolean(),
+  /** Customer wants art covering the whole garment (however they phrased it). */
+  all_over: z.boolean(),
+  /** Stated garment color preference ("black hoodie") or empty string. */
+  garment_color: z.string(),
+  /** Stated size preference ("XL") or empty string. */
+  size_preference: z.string(),
+  /** Per-attached-image handling directives (empty when no images). */
+  image_plan: z.array(ImagePlanSchema)
 });
 
 export type ExpressIntent = z.infer<typeof ExpressIntentSchema>;
+export type ImagePlanEntry = z.infer<typeof ImagePlanSchema>;
 
 /**
  * $0 pre-gate for unambiguous protected marks and abuse content. This is a
@@ -76,16 +107,28 @@ export const screenRequest = (text: string): { blocked: boolean; reason: string 
   return { blocked: false, reason: "" };
 };
 
-const INTENT_INSTRUCTIONS = `You are Threadbot Express Intent, the single planning step of a print-on-demand design service.
-Given one raw customer request (and optional captions of attached reference images), return JSON with:
+const INTENT_INSTRUCTIONS = `You are Threadbot Express Intent, the single planning step of a print-on-demand design service. You turn ONE messy customer request (plus captions of up to 10 attached reference images) into a production-ready design brief. Customers rarely know garment-production vocabulary — translate what they MEAN, not what they say.
+Return JSON with:
 - allowed: false ONLY for requests seeking protected trademarks/characters/logos, hate content, sexual content involving minors, or other unprintable material; otherwise true.
 - refusal_reason: short customer-safe sentence when allowed=false, else null.
-- product_query: the product type the customer wants, in a few plain lowercase words (e.g. "hoodie", "t-shirt", "leggings", "mug"). Empty string if unstated.
-- coverage: "single" ONLY if the customer explicitly wants art on just one area (e.g. "just the front"); otherwise "full".
-- artwork_brief: one rich paragraph describing the artwork to generate — subject, composition, mood. Faithful to the customer's words and any reference-image captions. Never mention garments, panels, seams, or printing.
-- style_terms / palette / mood_terms: short arrays of descriptors (may be empty).
-- required_text: exact strings the customer wants printed (empty if none). forbidden_text: strings they explicitly banned.
-- wants_repeat_pattern: true only if they ask for a repeating/tiled pattern.
+- product_query: the product type they want in plain lowercase words ("hoodie", "t-shirt", "leggings", "mug"). Empty if unstated.
+- coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
+- all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe") — they will never say "AOP"; that translation is your job.
+- artwork_brief: one rich paragraph describing the artwork — subject, composition, mood — faithful to their words and the reference captions.
+- image_prompt: a fully-engineered image-generation prompt: subject with concrete visual detail, composition and framing, art style/technique, lighting, color palette, texture and finish quality terms. Faithful to the customer; add professional craft they didn't articulate. NEVER mention garments, panels, seams, mockups, or printing.
+- style_terms / palette / mood_terms: short descriptor arrays (may be empty).
+- required_text: exact strings they want printed (empty if none). forbidden_text: strings they banned.
+- wants_repeat_pattern: true only for repeating/tiled pattern requests.
+- garment_color: their stated garment color ("black hoodie" -> "black"), else "".
+- size_preference: their stated size ("XL"), else "".
+- image_plan: one entry per attached image (by 0-based index) deciding how it is used, from what the TEXT says to do with it:
+   * "use_verbatim" — print the image exactly as uploaded, zero changes.
+   * "verbatim_remove_background" — exactly as uploaded but background removed.
+   * "edit_subject" — regenerate guided by the image with changes in \`instruction\` (make it a cartoon, change the pose but keep the face, add/remove clothing on the subject, restyle it...).
+   * "style_reference" — borrow only its style/palette/mood.
+   * "element_reference" — incorporate only specific element(s) named in \`instruction\`, not the whole image.
+  Default when the text gives no directive: "style_reference" for style-only mentions, else "edit_subject" with instruction "feature this subject faithfully in the design".
+  instruction: precise plain-language directive for that image, always non-empty.
 Return only JSON.`;
 
 export const heuristicIntent = (text: string): ExpressIntent => ({
@@ -96,12 +139,20 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
     ? "single"
     : "full",
   artwork_brief: text.slice(0, 2000),
+  image_prompt: text.slice(0, 2000),
   style_terms: [],
   palette: [],
   mood_terms: [],
   required_text: [],
   forbidden_text: [],
-  wants_repeat_pattern: /\bpattern\b|\brepeating\b|\btiled\b|\bseamless\b/i.test(text)
+  wants_repeat_pattern: /\bpattern\b|\brepeating\b|\btiled\b|\bseamless\b/i.test(text),
+  all_over:
+    /\ball[- ]?over\b|\beverywhere\b|\bentire (shirt|hoodie|garment)\b|\bcovered (in|with)\b|\bwrap(ping|s)? around\b/i.test(
+      text
+    ),
+  garment_color: "",
+  size_preference: "",
+  image_plan: []
 });
 
 export const deriveIntent = async (
