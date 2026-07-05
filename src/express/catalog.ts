@@ -88,6 +88,28 @@ const loadFullCatalog = (): Record<string, CatalogRecord> => {
 
 const FULL_CATALOG = loadFullCatalog();
 
+/**
+ * Retail pricing is the OWNER'S lever, not baked data: computed at runtime
+ * from the real Printful base cost using env-configurable markup.
+ *
+ *   THREADBOT_MARKUP_PCT   percent over base (default 15)
+ *   THREADBOT_MARKUP_FLAT  flat dollars added (default 3)
+ *
+ * The $4-over-base floor keeps every sale above payment fees (2.9% + $0.30)
+ * plus amortized AI cost (~$0.05/run) even at zero markup settings. Change
+ * the env vars on the Cloud Run service to reprice the whole catalog
+ * instantly — no rebuild, no data regeneration.
+ */
+export const computeRetail = (base: number): number => {
+  const pct = Number(process.env.THREADBOT_MARKUP_PCT ?? 15);
+  const flat = Number(process.env.THREADBOT_MARKUP_FLAT ?? 3);
+  const raw = Math.max(
+    base * (1 + (Number.isFinite(pct) ? pct : 15) / 100) + (Number.isFinite(flat) ? flat : 3),
+    base + 4
+  );
+  return Math.max(4.99, Math.ceil(raw) - 0.01);
+};
+
 export const catalogSize = (): number => Object.keys(FULL_CATALOG).length;
 
 export const getCatalogRecord = (
@@ -201,19 +223,19 @@ const productFromRecord = (record: CatalogRecord): ExpressProduct => ({
   keywords: [],
   aop: record.aop,
   baseCostUsd: record.baseCostUsd,
-  retailUsd: record.retailUsd
+  retailUsd: computeRetail(record.baseCostUsd)
 });
 
 /** Hero preferences + full-catalog truth (real prices/aop win over anchors). */
 const withRecordTruth = (hero: ExpressProduct): ExpressProduct => {
   const record = getCatalogRecord(hero.productId);
-  if (!record) return hero;
+  if (!record) return { ...hero, retailUsd: computeRetail(hero.baseCostUsd) };
   return {
     ...hero,
     name: record.name,
     aop: record.aop,
     baseCostUsd: record.baseCostUsd,
-    retailUsd: record.retailUsd
+    retailUsd: computeRetail(record.baseCostUsd)
   };
 };
 
@@ -321,7 +343,7 @@ const toSearchRow = (record: CatalogRecord): CatalogSearchRow => ({
   name: record.name,
   type_name: record.type_name,
   baseCostUsd: record.baseCostUsd,
-  retailUsd: record.retailUsd,
+  retailUsd: computeRetail(record.baseCostUsd),
   aop: record.aop,
   variantCount: record.variantCount,
   placementCount: record.placements.filter((p) => !/label/i.test(p.placement)).length,
