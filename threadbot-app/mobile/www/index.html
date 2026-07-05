@@ -353,7 +353,7 @@
           <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
             <img src="{{ checkoutImage }}" alt="design" style="width:64px; height:64px; border-radius:14px; object-fit:cover; border:1px solid rgba(0,229,255,0.25);">
             <div>
-              <p style="margin:0; font-size:14px; color:#eafcff; font-family:'Chakra Petch';">Gildan 5000 · Custom Tee</p>
+              <p style="margin:0; font-size:14px; color:#eafcff; font-family:'Chakra Petch';">{{ checkoutName }}</p>
               <p style="margin:5px 0 0; font-size:14px; color:#FFD400; font-weight:700;">{{ priceLabel }}</p>
             </div>
           </div>
@@ -537,6 +537,9 @@ class Component extends DCLogic {
       },
     }).then((res) => {
       const variations = (res && res.variations) || [];
+      // Product-specific commerce truth from the backend (name/price/sizes),
+      // used by the checkout sheet instead of static placeholders.
+      this._commerce = (res && res.commerce) || null;
       this.setState({ phase:'results', results: variations, variation:0, saved:false });
     }).catch((err) => {
       console.error('Threadbot synthesis failed', err);
@@ -581,7 +584,7 @@ class Component extends DCLogic {
     }
     this.buzz(14);
     const v = this.currentVariation();
-    const entry = { id:'d'+Date.now(), designId: v ? v.id : null, prompt:this._genPrompt || '', image: v ? v.image : null, ts: Date.now(), favorite:false };
+    const entry = { id:'d'+Date.now(), designId: v ? v.id : null, prompt:this._genPrompt || '', image: v ? v.image : null, ts: Date.now(), favorite:false, commerce: this._commerce || null };
     const designs = [entry, ...this.state.designs];
     this.store(this.K.designs, designs);
     this.setState({ designs, saved:true });
@@ -621,15 +624,22 @@ class Component extends DCLogic {
   };
   openDesign = (d) => () => {
     this._genPrompt = d.prompt;
+    this._commerce = d.commerce || null;
     this.setState({ phase:'results', results:[{ id:d.designId||d.id, image:d.image }], variation:0, tab:'create', saved:true });
   };
 
   // ---- checkout / order ----
+  checkoutSizeList = () => {
+    const c = this._commerce;
+    return (c && c.sizes && c.sizes.length) ? c.sizes : ['S','M','L','XL','2XL','3XL'];
+  };
   openCheckout = () => {
     const v = this.currentVariation();
     if (!v || !v.id) { this.buzz(24); return; }
     this.buzz(14);
-    this.setState({ checkout: { size: 'L', busy: false } });
+    const sizes = this.checkoutSizeList();
+    const size = sizes.indexOf('L') >= 0 ? 'L' : (sizes.indexOf('M') >= 0 ? 'M' : sizes[0]);
+    this.setState({ checkout: { size, busy: false } });
   };
   closeCheckout = () => this.setState({ checkout: null });
   setCheckoutSize = (z) => () => { const c = this.state.checkout; if (c && !c.busy) this.setState({ checkout: { ...c, size: z } }); };
@@ -646,7 +656,17 @@ class Component extends DCLogic {
       const res = await fetch(base + '/checkout', {
         method: 'POST',
         headers: Object.assign({ 'Content-Type':'application/json' }, cfg.apiKey ? { 'Authorization':'Bearer '+cfg.apiKey } : {}),
-        body: JSON.stringify({ designId: v.id, size: c.size, quantity: 1 }),
+        body: JSON.stringify(Object.assign(
+          { designId: v.id, size: c.size, quantity: 1 },
+          // Product-specific order context from the synthesis backend so the
+          // commerce server can price/name/fulfill the real catalog item.
+          this._commerce ? {
+            product_id: this._commerce.product_id,
+            variant_id: this._commerce.variant_id,
+            product_name: this._commerce.product_name,
+            price_usd: this._commerce.retail_usd,
+          } : {}
+        )),
       });
       if (!res.ok) throw new Error('Checkout failed (' + res.status + ')');
       const data = await res.json();
@@ -922,8 +942,11 @@ class Component extends DCLogic {
       closeCheckout: this.closeCheckout,
       proceedCheckout: this.proceedCheckout,
       checkoutImage: cur ? cur.image : null,
-      priceLabel: '$29.99',
-      checkoutSizes: ['S','M','L','XL','2XL','3XL'].map(z => ({
+      priceLabel: (this._commerce && this._commerce.retail_usd)
+        ? ('$' + Number(this._commerce.retail_usd).toFixed(2))
+        : '$29.99',
+      checkoutName: (this._commerce && this._commerce.product_name) || 'Custom Tee',
+      checkoutSizes: this.checkoutSizeList().map(z => ({
         label: z,
         select: this.setCheckoutSize(z),
         style: `min-width:50px;height:44px;padding:0 14px;border-radius:12px;cursor:pointer;font-family:'Chakra Petch';font-weight:700;font-size:14px;border:1px solid ${s.checkout && s.checkout.size===z ? '#FFD400' : 'rgba(0,229,255,0.2)'};background:${s.checkout && s.checkout.size===z ? 'rgba(255,212,0,0.15)' : 'rgba(0,229,255,0.05)'};color:${s.checkout && s.checkout.size===z ? '#FFD400' : '#bfeaf1'};`,

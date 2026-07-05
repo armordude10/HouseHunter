@@ -23,7 +23,11 @@ import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
 import { runExpress } from "./express/run.js";
 import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
 import { hostedImages, putHostedImage } from "./hosting.js";
+import { PrintfulTruth } from "./express/truth.js";
 import { activeProviderName, usageTally } from "./llm/provider.js";
+
+/** Product truth for the /generate commerce block (cached, free reads). */
+const commerceTruth = new PrintfulTruth();
 
 type RunMode = "express" | "agents";
 
@@ -268,12 +272,29 @@ const server = createServer(async (req, res) => {
           status: result.status
         });
       }
+      // Checkout-sheet truth: real product name, price, and purchasable
+      // size/color axes — never static placeholders.
+      let matrix: { sizes: string[]; colors: string[] } = { sizes: [], colors: [] };
+      try {
+        matrix = await commerceTruth.variantMatrix(result.product.id);
+      } catch (error) {
+        console.error(`[generate] variant matrix unavailable: ${(error as Error).message}`);
+      }
       return json(res, 200, {
         variations,
         run_id: result.run_id,
         product: result.product,
         message: result.message,
         retail_usd: result.economics.retail_anchor_usd,
+        commerce: {
+          product_id: result.product.id,
+          variant_id: result.product.variant_id,
+          product_name: result.product.name,
+          retail_usd: result.economics.retail_anchor_usd,
+          base_cost_usd: result.economics.base_cost_anchor_usd,
+          sizes: matrix.sizes,
+          colors: matrix.colors
+        },
         llm_usage: {
           calls: usageTally.calls - before.calls,
           input_tokens: usageTally.input_tokens - before.input_tokens,

@@ -34,6 +34,8 @@ export interface ProductTruth {
   placementSpecs(productId: number): Promise<PlacementSpec[]>;
   resolveVariant(productId: number, pick?: string): Promise<number>;
   productOptionNames(productId: number): Promise<string[]>;
+  /** Real purchasable size/color axes for the product (checkout UI truth). */
+  variantMatrix?(productId: number): Promise<{ sizes: string[]; colors: string[] }>;
 }
 
 const authHeaders = () => {
@@ -74,7 +76,7 @@ class Cached<T> {
 
 export class PrintfulTruth implements ProductTruth {
   private specs = new Cached<PlacementSpec[]>();
-  private variants = new Cached<Array<{ id: number; name: string }>>();
+  private variants = new Cached<Array<{ id: number; name: string; size?: string; color?: string }>>();
   private options = new Cached<string[]>();
 
   async placementSpecs(productId: number): Promise<PlacementSpec[]> {
@@ -131,17 +133,33 @@ export class PrintfulTruth implements ProductTruth {
     }
   }
 
-  private async matchVariant(productId: number, pick?: string): Promise<number> {
-    const variants = await this.variants.get(productId, async () => {
+  private loadVariants(productId: number) {
+    return this.variants.get(productId, async () => {
       const body = (await getJson(`${PRINTFUL_API_BASE}/products/${productId}`)) as {
-        result?: { variants?: Array<{ id?: number; name?: string }> };
+        result?: { variants?: Array<{ id?: number; name?: string; size?: string; color?: string }> };
       };
       const list = (body.result?.variants ?? [])
-        .filter((v): v is { id: number; name: string } => typeof v.id === "number")
-        .map((v) => ({ id: v.id, name: v.name ?? "" }));
+        .filter((v): v is { id: number; name: string; size?: string; color?: string } => typeof v.id === "number")
+        .map((v) => ({ id: v.id, name: v.name ?? "", size: v.size ?? "", color: v.color ?? "" }));
       if (!list.length) throw new Error(`Printful lists no variants for product ${productId}`);
       return list;
     });
+  }
+
+  /** Distinct sizes/colors in catalog order — what the checkout sheet shows. */
+  async variantMatrix(productId: number): Promise<{ sizes: string[]; colors: string[] }> {
+    const variants = await this.loadVariants(productId);
+    const sizes: string[] = [];
+    const colors: string[] = [];
+    for (const variant of variants) {
+      if (variant.size && !sizes.includes(variant.size)) sizes.push(variant.size);
+      if (variant.color && !colors.includes(variant.color)) colors.push(variant.color);
+    }
+    return { sizes, colors };
+  }
+
+  private async matchVariant(productId: number, pick?: string): Promise<number> {
+    const variants = await this.loadVariants(productId);
     if (pick) {
       // Token match, case-insensitive: "black xl" -> "... (Black / XL)".
       // All tokens first, then the most tokens, then exact substring.
