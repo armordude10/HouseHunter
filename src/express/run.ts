@@ -57,6 +57,16 @@ export interface ExpressResult {
   run_id: string;
   status: "completed" | "refused" | "failed" | "mockup_failed";
   message: string;
+  /**
+   * Compatibility aliases for clients built against the agent pipeline's
+   * Final Response Composer shape (the original Threadbot APK UI). Express
+   * results carry the same keys that UI already reads, so it renders
+   * express runs without modification.
+   */
+  user_message: string;
+  mockup_urls: string[];
+  mockup_url: string | null;
+  design_summary: string;
   product: { id: number; name: string; variant_id: number | null };
   coverage: "full" | "single";
   strategy: string | null;
@@ -123,6 +133,10 @@ const baseResult = (runId: string, product: ExpressProduct | null): ExpressResul
   run_id: runId,
   status: "failed",
   message: "",
+  user_message: "",
+  mockup_urls: [],
+  mockup_url: null,
+  design_summary: "",
   product: {
     id: product?.productId ?? 0,
     name: product?.name ?? "",
@@ -148,6 +162,16 @@ const baseResult = (runId: string, product: ExpressProduct | null): ExpressResul
   }
 });
 
+/** Keep the legacy-shape aliases in lockstep with the express fields. */
+const syncLegacyAliases = (result: ExpressResult) => {
+  result.user_message = result.message;
+  result.mockup_urls = result.mockups.map((mockup) => mockup.mockup_url);
+  result.mockup_url = result.mockup_urls[0] ?? null;
+  if (!result.design_summary && result.intent) {
+    result.design_summary = result.intent.artwork_brief.slice(0, 300);
+  }
+};
+
 const finishEconomics = (result: ExpressResult, meter: { generations: number; upscales: number }, llmCalls: number) => {
   const aiCost =
     meter.generations * COST_PER_GENERATION +
@@ -160,6 +184,7 @@ const finishEconomics = (result: ExpressResult, meter: { generations: number; up
   result.economics.estimated_margin_anchor_usd = Number(
     (result.economics.retail_anchor_usd - result.economics.base_cost_anchor_usd - aiCost).toFixed(2)
   );
+  syncLegacyAliases(result);
 };
 
 export const runExpress = async (
@@ -179,6 +204,7 @@ export const runExpress = async (
     const result = baseResult(runId, null);
     result.status = "refused";
     result.message = screened.reason;
+    finishEconomics(result, meter, llmCalls);
     return result;
   }
 
