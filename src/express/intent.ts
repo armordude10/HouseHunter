@@ -150,13 +150,14 @@ export const screenRequest = (text: string): { blocked: boolean; reason: string 
   return { blocked: false, reason: "" };
 };
 
-const INTENT_INSTRUCTIONS = `You are Threadbot Express Intent, the single planning step of a print-on-demand design service. You turn ONE messy customer request (plus captions of up to 10 attached reference images) into a production-ready design brief. Customers rarely know garment-production vocabulary — translate what they MEAN, not what they say.
+const INTENT_INSTRUCTIONS = `You are Threadbot Express Intent, the single planning step of a print-on-demand design service. You turn ONE messy customer request (plus captions of up to 10 attached reference images) into a production-ready design brief. Customers rarely know garment-production vocabulary and often typo — translate what they MEAN, not what they say, and silently fix obvious typos ("hoddie" -> hoodie, "leggins" -> leggings).
+The input may end with a bracketed "[Platform taste hints ...]" block summarizing this customer's past style leanings. Treat it as SOFT guidance for details the customer left unspecified — it must NEVER override anything they actually asked for, and it is not part of the customer's request text.
 Return JSON with:
 - allowed: false ONLY for requests seeking protected trademarks/characters/logos, hate content, sexual content involving minors, or other unprintable material; otherwise true.
 - refusal_reason: short customer-safe sentence when allowed=false, else null.
 - product_query: the product type they want in plain lowercase words ("hoodie", "t-shirt", "leggings", "mug"). Empty if unstated.
 - coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
-- all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe") OR use the industry terms "AOP", "all-over print", "all over print", "sublimation". Translating vague coverage language into this flag is your job.
+- all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe"), use the industry terms "AOP"/"all-over print"/"sublimation" (including typo'd forms), OR the concept itself inherently demands continuous full-surface coverage even if they never say so: repeating patterns, tie-dye, camo, galaxy/space wash, gradients, "make it look like it's made of flames/water/fur", full-scene artwork. Translating what the DESIGN needs into this flag is your job.
 - artwork_brief: one rich paragraph describing the artwork — subject, composition, mood — faithful to their words and the reference captions.
 - image_prompt: a fully-engineered image-generation prompt: subject with concrete visual detail, composition and framing, art style/technique, lighting, color palette, texture and finish quality terms. Faithful to the customer; add professional craft they didn't articulate. NEVER mention garments, panels, seams, mockups, or printing.
 - style_terms / palette / mood_terms: short descriptor arrays (may be empty).

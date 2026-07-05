@@ -24,6 +24,13 @@ import { runExpress } from "./express/run.js";
 import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
 import { hostedImages, putHostedImage } from "./hosting.js";
 import { PrintfulTruth } from "./express/truth.js";
+import {
+  decodeUserId,
+  fetchTaste,
+  looksLikeUserToken,
+  tasteHintLine,
+  updateTaste
+} from "./express/taste.js";
 import { activeProviderName, usageTally } from "./llm/provider.js";
 
 /** Product truth for the /generate commerce block (cached, free reads). */
@@ -257,11 +264,26 @@ const server = createServer(async (req, res) => {
       if (!prompt && !imageUrls.length) {
         return json(res, 400, { error: "prompt or reference image required" });
       }
+      // Per-user taste: soft hints from this customer's history, scoped by
+      // RLS through their own bearer token. Fails soft in every direction.
+      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const taste = looksLikeUserToken(bearer) ? await fetchTaste(bearer) : null;
+      const hint = tasteHintLine(taste);
       const before = { ...usageTally };
       const result = await runExpress({
-        input_as_text: prompt || "Design a product from the attached reference images.",
+        input_as_text:
+          (prompt || "Design a product from the attached reference images.") +
+          (hint
+            ? `\n\n[Platform taste hints — soft preferences from this customer's history; use ONLY for unspecified details, never override the request: ${hint}]`
+            : ""),
         input_image_urls: imageUrls
       });
+      if (result.status === "completed" && result.intent && looksLikeUserToken(bearer)) {
+        const userId = decodeUserId(bearer);
+        if (userId) {
+          void updateTaste(bearer, userId, result.intent, result.product.name, taste);
+        }
+      }
       const variations = [...new Set(result.mockups.map((m) => m.mockup_url))]
         .slice(0, 4)
         .map((mockupUrl, i) => ({ id: `${result.run_id}-${i}`, image: mockupUrl }));

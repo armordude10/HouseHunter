@@ -761,6 +761,29 @@ const main = async () => {
         heuristicIntent("an AOP grungy rap metal themed shirt").all_over === true
       );
     }
+
+    console.log("\n== 13. THE PILLOW CASE: real-record e2e for the reported product ==");
+    {
+      const { deps, media, mockups } = makeDeps(
+        intentFor({ product_query: "pillow", coverage: "full", all_over: true })
+      );
+      deps.truth = new PrintfulTruth(); // committed index, zero network
+      const result = await runExpress(
+        { input_as_text: "a pillow covered in ukiyo-e waves" },
+        deps
+      );
+      check("pillow run completed", result.status === "completed", result.message);
+      check("matched an AOP pillow product", /pillow/i.test(result.product.name), result.product.name);
+      const record = getCatalogRecord(result.product.id)!;
+      const renderableCount = record.placements.filter((p) => !/label/i.test(p.placement)).length;
+      check(
+        `both pillow faces produced and submitted (${renderableCount})`,
+        result.panels.length === renderableCount && mockups.calls[0]?.placements.length === renderableCount,
+        result.panels.map((p) => p.placement).join(",")
+      );
+      check("one master generation", media.generateCalls === 1);
+      check("style ids present in mockup payload", (mockups.calls[0]?.styleIds.length ?? 0) > 0);
+    }
     server.close();
   }
 

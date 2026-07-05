@@ -286,7 +286,13 @@
               <button onClick="{{ d.select }}" style="{{ d.style }}"></button>
             </sc-for>
           </div>
-          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 18px;">{{ variationLabel }}</p>
+          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 12px;">{{ variationLabel }}</p>
+
+          <div style="display:flex; align-items:center; justify-content:center; gap:9px; margin:0 0 6px;">
+            <button onClick="{{ fbUp }}" style="{{ fbUpStyle }}">👍 Nailed it</button>
+            <button onClick="{{ fbDown }}" style="{{ fbDownStyle }}">👎 Something's off</button>
+          </div>
+          <p style="text-align:center; font-size:10px; color:#5b6b73; margin:0 0 16px;">{{ fbNote }}</p>
 
           <p style="margin:0 0 11px; font-size:11px; letter-spacing:2px; color:#7d8c94;">REFINE WITH AI</p>
           <div style="display:flex; flex-wrap:wrap; gap:9px; margin-bottom:8px;">
@@ -540,10 +546,16 @@ class Component extends DCLogic {
       // Product-specific commerce truth from the backend (name/price/sizes),
       // used by the checkout sheet instead of static placeholders.
       this._commerce = (res && res.commerce) || null;
-      this.setState({ phase:'results', results: variations, variation:0, saved:false });
+      this._runId = (res && res.run_id) || null;
+      this.setState({ phase:'results', results: variations, variation:0, saved:false, fbSent:null });
     }).catch((err) => {
       console.error('Threadbot synthesis failed', err);
-      this.setState({ phase:'input' });
+      // Never fail silently — tell the user what happened and that retry is free.
+      this.setState({ phase:'input', dialog: {
+        title: 'Synthesis hiccup',
+        body: ((err && err.message) || 'The design service did not respond.') + ' Nothing was charged — try again.',
+        primaryLabel: 'OK',
+      }});
     });
   };
   initiate = () => {
@@ -565,6 +577,32 @@ class Component extends DCLogic {
     const r = this.state.results;
     if (!r || !r.length) return null;
     return r[Math.min(this.state.variation, r.length - 1)];
+  };
+
+  // ---- feedback: user verdicts flow to design_feedback for pipeline review ----
+  submitFeedback = (verdict) => async () => {
+    if (this.state.fbSent) return;
+    this.buzz(12);
+    this.setState({ fbSent: verdict });
+    try {
+      const sb = window.__tbSupabase;
+      if (!sb) return;
+      const u = await sb.auth.getUser();
+      const uid = u && u.data && u.data.user && u.data.user.id;
+      if (!uid) return;
+      const v = this.currentVariation() || {};
+      const c = this._commerce || {};
+      await sb.from('design_feedback').insert({
+        user_id: uid,
+        run_id: this._runId || null,
+        verdict,
+        prompt: this._genPrompt || '',
+        product_id: c.product_id || null,
+        product_name: c.product_name || null,
+        variant_id: c.variant_id || null,
+        mockup_url: (v.image && /^https?:/.test(v.image)) ? v.image : null,
+      });
+    } catch (e) { console.warn('feedback failed', e); }
   };
 
   // ---- save / favorite ----
@@ -625,7 +663,8 @@ class Component extends DCLogic {
   openDesign = (d) => () => {
     this._genPrompt = d.prompt;
     this._commerce = d.commerce || null;
-    this.setState({ phase:'results', results:[{ id:d.designId||d.id, image:d.image }], variation:0, tab:'create', saved:true });
+    this._runId = null;
+    this.setState({ phase:'results', results:[{ id:d.designId||d.id, image:d.image }], variation:0, tab:'create', saved:true, fbSent:null });
   };
 
   // ---- checkout / order ----
@@ -936,6 +975,14 @@ class Component extends DCLogic {
       saveBtnStyle: `width:36px;height:36px;border-radius:11px;border:1px solid rgba(255,212,0,0.35);background:${s.saved?'rgba(255,212,0,0.18)':'rgba(255,212,0,0.07)'};display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;`,
       regenerate: this.regenerate,
       remixDesign: this.remixDesign,
+
+      fbUp: this.submitFeedback('good'),
+      fbDown: this.submitFeedback('bad'),
+      fbUpStyle: `padding:9px 14px;border-radius:11px;font-family:inherit;font-size:12px;cursor:${s.fbSent?'default':'pointer'};border:1px solid ${s.fbSent==='good'?'#19f0c4':'rgba(0,229,255,0.2)'};background:${s.fbSent==='good'?'rgba(25,240,196,0.14)':'rgba(0,229,255,0.05)'};color:${s.fbSent==='good'?'#19f0c4':(s.fbSent?'#3f4d54':'#bfeaf1')};`,
+      fbDownStyle: `padding:9px 14px;border-radius:11px;font-family:inherit;font-size:12px;cursor:${s.fbSent?'default':'pointer'};border:1px solid ${s.fbSent==='bad'?'#ff9f43':'rgba(0,229,255,0.2)'};background:${s.fbSent==='bad'?'rgba(255,159,67,0.13)':'rgba(0,229,255,0.05)'};color:${s.fbSent==='bad'?'#ff9f43':(s.fbSent?'#3f4d54':'#bfeaf1')};`,
+      fbNote: s.fbSent === 'bad'
+        ? 'Flagged for review — the design team sees this with full context.'
+        : (s.fbSent === 'good' ? 'Thanks — noted for your style profile.' : 'Did we nail it? Your feedback tunes the engine.'),
 
       checkoutOpen: !!s.checkout,
       openCheckout: this.openCheckout,

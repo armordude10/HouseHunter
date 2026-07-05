@@ -483,7 +483,13 @@ export const runExpress = async (
       }));
 
     // 7. Official Printful mockups — the hard-coded final-output rule.
-    const styleIds = pickPrimaryPlacement(activeSpecs).styleIds.slice(0, 2);
+    // Style ids: primary placement's first, then any placement's (a few
+    // catalog products list styles on secondary placements only).
+    const styleIds = (
+      pickPrimaryPlacement(activeSpecs).styleIds.length
+        ? pickPrimaryPlacement(activeSpecs).styleIds
+        : [...new Set(activeSpecs.flatMap((spec) => spec.styleIds))]
+    ).slice(0, 2);
     const productOptions = optionNames.includes("stitch_color")
       ? { stitch_color: pickStitchColor(intent) }
       : undefined;

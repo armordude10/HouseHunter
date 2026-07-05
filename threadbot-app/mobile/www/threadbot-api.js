@@ -66,7 +66,13 @@
             body: JSON.stringify({ prompt, refImage, remix, baseImage }),
             signal: ctrl.signal,
           });
-          if (!res.ok) throw new Error('Synthesis failed: ' + res.status + ' ' + res.statusText);
+          if (!res.ok) {
+            // Surface the backend's actual reason (refusals, product issues)
+            // instead of a bare status code.
+            var detail = '';
+            try { detail = ((await res.json()) || {}).error || ''; } catch (e2) {}
+            throw new Error(detail || ('Synthesis failed: ' + res.status + ' ' + res.statusText));
+          }
           const data = await res.json();   // expected: { variations: [{id,image},...] }
           if (!data || !Array.isArray(data.variations)) {
             throw new Error('Backend returned an unexpected shape; expected { variations: [...] }');
