@@ -23,6 +23,7 @@ import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
 import { runExpress } from "./express/run.js";
 import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
 import { hostedImages, putHostedImage } from "./hosting.js";
+import { resolveTaskWebhook, webhookStats } from "./integrations/mockupWaiters.js";
 import { PrintfulTruth } from "./express/truth.js";
 import {
   decodeUserId,
@@ -203,10 +204,34 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 200, { service: "threadbot-agentic-pipeline", ui: "not bundled" });
     }
+    // Printful v2 `mockup_task_finished` webhook: resolves in-flight mockup
+    // waits instantly (polling remains the fallback race). Token-guarded —
+    // the registered URL carries ?token=THREADBOT_WEBHOOK_TOKEN.
+    if (req.method === "POST" && url.pathname === "/webhooks/printful") {
+      const expected = process.env.THREADBOT_WEBHOOK_TOKEN ?? "";
+      if (!expected || url.searchParams.get("token") !== expected) {
+        return json(res, 403, { error: "bad token" });
+      }
+      const raw = await readBody(req, 4_000_000);
+      let event: { type?: string; data?: { id?: number } };
+      try {
+        event = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON" });
+      }
+      if (event.type === "mockup_task_finished" && typeof event.data?.id === "number") {
+        resolveTaskWebhook(event.data as Parameters<typeof resolveTaskWebhook>[0]);
+      }
+      return json(res, 200, { ok: true });
+    }
     if (req.method === "GET" && url.pathname === "/debug/hosting") {
       let total = 0;
       for (const record of hostedImages.values()) total += record.bytes.length;
-      return json(res, 200, { images: hostedImages.size, total_mb: Math.round(total / 1e6) });
+      return json(res, 200, {
+        images: hostedImages.size,
+        total_mb: Math.round(total / 1e6),
+        webhook: webhookStats
+      });
     }
     if (req.method === "GET" && url.pathname === "/catalog") {
       const query = url.searchParams.get("q") ?? "";

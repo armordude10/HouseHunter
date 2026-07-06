@@ -8,6 +8,8 @@
  * instructions; this client renders through the exact same Printful API.
  */
 
+import { waitForTaskWebhook } from "./mockupWaiters.js";
+
 const PRINTFUL_API_BASE = process.env.PRINTFUL_API_BASE ?? "https://api.printful.com";
 
 const apiKey = () => {
@@ -54,7 +56,12 @@ export const createAndWaitForMockups = async (params: {
   widthPx?: number;
   maxAttempts?: number;
   intervalSeconds?: number;
-}): Promise<{ status: string; mockups: MockupRender[]; raw: TaskData | null }> => {
+}): Promise<{
+  status: string;
+  mockups: MockupRender[];
+  raw: TaskData | null;
+  via?: "webhook" | "poll";
+}> => {
   const body = {
     format: params.format ?? "jpg",
     width: params.widthPx ?? 1000,
@@ -113,18 +120,39 @@ export const createAndWaitForMockups = async (params: {
 
   const maxAttempts = params.maxAttempts ?? 30;
   const intervalMs = (params.intervalSeconds ?? 5) * 1000;
-  for (let poll = 0; poll < maxAttempts; poll++) {
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-    const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks?id=${taskId}`, {
-      headers: headers()
-    });
-    const polled = (await response.json().catch(() => null)) as { data?: TaskData[] } | null;
-    const task = polled?.data?.[0];
-    if (!task) continue;
-    if (task.status === "completed" || task.status === "failed") {
-      const mockups = (task.catalog_variant_mockups ?? []).flatMap((group) => group.mockups);
-      return { status: task.status, mockups, raw: task };
+  const totalBudgetMs = maxAttempts * intervalMs;
+
+  const finish = (task: TaskData, via: "webhook" | "poll") => {
+    const mockups = (task.catalog_variant_mockups ?? []).flatMap((group) => group.mockups);
+    return { status: task.status, mockups, raw: task, via };
+  };
+
+  // Race Printful's v2 `mockup_task_finished` webhook (instant) against a
+  // fallback poll (first check late, then relaxed cadence) — a dropped
+  // webhook delivery can never strand a run.
+  const webhookWait = waitForTaskWebhook(taskId, totalBudgetMs).then((task) =>
+    task ? finish(task as TaskData, "webhook") : null
+  );
+  const pollWait = (async () => {
+    for (let poll = 0; poll < maxAttempts; poll++) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks?id=${taskId}`, {
+        headers: headers()
+      });
+      const polled = (await response.json().catch(() => null)) as { data?: TaskData[] } | null;
+      const task = polled?.data?.[0];
+      if (!task) continue;
+      if (task.status === "completed" || task.status === "failed") {
+        return finish(task, "poll");
+      }
     }
-  }
-  return { status: "timeout", mockups: [], raw: null };
+    return null;
+  })();
+
+  const winner = await Promise.race([
+    webhookWait.then((r) => r ?? pollWait),
+    pollWait.then((r) => r ?? webhookWait)
+  ]);
+  if (winner) return winner;
+  return { status: "timeout", mockups: [], raw: null, via: "poll" };
 };
