@@ -42,6 +42,9 @@
         // ramp (2% -> 95%, ease-out) and cycle the status labels while the request is in flight,
         // then snap to 100% when it lands. Without this the bar sits frozen at 2% the whole time.
         const ctrl = new AbortController();
+        // Hard ceiling: multi-panel products legitimately take minutes, but a
+        // spinner may NEVER run forever — kill and explain at 10 minutes.
+        const kill = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 600000);
         let pct = 2, finished = false;
         if (onProgress) onProgress(pct, STATUS[0]);
         const t0 = Date.now();
@@ -87,11 +90,14 @@
           if (!data || !Array.isArray(data.variations)) {
             throw new Error('Backend returned an unexpected shape; expected { variations: [...] }');
           }
-          finished = true; clearInterval(timer);
+          finished = true; clearInterval(timer); clearTimeout(kill);
           if (onProgress) onProgress(100, STATUS[STATUS.length - 1]);
           return data;
         } catch (e) {
-          finished = true; clearInterval(timer);
+          finished = true; clearInterval(timer); clearTimeout(kill);
+          if (e && e.name === 'AbortError') {
+            throw new Error('This design is taking longer than expected. It may still finish — check back, or try again.');
+          }
           throw e;
         }
       }

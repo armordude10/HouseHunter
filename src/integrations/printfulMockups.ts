@@ -45,6 +45,22 @@ interface TaskData {
   failure_reasons?: unknown[];
 }
 
+/**
+ * Style ids are VARIANT-specific at Printful; the catalog index merges them
+ * across a product's variants, so a picked style can be invalid for the
+ * resolved variant. The 400 error enumerates the valid ones — parse them and
+ * self-heal (works for every product without rebuilding the index).
+ */
+export const parseAvailableStyleIds = (errorBody: string): number[] | null => {
+  const match = errorBody.match(/Available `?style_ids`? are:\s*([0-9,\s]+)/i);
+  if (!match) return null;
+  const ids = match[1]
+    .split(/[,\s]+/)
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return ids.length ? ids : null;
+};
+
 export const createAndWaitForMockups = async (params: {
   productId: number;
   variantIds: number[];
@@ -62,7 +78,9 @@ export const createAndWaitForMockups = async (params: {
   raw: TaskData | null;
   via?: "webhook" | "poll";
 }> => {
-  const body = {
+  let styleIds = params.styleIds;
+  let healedStyles = false;
+  const buildBody = () => ({
     format: params.format ?? "jpg",
     width: params.widthPx ?? 1000,
     products: [
@@ -70,7 +88,7 @@ export const createAndWaitForMockups = async (params: {
         source: "catalog",
         catalog_product_id: params.productId,
         catalog_variant_ids: params.variantIds,
-        mockup_style_ids: params.styleIds,
+        mockup_style_ids: styleIds,
         ...(params.productOptions
           ? {
               product_options: Object.entries(params.productOptions).map(([name, value]) => ({
@@ -86,14 +104,14 @@ export const createAndWaitForMockups = async (params: {
         }))
       }
     ]
-  };
+  });
 
   let taskId: number | null = null;
   for (let attempt = 1; attempt <= 6; attempt++) {
     const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks`, {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify(body)
+      body: JSON.stringify(buildBody())
     });
     const created = (await response.json().catch(() => null)) as {
       data?: TaskData[];
@@ -105,6 +123,14 @@ export const createAndWaitForMockups = async (params: {
       }
       await new Promise((resolve) => setTimeout(resolve, 45000));
       continue;
+    }
+    if (response.status === 400 && !healedStyles) {
+      const available = parseAvailableStyleIds(JSON.stringify(created) ?? "");
+      if (available) {
+        styleIds = available.slice(0, Math.max(1, styleIds.length));
+        healedStyles = true;
+        continue; // retry immediately with variant-valid styles
+      }
     }
     if (!response.ok || !created?.data?.[0]?.id) {
       throw new Error(

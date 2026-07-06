@@ -98,6 +98,10 @@ export const renderLayerOverlay = async (params: {
 
   for (const layer of layers) {
     const widthPx = Math.max(16, Math.round(pieceW * clamp01(layer.width_frac, 0.4)));
+    // Assets must FIT the piece: a square 1024px element on a short, wide
+    // canvas (a pet bowl's print strip) would out-size the base image and
+    // sharp rejects the whole composite.
+    const maxHPx = Math.max(16, Math.round(pieceH));
     let asset: Buffer;
 
     if (layer.kind === "customer_image") {
@@ -105,7 +109,10 @@ export const renderLayerOverlay = async (params: {
       const url = imageUrls[index];
       if (!url) throw new Error(`layer references attached image ${index + 1}, which was not provided`);
       sourceUrls.push(url);
-      asset = await sharp(await fetchBuffer(url)).resize({ width: widthPx }).png().toBuffer();
+      asset = await sharp(await fetchBuffer(url))
+        .resize({ width: widthPx, height: maxHPx, fit: "inside" })
+        .png()
+        .toBuffer();
       promptParts.push(`customer_image(${index})`);
     } else {
       // Generated element with native alpha; verified, repaired if opaque.
@@ -131,7 +138,11 @@ export const renderLayerOverlay = async (params: {
         const cutout = await media.removeBackground(generated.imageURL);
         bytes = await fetchBuffer(cutout.imageURL);
       }
-      asset = await sharp(bytes).trim().resize({ width: widthPx }).png().toBuffer();
+      asset = await sharp(bytes)
+        .trim()
+        .resize({ width: widthPx, height: maxHPx, fit: "inside" })
+        .png()
+        .toBuffer();
       promptParts.push(`element("${elementPrompt.slice(0, 60)}")`);
     }
 
@@ -140,6 +151,17 @@ export const renderLayerOverlay = async (params: {
         .rotate(layer.rotation_deg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer();
+    }
+    // Final guarantee before compositing: rotation can re-grow a fitted
+    // asset past the canvas; sharp hard-fails on oversized composites.
+    {
+      const dims = await sharp(asset).metadata();
+      if ((dims.width ?? 0) > canvasW || (dims.height ?? 0) > canvasH) {
+        asset = await sharp(asset)
+          .resize({ width: canvasW, height: canvasH, fit: "inside" })
+          .png()
+          .toBuffer();
+      }
     }
 
     const meta = await sharp(asset).metadata();

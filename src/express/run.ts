@@ -384,6 +384,24 @@ export const runExpress = async (
       return grouped;
     };
 
+    // TEXT POLICY (the Gunner rule), applied at the DOOR: on a single-panel
+    // product, request text belongs INSIDE the one generation — never a
+    // composited lockup. This must happen BEFORE the standalone-layers
+    // routing, or a "bowl that says X" rides the layer path and skips the
+    // rule entirely (the reported Pet Bowl failure).
+    if (renderableSpecs.length === 1 && convertedTexts.size) {
+      for (const [layer, original] of convertedTexts) {
+        const at = effectiveLayers.indexOf(layer);
+        if (at >= 0) {
+          effectiveLayers.splice(at, 1);
+          if (!requiredText.some((t) => t.toLowerCase() === original.toLowerCase())) {
+            requiredText.push(original);
+          }
+        }
+      }
+      convertedTexts.clear();
+    }
+
     // Layers ARE the whole design only when the intent says so AND there is
     // no all-over/pattern artwork underneath them.
     const layersStandalone =
@@ -603,7 +621,10 @@ export const runExpress = async (
     // weight scales with styles x placements: heavy products get ONE style
     // so Printful renders within our patience window (leggings proved 2
     // styles x 3 placements can exceed 400s).
-    const styleBudget = 2; // small mockup files keep task weight low even multi-panel
+    // Task weight = styles x placements at Printful's renderer: heavy
+    // multi-panel products (AOP hoodies: 6 placements) get ONE style so the
+    // task finishes inside the run's patience window.
+    const styleBudget = result.submitted_placements.length >= 4 ? 1 : 2;
     const styleIds = (
       pickPrimaryPlacement(activeSpecs).styleIds.length
         ? pickPrimaryPlacement(activeSpecs).styleIds

@@ -29,8 +29,9 @@ import {
 import { ExpressIntent, heuristicIntent, screenRequest } from "../src/express/intent.js";
 import { buildExpressJobs, pickStitchColor } from "../src/express/plan.js";
 import { runExpress, ExpressDeps } from "../src/express/run.js";
+import { renderLayerOverlay } from "../src/express/layers.js";
 import { PlacementSpec, PrintfulTruth, ProductTruth } from "../src/express/truth.js";
-import { createAndWaitForMockups } from "../src/integrations/printfulMockups.js";
+import { createAndWaitForMockups, parseAvailableStyleIds } from "../src/integrations/printfulMockups.js";
 import { buildSessionForm, signStripePayload, verifyStripeSignature } from "../src/commerce/stripe.js";
 import { buildOrderPayload, getDesign, registerDesign } from "../src/commerce/orders.js";
 import {
@@ -311,7 +312,10 @@ const main = async () => {
       payload.placements.length === 6 &&
         payload.placements.every((p) => p.technique === "cut-sew")
     );
-    check("two mockup styles requested (small files keep task weight low)", payload.styleIds.join(",") === "11,12");
+    check(
+      "heavy product (6 placements) requests ONE style — task weight stays renderable",
+      payload.styleIds.join(",") === "11"
+    );
     // THE SPEED CONTRACT: every file submitted to the mockup generator must
     // be <=2048px — print-res submissions are what made tasks take minutes.
     let allSmall = true;
@@ -905,6 +909,83 @@ const main = async () => {
       check("style ids present in mockup payload", (mockups.calls[0]?.styleIds.length ?? 0) > 0);
     }
 
+    console.log("\n== 13b. THE PET BOWL CASE: single-panel text via the layer door ==");
+    {
+      // Reported live failure: 'a dog bowl with "Gunner" written on it' -> the
+      // intent planned a standalone text layer (layers_only), which skipped
+      // the Gunner rule AND composited a square element onto the bowl's
+      // 21.65in x 2.68in strip — sharp refuses oversized composites. The rule
+      // must now fire at the door: text rides the ONE generation.
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "dog bowl",
+          layers_only: true,
+          artwork_brief: 'a clean pet bowl design with "Gunner" written on it',
+          image_prompt: 'a playful pet bowl wrap design with "Gunner" written in bold friendly lettering',
+          required_text: ["Gunner"],
+          layers: [
+            {
+              kind: "text" as const,
+              content: "Gunner",
+              image_index: null,
+              placement: "front",
+              cx_frac: 0.5,
+              cy_frac: 0.5,
+              width_frac: 0.5,
+              rotation_deg: 0,
+              color: "",
+              order: 0
+            }
+          ]
+        })
+      );
+      deps.truth = new PrintfulTruth(); // real bowl geometry from the index
+      const result = await runExpress({ input_as_text: 'a dog bowl with "Gunner" written on it' }, deps);
+      check("dog bowl run completed", result.status === "completed", result.message);
+      check("matched the pet bowl", /pet bowl/i.test(result.product.name), result.product.name);
+      check(
+        "text rode the generation (1 gen, exact string quoted, no layer path)",
+        media.generateCalls === 1 && media.prompts[0]?.includes('"Gunner"') === true,
+        `${media.generateCalls} gens — ${media.prompts[0]?.slice(0, 70)}`
+      );
+      check(
+        "no layered composition ran on the bowl",
+        result.panels.every((p) => !/Layered/i.test(p.notes)),
+        result.panels[0]?.notes?.slice(0, 60)
+      );
+    }
+    {
+      // Engine hardening: even when layers DO composite onto a short, wide
+      // piece, assets are fitted — never larger than the canvas.
+      const media = new StubMedia();
+      const overlay = await renderLayerOverlay({
+        media,
+        spec: { placement: "default", technique: "sublimation", widthIn: 21.65, heightIn: 2.68, dpi: 300, styleIds: [] },
+        layers: [
+          {
+            kind: "element",
+            content: "a bone icon",
+            image_index: null,
+            placement: "default",
+            cx_frac: 0.5,
+            cy_frac: 0.5,
+            width_frac: 0.6,
+            rotation_deg: 15,
+            color: "",
+            order: 0
+          }
+        ],
+        imageUrls: [],
+        runId: "bowl-overlay-test"
+      });
+      const dims = await sharp(overlay.buffer).metadata();
+      check(
+        "square asset fitted into the 8x-wide strip (composite cannot outsize canvas)",
+        dims.width === overlay.canvasW && dims.height === overlay.canvasH && overlay.canvasH < 900,
+        `${dims.width}x${dims.height}`
+      );
+    }
+
     console.log("\n== 14. REACHABILITY GATE: lay language reaches the whole catalog ==");
     {
       // Customer wording (no supplier vocabulary, typos included) -> a
@@ -1136,6 +1217,14 @@ const main = async () => {
     check(
       "country picks normalize (gb -> GB, junk -> US)",
       normalizeShippingCountry("gb") === "GB" && normalizeShippingCountry("XX") === "US" && normalizeShippingCountry(7) === "US"
+    );
+    check(
+      "variant-invalid style ids self-heal from Printful's 400 (the Pet Bowl mockup fix)",
+      JSON.stringify(
+        parseAvailableStyleIds(
+          '{"data":"Following `style_ids`: 6558, 6561 are not available for catalog variant: 16786 with placements: default. Available `style_ids` are: 6559, 6560, 6562, 6564"}'
+        )
+      ) === "[6559,6560,6562,6564]" && parseAvailableStyleIds('{"data":"some other 400"}') === null
     );
     const lockedForm = buildSessionForm({
       productName: "x",

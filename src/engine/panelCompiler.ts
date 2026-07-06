@@ -551,7 +551,12 @@ export class PanelCompiler {
       return masterUrl;
     }
 
-    for (const job of sliceJobs) {
+    // Panels are independent once the master exists: slice/upscale/host them
+    // CONCURRENTLY (an AOP hoodie is 6-7 panels of 6000px work — serial was
+    // the "clocked forever" hot path). Results record in job order so bundles
+    // stay deterministic. The Printful file-library mirror is fire-and-forget:
+    // mockups and orders both consume our hosted URLs, never the mirror.
+    const sliceOne = async (job: CompileJob): Promise<Parameters<typeof record> | { failure: string }> => {
       const panel = planeByPlacement.get(job.placement)!;
       const target = jobTarget(job);
       const sizing = workingSize(target.width, target.height);
@@ -572,10 +577,12 @@ export class PanelCompiler {
           dpi: target.dpi
         });
         const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
-        const printfulRef = printfulEnabled()
-          ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
-          : null;
-        record(
+        if (printfulEnabled()) {
+          void mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`).catch((error) =>
+            console.warn(`[compiler] background mirror failed: ${(error as Error).message}`)
+          );
+        }
+        return [
           {
             job_id: job.job_id,
             placement: job.placement,
@@ -590,9 +597,7 @@ export class PanelCompiler {
             source_job_id: job.source_job_id ?? null,
             source_parent_url: masterUrl,
             geometry_applied: true,
-            notes: `Cut from shared master at garment-plane rect; seam continuity guaranteed by shared cut lines.${
-              printfulRef ? ` Mirrored to Printful file ${printfulRef.id}.` : ""
-            }`
+            notes: "Cut from shared master at garment-plane rect; seam continuity guaranteed by shared cut lines."
           },
           {
             job_id: job.job_id,
@@ -614,13 +619,29 @@ export class PanelCompiler {
             dpi: target.dpi,
             transparent,
             source_urls: masterUrl ? [masterUrl] : [],
-            printful_file_id: printfulRef?.id ?? null
+            printful_file_id: null
           }
-        );
+        ];
       } catch (error) {
-        this.recordFailure(job, `Slice failed: ${(error as Error).message}`, record);
+        return { failure: `Slice failed: ${(error as Error).message}` };
       }
-    }
+    };
+    const SLICE_CONCURRENCY = 3;
+    const sliceResults = new Array<Awaited<ReturnType<typeof sliceOne>>>(sliceJobs.length);
+    let nextSlice = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(SLICE_CONCURRENCY, sliceJobs.length) }, async () => {
+        while (nextSlice < sliceJobs.length) {
+          const index = nextSlice++;
+          sliceResults[index] = await sliceOne(sliceJobs[index]);
+        }
+      })
+    );
+    sliceJobs.forEach((job, index) => {
+      const outcome = sliceResults[index];
+      if ("failure" in outcome) this.recordFailure(job, outcome.failure, record);
+      else record(...outcome);
+    });
 
     for (const job of directJobs) {
       await this.generateDirect(runId, job, design, masterUrl, record);
