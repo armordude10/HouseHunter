@@ -39,6 +39,7 @@ import {
   stripeConfigured,
   verifyStripeSignature
 } from "./commerce/stripe.js";
+import { normalizeShippingCountry, quoteShipping } from "./commerce/shipping.js";
 import {
   designRegistrySize,
   getDesign,
@@ -277,7 +278,13 @@ const server = createServer(async (req, res) => {
         });
       }
       const raw = await readBody(req, 100_000);
-      let body: { designId?: unknown; size?: unknown; color?: unknown; quantity?: unknown };
+      let body: {
+        designId?: unknown;
+        size?: unknown;
+        color?: unknown;
+        quantity?: unknown;
+        country?: unknown;
+      };
       try {
         body = JSON.parse(raw || "{}");
       } catch {
@@ -307,6 +314,12 @@ const server = createServer(async (req, res) => {
           console.error(`[checkout] variant resolve failed: ${(error as Error).message}`);
         }
       }
+      // Shipping: charge the supplier's real rate for the chosen destination
+      // (flat guesses lose money); the Stripe page locks address entry to the
+      // quoted country so charged always equals shipped. Quote failure falls
+      // back to the flat knob, restricted to US.
+      const country = normalizeShippingCountry(body.country);
+      const shippingQuote = await quoteShipping(variantId, quantity, country);
       const metadata: Record<string, string> = {
         run_id: design.run_id,
         design_id: designId,
@@ -314,6 +327,7 @@ const server = createServer(async (req, res) => {
         variant_id: String(variantId),
         size,
         color,
+        country,
         quantity: String(quantity),
         product_name: design.product_name.slice(0, 120),
         retail_usd: design.retail_usd.toFixed(2)
@@ -334,7 +348,9 @@ const server = createServer(async (req, res) => {
           imageUrl: design.mockup_url ?? undefined,
           unitAmountCents: Math.round(design.retail_usd * 100),
           quantity,
-          shippingCents: shippingFlatCents(),
+          shippingCents: shippingQuote?.cents ?? shippingFlatCents(),
+          shippingLabel: shippingQuote?.display_name,
+          allowedCountries: shippingQuote ? [country] : ["US"],
           successUrl: `${base}/checkout/success`,
           cancelUrl: `${base}/checkout/cancel`,
           metadata

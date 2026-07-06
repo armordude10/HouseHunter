@@ -33,6 +33,11 @@ import { PlacementSpec, PrintfulTruth, ProductTruth } from "../src/express/truth
 import { createAndWaitForMockups } from "../src/integrations/printfulMockups.js";
 import { buildSessionForm, signStripePayload, verifyStripeSignature } from "../src/commerce/stripe.js";
 import { buildOrderPayload, getDesign, registerDesign } from "../src/commerce/orders.js";
+import {
+  buildShippingRequest,
+  normalizeShippingCountry,
+  pickCheapestRate
+} from "../src/commerce/shipping.js";
 
 // -----------------------------------------------------------------------------
 // Stubs.
@@ -1106,6 +1111,49 @@ const main = async () => {
     check(
       "recipient mapped from Stripe session shape",
       order.recipient.name === "Doug A" && order.recipient.zip === "61602" && order.external_id === "cs_test_123"
+    );
+
+    // Shipping: supplier-quoted, never a flat guess.
+    const usReq = buildShippingRequest(9513, 1, "US");
+    check(
+      "US/CA quotes carry the representative state Printful demands",
+      usReq.recipient.country_code === "US" &&
+        (usReq.recipient as { state_code?: string }).state_code === "CA" &&
+        buildShippingRequest(9513, 1, "GB").recipient.country_code === "GB" &&
+        !(buildShippingRequest(9513, 1, "GB").recipient as { state_code?: string }).state_code
+    );
+    const cheapest = pickCheapestRate([
+      { id: "EXPRESS", name: "Express", rate: "24.99", minDeliveryDays: 1, maxDeliveryDays: 2 },
+      { id: "STANDARD", name: "Flat Rate (Estimated delivery: Jul 14-15)", rate: "10.49", minDeliveryDays: 3, maxDeliveryDays: 4 }
+    ]);
+    check(
+      "cheapest rate wins and the label never names the supplier",
+      cheapest?.cents === 1049 &&
+        cheapest.display_name === "Standard shipping (3–4 business days)" &&
+        !/printful|flat rate/i.test(cheapest.display_name)
+    );
+    check("garbage rates yield null (fallback path), not NaN cents", pickCheapestRate([{ rate: "oops" }]) === null);
+    check(
+      "country picks normalize (gb -> GB, junk -> US)",
+      normalizeShippingCountry("gb") === "GB" && normalizeShippingCountry("XX") === "US" && normalizeShippingCountry(7) === "US"
+    );
+    const lockedForm = buildSessionForm({
+      productName: "x",
+      unitAmountCents: 2099,
+      quantity: 1,
+      shippingCents: 1109,
+      shippingLabel: "Standard shipping (3–4 business days)",
+      allowedCountries: ["GB"],
+      successUrl: "https://x/s",
+      cancelUrl: "https://x/c",
+      metadata: {}
+    });
+    check(
+      "session locks address entry to the quoted country at the quoted rate",
+      lockedForm.get("shipping_address_collection[allowed_countries][0]") === "GB" &&
+        lockedForm.get("shipping_address_collection[allowed_countries][1]") === null &&
+        lockedForm.get("shipping_options[0][shipping_rate_data][fixed_amount][amount]") === "1109" &&
+        lockedForm.get("shipping_options[0][shipping_rate_data][display_name]") === "Standard shipping (3–4 business days)"
     );
   }
 

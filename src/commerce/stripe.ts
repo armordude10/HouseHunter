@@ -35,6 +35,10 @@ export interface CheckoutSessionParams {
   unitAmountCents: number;
   quantity: number;
   shippingCents: number;
+  /** Customer-facing shipping label (defaults to "Standard shipping"). */
+  shippingLabel?: string;
+  /** Lock address collection to these countries (quote-country match). */
+  allowedCountries?: string[];
   successUrl: string;
   cancelUrl: string;
   /** Flat string metadata; Stripe caps 50 keys / 500-char values. */
@@ -58,12 +62,17 @@ export const buildSessionForm = (params: CheckoutSessionParams): URLSearchParams
   if (params.imageUrl && /^https:\/\//.test(params.imageUrl)) {
     form.set("line_items[0][price_data][product_data][images][0]", params.imageUrl);
   }
-  ["US", "CA", "GB", "AU"].forEach((country, i) => {
-    form.set(`shipping_address_collection[allowed_countries][${i}]`, country);
-  });
+  (params.allowedCountries?.length ? params.allowedCountries : ["US", "CA", "GB", "AU"]).forEach(
+    (country, i) => {
+      form.set(`shipping_address_collection[allowed_countries][${i}]`, country);
+    }
+  );
   if (params.shippingCents > 0) {
     form.set("shipping_options[0][shipping_rate_data][type]", "fixed_amount");
-    form.set("shipping_options[0][shipping_rate_data][display_name]", "Standard shipping");
+    form.set(
+      "shipping_options[0][shipping_rate_data][display_name]",
+      (params.shippingLabel ?? "Standard shipping").slice(0, 100)
+    );
     form.set("shipping_options[0][shipping_rate_data][fixed_amount][currency]", "usd");
     form.set("shipping_options[0][shipping_rate_data][fixed_amount][amount]", String(Math.round(params.shippingCents)));
   }

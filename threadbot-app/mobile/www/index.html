@@ -6,6 +6,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="threadbot-config.js"></script>
 <link rel="stylesheet" href="threadbot-mobile.css">
+<!-- Pre-hydration cloak: the raw template (with {{ }} placeholders) must
+     never flash before React mounts; the runtime replaces <x-dc> with
+     #dc-root, so this rule self-retires at mount. -->
+<style>x-dc{display:none}</style>
 <script src="threadbot-boot.js"></script>
 </head>
 <body>
@@ -369,7 +373,7 @@
       <div style="position:absolute; inset:0; z-index:45; background:rgba(4,6,8,0.8); backdrop-filter:blur(6px); display:flex; align-items:flex-end;">
         <div style="width:100%; background:#0a0f14; border-top:1px solid rgba(255,212,0,0.25); border-radius:26px 26px 0 0; padding:22px 22px 30px; animation:tbSlideUp .35s cubic-bezier(.2,.9,.2,1) both; box-shadow:0 -20px 60px -20px rgba(255,212,0,0.25);">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
-            <h2 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:19px; color:#eafcff;">Order this tee</h2>
+            <h2 style="margin:0; font-family:'Chakra Petch'; font-weight:600; font-size:19px; color:#eafcff;">Order this design</h2>
             <button onClick="{{ closeCheckout }}" style="width:34px; height:34px; border-radius:11px; border:1px solid rgba(255,255,255,0.08); background:rgba(13,20,26,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
@@ -382,9 +386,15 @@
             </div>
           </div>
           <label style="display:block; font-size:11px; letter-spacing:1px; color:#7d8c94; margin-bottom:9px;">SIZE</label>
-          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;">
             <sc-for list="{{ checkoutSizes }}" as="z" hint-placeholder-count="6">
               <button onClick="{{ z.select }}" style="{{ z.style }}">{{ z.label }}</button>
+            </sc-for>
+          </div>
+          <label style="display:block; font-size:11px; letter-spacing:1px; color:#7d8c94; margin-bottom:9px;">SHIPS TO</label>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+            <sc-for list="{{ checkoutCountries }}" as="cc" hint-placeholder-count="4">
+              <button onClick="{{ cc.select }}" style="{{ cc.style }}">{{ cc.label }}</button>
             </sc-for>
           </div>
           <button onClick="{{ proceedCheckout }}" style="{{ checkoutBtnStyle }}">{{ checkoutBtnLabel }}</button>
@@ -704,10 +714,12 @@ class Component extends DCLogic {
     this.buzz(14);
     const sizes = this.checkoutSizeList();
     const size = sizes.indexOf('L') >= 0 ? 'L' : (sizes.indexOf('M') >= 0 ? 'M' : sizes[0]);
-    this.setState({ checkout: { size, busy: false } });
+    this.setState({ checkout: { size, country: 'US', busy: false } });
   };
   closeCheckout = () => this.setState({ checkout: null });
   setCheckoutSize = (z) => () => { const c = this.state.checkout; if (c && !c.busy) this.setState({ checkout: { ...c, size: z } }); };
+  setCheckoutCountry = (cc) => () => { const c = this.state.checkout; if (c && !c.busy) this.setState({ checkout: { ...c, country: cc } }); };
+  COUNTRIES = [ { code:'US', label:'USA' }, { code:'CA', label:'Canada' }, { code:'GB', label:'UK' }, { code:'AU', label:'Australia' } ];
   proceedCheckout = async () => {
     const c = this.state.checkout;
     if (!c || c.busy) return;
@@ -722,7 +734,7 @@ class Component extends DCLogic {
         method: 'POST',
         headers: Object.assign({ 'Content-Type':'application/json' }, cfg.apiKey ? { 'Authorization':'Bearer '+cfg.apiKey } : {}),
         body: JSON.stringify(Object.assign(
-          { designId: v.id, size: c.size, quantity: 1 },
+          { designId: v.id, size: c.size, country: c.country || 'US', quantity: 1 },
           // Product-specific order context from the synthesis backend so the
           // commerce server can price/name/fulfill the real catalog item.
           this._commerce ? {
@@ -755,6 +767,23 @@ class Component extends DCLogic {
     const d = this.state.dialog;
     this.setState({ dialog: null });
     if (d && d.primaryAction) d.primaryAction();
+  };
+
+  // ---- account: sign out ----
+  signOut = () => {
+    this.buzz(12);
+    this.setState({ dialog: {
+      title: 'SIGN OUT',
+      body: 'Your designs stay saved to your account. You will need to sign in again to use Threadbot on this device.',
+      primaryLabel: 'Sign out',
+      danger: true,
+      primaryAction: async () => {
+        try { const sb = window.__tbSupabase; if (sb) await sb.auth.signOut(); } catch (e) {}
+        try { if (window.__tbClearSession) window.__tbClearSession(); } catch (e) {}
+        location.reload();
+      },
+      secondaryLabel: 'Cancel',
+    }});
   };
   removeDesigns = (ids) => {
     const kill = new Set(ids);
@@ -905,6 +934,7 @@ class Component extends DCLogic {
     const settingGroups = [
       { label:'ACCOUNT', rows:[
         { ...actionRow('Edit Profile','', this.openProfile), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+        { ...actionRow('Sign Out','', this.signOut), nameColor:'#ff7b7b' },
       ]},
       { label:'PREFERENCES', rows:[
         { ...toggleRow('Ambient Motion','motion'), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
@@ -1028,6 +1058,11 @@ class Component extends DCLogic {
         label: z,
         select: this.setCheckoutSize(z),
         style: `min-width:50px;height:44px;padding:0 14px;border-radius:12px;cursor:pointer;font-family:'Chakra Petch';font-weight:700;font-size:14px;border:1px solid ${s.checkout && s.checkout.size===z ? '#FFD400' : 'rgba(0,229,255,0.2)'};background:${s.checkout && s.checkout.size===z ? 'rgba(255,212,0,0.15)' : 'rgba(0,229,255,0.05)'};color:${s.checkout && s.checkout.size===z ? '#FFD400' : '#bfeaf1'};`,
+      })),
+      checkoutCountries: this.COUNTRIES.map(cn => ({
+        label: cn.label,
+        select: this.setCheckoutCountry(cn.code),
+        style: `min-width:50px;height:40px;padding:0 13px;border-radius:12px;cursor:pointer;font-family:'Chakra Petch';font-weight:600;font-size:12px;border:1px solid ${s.checkout && (s.checkout.country||'US')===cn.code ? '#FFD400' : 'rgba(0,229,255,0.2)'};background:${s.checkout && (s.checkout.country||'US')===cn.code ? 'rgba(255,212,0,0.15)' : 'rgba(0,229,255,0.05)'};color:${s.checkout && (s.checkout.country||'US')===cn.code ? '#FFD400' : '#bfeaf1'};`,
       })),
       checkoutBtnLabel: (s.checkout && s.checkout.busy) ? 'Starting checkout…' : 'Proceed to Payment',
       checkoutBtnStyle: `width:100%;height:54px;border-radius:15px;border:0;cursor:${(s.checkout && s.checkout.busy) ? 'default' : 'pointer'};font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:1px;color:#231a04;background:${(s.checkout && s.checkout.busy) ? 'rgba(255,212,0,0.45)' : 'linear-gradient(100deg,#FFD400,#ff9f43)'};box-shadow:0 0 28px -6px rgba(255,212,0,0.5);`,

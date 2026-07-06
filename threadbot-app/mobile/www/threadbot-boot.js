@@ -6,10 +6,64 @@
 (function () {
   var cfg = window.THREADBOT_CONFIG || (window.THREADBOT_CONFIG = {});
   if (!window.supabase) { console.error("Threadbot: supabase-js failed to load"); return; }
+
+  /* Session storage lives in NATIVE Preferences (with a localStorage mirror
+     for speed + migration). WebView localStorage can lose a freshly-rotated
+     refresh token when Android kills the app mid-write; the stale token then
+     trips GoTrue's reuse detection, which revokes the whole session — the
+     "why am I logged out AGAIN" bug. SharedPreferences writes survive. */
+  function prefsPlugin() {
+    var p = window.Capacitor && window.Capacitor.Plugins;
+    return (p && p.Preferences) || null;
+  }
+  var authKeys = {};
+  var authStorage = {
+    getItem: async function (k) {
+      var pf = prefsPlugin();
+      if (pf) {
+        try {
+          var r = await pf.get({ key: k });
+          if (r && r.value != null && r.value !== "") { authKeys[k] = 1; return r.value; }
+        } catch (e) {}
+      }
+      return localStorage.getItem(k);
+    },
+    setItem: async function (k, v) {
+      authKeys[k] = 1;
+      try { localStorage.setItem(k, v); } catch (e) {}
+      var pf = prefsPlugin();
+      if (pf) { try { await pf.set({ key: k, value: v }); } catch (e) {} }
+    },
+    removeItem: async function (k) {
+      delete authKeys[k];
+      try { localStorage.removeItem(k); } catch (e) {}
+      var pf = prefsPlugin();
+      if (pf) { try { await pf.remove({ key: k }); } catch (e) {} }
+    },
+  };
+  /* Sign-out helper for the app UI: guarantee both stores are purged. */
+  window.__tbClearSession = function () {
+    Object.keys(authKeys).forEach(function (k) { authStorage.removeItem(k); });
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("sb-") === 0) { try { localStorage.removeItem(k); } catch (e) {} var pf = prefsPlugin(); if (pf) { try { pf.remove({ key: k }); } catch (e) {} } }
+    }
+  };
+
   var sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: "pkce" },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: "pkce", storage: authStorage },
   });
   window.__tbSupabase = sb;
+
+  /* Keep token refresh honest across app suspends: the JS timer dies in the
+     background; restart it on resume so we refresh BEFORE the access token
+     expires instead of racing at next launch. */
+  (function bindLifecycle() {
+    var p = window.Capacitor && window.Capacitor.Plugins;
+    if (!p || !p.App) return;
+    p.App.addListener("resume", function () { try { sb.auth.startAutoRefresh(); } catch (e) {} });
+    p.App.addListener("pause", function () { try { sb.auth.stopAutoRefresh(); } catch (e) {} });
+  })();
 
   function loadApp() {
     var s = document.createElement("script");
@@ -90,6 +144,7 @@
     caps().App.addListener("appUrlOpen", async function (ev) {
       var url = (ev && ev.url) || "";
       if (url.indexOf("auth-callback") === -1) return;
+      clearTimeout(oauthWatchdog);
       try { if (caps().Browser) await caps().Browser.close(); } catch (e) {}
       try {
         var code = (url.match(/[?&]code=([^&]+)/) || [])[1];
@@ -108,6 +163,7 @@
       } catch (e) { console.warn("OAuth callback failed", e); }
     });
   }
+  var oauthWatchdog = null;
   async function social(provider, setStatus) {
     ensureOAuthListener();
     try {
@@ -117,10 +173,19 @@
       if (isNative && res.data && res.data.url) {
         if (caps().Browser) await caps().Browser.open({ url: res.data.url, presentationStyle: "popover" });
         else window.open(res.data.url, "_system");
+        /* If the provider round-trip never deep-links back, say so instead
+           of leaving a silent spinner (diagnosable: it means the callback
+           URL isn't allowlisted server-side, so the browser was stranded). */
+        clearTimeout(oauthWatchdog);
+        oauthWatchdog = setTimeout(function () {
+          if (document.getElementById("tb-auth")) {
+            setStatus("Sign-in didn't return to the app. Try again, or use email + password.", false);
+          }
+        }, 75000);
       }
     } catch (e) {
       var m = (e && e.message) || "Sign-in failed.";
-      if (/not enabled|unsupported provider/i.test(m)) m = "This login isn't enabled yet — finish provider setup in Supabase (see PRODUCTION.md).";
+      if (/not enabled|unsupported provider/i.test(m)) m = "This login isn't available yet — try email + password.";
       setStatus(m, false);
     }
   }
