@@ -29,7 +29,7 @@ import {
 } from "../integrations/printfulMockups.js";
 import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 import { normalizeCustomerImages } from "../workflow.js";
-import { hostedImageUrl, putHostedImage } from "../hosting.js";
+import { hostedImageUrl, putHostedImage, waitForDurablePersists } from "../hosting.js";
 import {
   DEFAULT_PRODUCT_ID,
   ExpressProduct,
@@ -769,6 +769,9 @@ export const runExpress = async (
     result.product_options = productOptions;
     stageMs.panels = Date.now() - tIntent - (stageMs.intent ?? 0);
     const tMockups = Date.now();
+    // Network quiet before Printful's file fetches (see hosting.ts).
+    const quietMs = await waitForDurablePersists(90000);
+    note("durable_wait", `${quietMs}ms until durable uploads settled`);
     note(
       "mockup_submit",
       JSON.stringify({
@@ -785,11 +788,16 @@ export const runExpress = async (
     const rendered = await resolved.renderMockups({
       productId: product.productId,
       variantIds: [variantId],
-      placements: result.submitted_placements.map(({ placement, technique, fileUrl }) => ({
-        placement,
-        technique,
-        fileUrl
-      })),
+      placements: result.submitted_placements.map(({ placement, technique, fileUrl }) => {
+        const spec = activeSpecs.find((s) => s.placement === placement);
+        return {
+          placement,
+          technique,
+          fileUrl,
+          widthPx: spec ? Math.round(spec.widthIn * spec.dpi) : undefined,
+          heightPx: spec ? Math.round(spec.heightIn * spec.dpi) : undefined
+        };
+      }),
       styleIds,
       productOptions,
       format: "jpg",

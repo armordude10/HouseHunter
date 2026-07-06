@@ -29,6 +29,9 @@ export interface MockupPlacementFile {
   placement: string;
   technique: string;
   fileUrl: string;
+  /** Print-area pixel dims (v1 requires an explicit full-bleed position). */
+  widthPx?: number;
+  heightPx?: number;
 }
 
 export interface MockupRender {
@@ -61,6 +64,97 @@ export const parseAvailableStyleIds = (errorBody: string): number[] | null => {
   return ids.length ? ids : null;
 };
 
+/**
+ * v1 mockup generator: the road-tested fast path. v2 (beta) parks tasks in
+ * 'pending' for 10+ minutes when a task carries several never-before-seen
+ * files (proven by isolation: 6 fresh files jam from ANY host and ANY
+ * creator; 0-1 fresh files render in <60s; the same 6 files re-submitted
+ * after ingest render in 45s). v1 rendered 6 fresh files in 32s flat, so
+ * multi-placement tasks go v1; single-placement keeps v2 + the webhook race.
+ */
+const runV1 = async (params: Parameters<typeof createAndWaitForMockups>[0]): Promise<{
+  status: string;
+  mockups: MockupRender[];
+  raw: TaskData | null;
+  via?: "webhook" | "poll";
+}> => {
+  const body = {
+    variant_ids: params.variantIds,
+    format: params.format ?? "jpg",
+    files: params.placements.map((p) => {
+      const w = Math.max(16, Math.round(p.widthPx ?? 4000));
+      const h = Math.max(16, Math.round(p.heightPx ?? 4000));
+      return {
+        placement: p.placement,
+        image_url: p.fileUrl,
+        position: { area_width: w, area_height: h, width: w, height: h, top: 0, left: 0 }
+      };
+    })
+  };
+  const created = await fetch(
+    `${PRINTFUL_API_BASE}/mockup-generator/create-task/${params.productId}`,
+    { method: "POST", headers: headers(), body: JSON.stringify(body) }
+  );
+  const createdBody = (await created.json().catch(() => null)) as {
+    result?: { task_key?: string };
+    error?: { message?: string };
+  } | null;
+  const taskKey = createdBody?.result?.task_key;
+  if (!created.ok || !taskKey) {
+    throw new Error(
+      `v1 create-task HTTP ${created.status}: ${JSON.stringify(createdBody)?.slice(0, 300)}`
+    );
+  }
+  params.onEvent?.(`v1 task created: ${taskKey}`);
+  const maxAttempts = params.maxAttempts ?? 60;
+  const intervalMs = (params.intervalSeconds ?? 5) * 1000;
+  for (let poll = 0; poll < maxAttempts; poll++) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const response = await fetch(
+      `${PRINTFUL_API_BASE}/mockup-generator/task?task_key=${encodeURIComponent(taskKey)}`,
+      { headers: headers() }
+    );
+    if (response.status === 429) {
+      params.onEvent?.(`v1 poll ${poll}: 429 — backing off`);
+      await new Promise((resolve) => setTimeout(resolve, 20000));
+      continue;
+    }
+    const polled = (await response.json().catch(() => null)) as {
+      result?: {
+        status?: string;
+        error?: string;
+        mockups?: Array<{
+          placement?: string;
+          mockup_url?: string;
+          extra?: Array<{ option?: string; url?: string }>;
+        }>;
+      };
+    } | null;
+    const status = polled?.result?.status;
+    if (poll % 6 === 0 || status !== "pending") {
+      params.onEvent?.(`v1 poll ${poll}: HTTP ${response.status} status=${status ?? "?"}`);
+    }
+    if (status === "completed") {
+      const mockups: MockupRender[] = [];
+      for (const m of polled?.result?.mockups ?? []) {
+        if (m.mockup_url) {
+          mockups.push({ view: m.placement ?? "front", style_id: 0, mockup_url: m.mockup_url, placement: m.placement ?? "front" });
+        }
+        for (const extra of m.extra ?? []) {
+          if (extra.url) {
+            mockups.push({ view: extra.option ?? "extra", style_id: 0, mockup_url: extra.url, placement: m.placement ?? "front" });
+          }
+        }
+      }
+      return { status: "completed", mockups, raw: null, via: "poll" };
+    }
+    if (status === "failed") {
+      return { status: "failed", mockups: [], raw: { id: 0, status: "failed", failure_reasons: [polled?.result?.error ?? "v1 task failed"] }, via: "poll" };
+    }
+  }
+  return { status: "timeout", mockups: [], raw: null, via: "poll" };
+};
+
 export const createAndWaitForMockups = async (params: {
   productId: number;
   variantIds: number[];
@@ -80,6 +174,10 @@ export const createAndWaitForMockups = async (params: {
   raw: TaskData | null;
   via?: "webhook" | "poll";
 }> => {
+  // Multi-file tasks go v1 (fast, proven); v2 beta jams on several fresh files.
+  if (params.placements.length >= 2) {
+    return runV1(params);
+  }
   let styleIds = params.styleIds;
   let healedStyles = false;
   const buildBody = () => ({

@@ -47,6 +47,26 @@ const SUPABASE_URL = () =>
   process.env.THREADBOT_SUPABASE_URL ?? "https://dwexqosfijipthndmtvf.supabase.co";
 const SUPABASE_KEY = () => process.env.THREADBOT_SUPABASE_KEY ?? "";
 
+/** In-flight durable uploads: mockup submission waits for network quiet. */
+const pendingPersists = new Set<Promise<void>>();
+
+/**
+ * Wait until durable uploads settle (bounded): Printful fetches panel files
+ * from this instance the moment a mockup task is created — if the pipe is
+ * busy pushing ~20MB to the durable store, their fetcher can give up and
+ * leave the task 'pending' forever (the AOP-hoodie stall's final form).
+ */
+export const waitForDurablePersists = async (timeoutMs = 90000): Promise<number> => {
+  const start = Date.now();
+  while (pendingPersists.size && Date.now() - start < timeoutMs) {
+    await Promise.race([
+      Promise.allSettled([...pendingPersists]),
+      new Promise((resolve) => setTimeout(resolve, 1000))
+    ]);
+  }
+  return Date.now() - start;
+};
+
 const persistDurable = async (id: string, record: HostedImage): Promise<void> => {
   if (!SUPABASE_KEY()) return;
   try {
@@ -90,7 +110,8 @@ export const putHostedImage = (bytes: Buffer, contentType = "image/png"): string
   const id = randomUUID();
   const record = { bytes, contentType, at: Date.now() };
   hostedImages.set(id, record);
-  void persistDurable(id, record);
+  const persist = persistDurable(id, record).finally(() => pendingPersists.delete(persist));
+  pendingPersists.add(persist);
   pruneHostedImages();
   return id;
 };
