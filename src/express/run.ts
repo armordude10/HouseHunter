@@ -55,6 +55,8 @@ export interface ExpressEconomics {
   base_cost_anchor_usd: number;
   retail_anchor_usd: number;
   estimated_margin_anchor_usd: number;
+  /** Per-stage wall times — the diagnosis for any slow run rides the response. */
+  stage_ms?: { intent?: number; panels?: number; mockups?: number };
 }
 
 export interface ExpressResult {
@@ -235,7 +237,10 @@ export const runExpress = async (
   }
 
   // 3. The one planning judgment: intent + policy in a single light call.
+  const stageMs: { intent?: number; panels?: number; mockups?: number } = {};
+  const tIntent = Date.now();
   const { intent, degraded } = await deriveIntent(resolved.provider, text, captions);
+  stageMs.intent = Date.now() - tIntent;
   if (!degraded) llmCalls += 1;
   if (!intent.allowed) {
     const result = baseResult(runId, null);
@@ -634,6 +639,8 @@ export const runExpress = async (
       ? { stitch_color: pickStitchColor(intent) }
       : undefined;
     result.product_options = productOptions;
+    stageMs.panels = Date.now() - tIntent - (stageMs.intent ?? 0);
+    const tMockups = Date.now();
     const rendered = await resolved.renderMockups({
       productId: product.productId,
       variantIds: [variantId],
@@ -652,6 +659,7 @@ export const runExpress = async (
       maxAttempts: 100,
       intervalSeconds: 5
     });
+    stageMs.mockups = Date.now() - tMockups;
 
     if (rendered.status === "completed" && rendered.mockups.length) {
       result.mockups = rendered.mockups;
@@ -682,6 +690,7 @@ export const runExpress = async (
     ];
   }
 
+  result.economics.stage_ms = stageMs;
   finishEconomics(result, meter, llmCalls);
   return result;
 };

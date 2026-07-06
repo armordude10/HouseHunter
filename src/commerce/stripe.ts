@@ -112,6 +112,56 @@ export const createCheckoutSession = async (
 };
 
 /**
+ * Subscription checkout: created entirely at runtime with inline price_data
+ * (no pre-created Stripe products/prices to manage). The plan id rides
+ * subscription metadata; plan resolution reads it back.
+ */
+export const buildSubscriptionForm = (params: {
+  planId: string;
+  planLabel: string;
+  amountCents: number;
+  email?: string;
+  successUrl: string;
+  cancelUrl: string;
+}): URLSearchParams => {
+  const form = new URLSearchParams();
+  form.set("mode", "subscription");
+  form.set("line_items[0][quantity]", "1");
+  form.set("line_items[0][price_data][currency]", "usd");
+  form.set("line_items[0][price_data][unit_amount]", String(Math.round(params.amountCents)));
+  form.set("line_items[0][price_data][recurring][interval]", "month");
+  form.set("line_items[0][price_data][product_data][name]", `Threadbot ${params.planLabel}`);
+  form.set("subscription_data[metadata][plan]", params.planId);
+  if (params.email) form.set("customer_email", params.email.slice(0, 120));
+  form.set("success_url", params.successUrl);
+  form.set("cancel_url", params.cancelUrl);
+  return form;
+};
+
+export const createSubscriptionSession = async (
+  params: Parameters<typeof buildSubscriptionForm>[0]
+): Promise<{ id: string; url: string }> => {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+  const response = await fetch(`${STRIPE_API_BASE}/v1/checkout/sessions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: buildSubscriptionForm(params).toString()
+  });
+  const data = (await response.json().catch(() => null)) as {
+    id?: string;
+    url?: string;
+    error?: { message?: string };
+  } | null;
+  if (!response.ok || !data?.id || !data?.url) {
+    throw new Error(
+      `subscription session failed (HTTP ${response.status}): ${data?.error?.message ?? "no body"}`
+    );
+  }
+  return { id: data.id, url: data.url };
+};
+
+/**
  * Verify a `Stripe-Signature` header against the raw request body.
  * Scheme: header carries `t=<ts>,v1=<hmac>,...`; the signed payload is
  * `${t}.${rawBody}` with HMAC-SHA256 under the endpoint's signing secret.

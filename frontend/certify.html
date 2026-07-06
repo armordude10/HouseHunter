@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threadbot Certification</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:radial-gradient(120% 90% at 50% -10%,#0c1622,#07080a 60%); color:#cfe9ee; font-family:system-ui,sans-serif; padding:20px; }
+  h1 { color:#00E5FF; letter-spacing:2px; font-size:20px; }
+  .card { background:#0c1117; border:1px solid rgba(0,229,255,0.15); border-radius:14px; padding:16px; margin-bottom:14px; }
+  textarea, input { width:100%; box-sizing:border-box; background:#0d1217; border:1px solid #1d2a30; border-radius:10px; color:#cfe9ee; padding:10px; font-size:13px; margin:4px 0; }
+  button { background:#00E5FF; color:#04181c; border:0; border-radius:10px; padding:10px 18px; font-weight:700; cursor:pointer; margin:4px 6px 4px 0; }
+  button.ghost { background:transparent; border:1px solid #1d2a30; color:#cfe9ee; }
+  button.danger { background:#ff7b7b; color:#2a0d0d; }
+  button:disabled { opacity:.4; cursor:default; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .cell { background:#0d1217; border:1px solid #1d2a30; border-radius:12px; padding:8px; }
+  .cell img { width:100%; border-radius:8px; display:block; min-height:120px; background:#07080a; }
+  .cell p { font-size:11px; color:#7d8c94; margin:6px 0 0; word-break:break-word; }
+  .ok { color:#19f0c4; } .bad { color:#ff7b7b; } .warn { color:#FFD400; }
+  #status { font-size:13px; margin:8px 0; min-height:18px; }
+  .meta { font-size:12px; color:#7d8c94; }
+</style>
+</head>
+<body>
+<h1>THREADBOT · PRODUCT CERTIFICATION</h1>
+<p class="meta">Your prompts. Your verdicts. The harness runs each product through all five prompts and does not advance until YOU approve. Progress survives reloads (saved to your account). Est. cost ≈ $0.05–0.15 per generation.</p>
+
+<div class="card" id="auth">
+  <b>Sign in (same account as the app)</b>
+  <input id="em" type="email" placeholder="email">
+  <input id="pw" type="password" placeholder="password">
+  <button onclick="signIn()">Sign in</button>
+  <button class="ghost" onclick="signInGoogle()">Google</button>
+  <div id="authmsg" class="bad"></div>
+</div>
+
+<div class="card" id="setup" style="display:none">
+  <b>Your 5 test prompts</b> — use <code>{product}</code> where the product name belongs.
+  <div id="tpls"></div>
+  <button onclick="saveTemplates()">Save prompts</button>
+  <span id="tplmsg" class="ok"></span>
+</div>
+
+<div class="card" id="runner" style="display:none">
+  <div id="progress" class="meta"></div>
+  <div id="current" style="font-size:16px;color:#eafcff;margin:6px 0"></div>
+  <div id="status"></div>
+  <button id="startBtn" onclick="runCurrent()">RUN THIS PRODUCT</button>
+  <button id="autoBtn" class="ghost" onclick="toggleAuto()">AUTO MODE: OFF</button>
+  <button class="ghost" onclick="skipProduct('skipped by owner')">SKIP</button>
+  <div class="grid" id="results"></div>
+  <div id="verdict" style="display:none;margin-top:12px">
+    <button class="ok" style="background:#19f0c4" onclick="approve()">✓ APPROVE — NEXT PRODUCT</button>
+    <button class="danger" onclick="showReject()">✗ REJECT</button>
+    <div id="rejbox" style="display:none">
+      <textarea id="rejnote" placeholder="what's wrong (goes straight to the fix queue)"></textarea>
+      <button class="danger" onclick="reject(true)">Log & continue to next</button>
+      <button class="ghost" onclick="reject(false)">Log & PAUSE here</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://dwexqosfijipthndmtvf.supabase.co';
+const SB_KEY = 'sb_publishable_28gkODEjxAefcO67LcCYqg_gjIe4fPZ';
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, flowType: 'pkce' } });
+const BASE = location.origin;
+let session = null, catalog = [], state = { index: 0, verdicts: {} }, templates = [], auto = false, running = false;
+
+const $ = (id) => document.getElementById(id);
+async function signIn() {
+  const r = await sb.auth.signInWithPassword({ email: $('em').value.trim(), password: $('pw').value });
+  if (r.error) { $('authmsg').textContent = r.error.message; return; }
+  boot(r.data.session);
+}
+async function signInGoogle() {
+  await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } });
+}
+async function loadState() {
+  const r = await sb.from('app_state').select('key,value').eq('user_id', session.user.id).in('key', ['cert_templates','cert_state']);
+  for (const row of (r.data || [])) {
+    if (row.key === 'cert_templates' && Array.isArray(row.value)) templates = row.value;
+    if (row.key === 'cert_state' && row.value && typeof row.value.index === 'number') state = row.value;
+  }
+}
+async function saveKV(key, value) { await sb.from('app_state').upsert({ user_id: session.user.id, key, value }); }
+async function boot(s) {
+  session = s;
+  $('auth').style.display = 'none';
+  $('setup').style.display = 'block';
+  const cat = await fetch(BASE + '/catalog?limit=100000').then(r => r.json());
+  catalog = cat.products.sort((a,b) => a.id - b.id);
+  await loadState();
+  if (!templates.length) templates = [
+    'a {product} with a mountain sunrise scene',
+    'an all over print {product} covered in sunflowers and roses',
+    'a {product} that says "The Arndt Wedding" in elegant script',
+    'a minimalist geometric {product} design in teal and gold',
+    'a {product} with a retro robot and neon circuitry'
+  ];
+  $('tpls').innerHTML = templates.map((t,i) => `<textarea id="tpl${i}" rows="2">${t.replace(/</g,'&lt;')}</textarea>`).join('');
+  $('runner').style.display = 'block';
+  renderProgress();
+}
+async function saveTemplates() {
+  templates = [0,1,2,3,4].map(i => $('tpl'+i).value.trim()).filter(Boolean);
+  await saveKV('cert_templates', templates);
+  $('tplmsg').textContent = 'saved';
+  setTimeout(() => $('tplmsg').textContent = '', 1500);
+}
+function currentProduct() { return catalog[state.index]; }
+function renderProgress() {
+  const done = Object.keys(state.verdicts).length;
+  const p = currentProduct();
+  $('progress').textContent = `Product ${state.index + 1} of ${catalog.length} · ${done} verdicts recorded`;
+  $('current').textContent = p ? `#${p.id} — ${p.name} ($${p.retail_usd})` : 'ALL PRODUCTS REVIEWED 🎉';
+  $('startBtn').disabled = !p || running;
+}
+async function runCurrent() {
+  const p = currentProduct();
+  if (!p || running) return;
+  running = true; $('startBtn').disabled = true; $('verdict').style.display = 'none';
+  $('results').innerHTML = ''; $('rejbox').style.display = 'none';
+  const token = (await sb.auth.getSession()).data.session.access_token;
+  let passes = 0;
+  for (let i = 0; i < templates.length; i++) {
+    const prompt = templates[i].replace(/\{product\}/g, p.name.replace(/\|.*$/, '').trim());
+    const cell = document.createElement('div'); cell.className = 'cell';
+    cell.innerHTML = `<img><p class="warn">running… ${prompt.slice(0,90)}</p>`;
+    $('results').appendChild(cell);
+    try {
+      const t0 = Date.now();
+      const r = await fetch(BASE + '/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ prompt, product_id: p.id })
+      });
+      const d = await r.json();
+      const secs = Math.round((Date.now() - t0) / 1000);
+      const img = (d.variations && d.variations[0] && d.variations[0].image) || '';
+      if (r.ok && img) {
+        passes++;
+        cell.innerHTML = `<img src="${img}"><p class="ok">${secs}s · ${prompt.slice(0,80)}</p>`;
+      } else {
+        cell.innerHTML = `<img><p class="bad">FAILED ${secs}s: ${(d.error||'').slice(0,120)}<br>${prompt.slice(0,80)}</p>`;
+      }
+    } catch (e) {
+      cell.innerHTML = `<img><p class="bad">NETWORK: ${String(e).slice(0,100)}</p>`;
+    }
+  }
+  running = false;
+  $('status').innerHTML = `${passes}/${templates.length} returned mockups — your call:`;
+  $('verdict').style.display = 'block';
+  renderProgress();
+  if (auto && passes === templates.length) approve();
+  if (auto && passes < templates.length) { auto = false; $('autoBtn').textContent = 'AUTO MODE: OFF (paused on failure)'; }
+}
+async function advance(verdict, note) {
+  const p = currentProduct();
+  state.verdicts[p.id] = { verdict, note: note || '', at: Date.now() };
+  state.index++;
+  await saveKV('cert_state', state);
+  renderProgress();
+  $('results').innerHTML = ''; $('verdict').style.display = 'none'; $('status').textContent = '';
+}
+async function approve() { await advance('approved'); if (auto) runCurrent(); }
+function showReject() { $('rejbox').style.display = 'block'; }
+async function reject(cont) {
+  const p = currentProduct();
+  const note = $('rejnote').value.trim();
+  await sb.from('design_feedback').insert({
+    user_id: session.user.id, verdict: 'bad',
+    note: `[CERT #${p.id} ${p.name}] ${note}`.slice(0, 1000),
+    product_id: p.id, product_name: p.name, prompt: templates.join(' || ').slice(0, 900)
+  });
+  $('rejnote').value = '';
+  await advance('rejected', note);
+  if (cont && auto) runCurrent();
+  if (!cont) { auto = false; $('autoBtn').textContent = 'AUTO MODE: OFF'; }
+}
+async function skipProduct(reason) { await advance('skipped', reason); if (auto) runCurrent(); }
+function toggleAuto() {
+  auto = !auto;
+  $('autoBtn').textContent = 'AUTO MODE: ' + (auto ? 'ON (advances on 5/5, pauses on any failure)' : 'OFF');
+  if (auto && !running) runCurrent();
+}
+sb.auth.getSession().then(r => { if (r.data.session) boot(r.data.session); });
+sb.auth.onAuthStateChange((_e, s) => { if (s && !session) boot(s); });
+</script>
+</body>
+</html>

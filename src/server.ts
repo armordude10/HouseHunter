@@ -40,6 +40,9 @@ import {
   verifyStripeSignature
 } from "./commerce/stripe.js";
 import { normalizeShippingCountry, quoteShipping } from "./commerce/shipping.js";
+import { monthlyUsage, PLANS, quotaMessage, recordUsage, resolvePlan } from "./commerce/plans.js";
+import { createSubscriptionSession } from "./commerce/stripe.js";
+import { decodeJwtClaims } from "./commerce/plans.js";
 import {
   designRegistrySize,
   getDesign,
@@ -236,6 +239,21 @@ const server = createServer(async (req, res) => {
           registered_designs: designRegistrySize()
         }
       });
+    }
+    // Owner QA console: sequential per-product certification driven by the
+    // owner's own prompts and verdicts (their login + their usage budget).
+    if (req.method === "GET" && url.pathname === "/certify") {
+      try {
+        const page = readFileSync(
+          path.resolve(process.cwd(), "frontend/certify.html"),
+          "utf8"
+        );
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(page);
+        return;
+      } catch {
+        return json(res, 404, { error: "certification console not bundled" });
+      }
     }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       if (frontendHtml === null) frontendHtml = loadFrontend();
@@ -469,6 +487,36 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 200, { received: true });
     }
+    // Subscription upgrade: runtime checkout session, plan in metadata.
+    if (req.method === "POST" && url.pathname === "/subscribe") {
+      if (!stripeConfigured()) return json(res, 503, { error: "Subscriptions aren't live yet." });
+      const raw = await readBody(req, 10_000);
+      let body: { plan?: unknown };
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON" });
+      }
+      const plan = typeof body.plan === "string" ? PLANS[body.plan] : undefined;
+      if (!plan || plan.priceUsdMonthly <= 0) return json(res, 400, { error: "unknown plan" });
+      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const { email } = looksLikeUserToken(bearer) ? decodeJwtClaims(bearer) : {};
+      try {
+        const base = publicBaseUrl(req);
+        const session = await createSubscriptionSession({
+          planId: plan.id,
+          planLabel: plan.label,
+          amountCents: Math.round(plan.priceUsdMonthly * 100),
+          email,
+          successUrl: `${base}/checkout/success`,
+          cancelUrl: `${base}/checkout/cancel`
+        });
+        return json(res, 200, { url: session.url, sessionId: session.id, plan: plan.id });
+      } catch (error) {
+        console.error(`[subscribe] ${(error as Error).message}`);
+        return json(res, 502, { error: "Couldn't start the upgrade. Please try again." });
+      }
+    }
     // Live order status for the app's Orders tab (session ids are the join
     // key and are unguessable; supplier vocabulary is translated).
     if (req.method === "GET" && url.pathname === "/orders/status") {
@@ -553,9 +601,36 @@ const server = createServer(async (req, res) => {
       if (!prompt && !imageUrls.length) {
         return json(res, 400, { error: "prompt or reference image required" });
       }
+      // TIER ENFORCEMENT: paid AI work is budgeted per account per month.
+      // Anonymous callers get nothing (the app always sends a session token);
+      // the test key keeps deploy verification possible without a login.
+      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const testKey = process.env.THREADBOT_TEST_KEY ?? "";
+      const isTestCall = Boolean(testKey) && req.headers["x-threadbot-test"] === testKey;
+      let plan = null;
+      if (!isTestCall) {
+        if (!looksLikeUserToken(bearer)) {
+          return json(res, 401, { error: "Sign in to generate designs." });
+        }
+        plan = await resolvePlan(bearer);
+        if (plan.generationsPerMonth !== Number.MAX_SAFE_INTEGER) {
+          const used = await monthlyUsage(bearer);
+          // Metering outage fails OPEN for paying tiers, CLOSED for free.
+          if (used === null && plan.id === "free") {
+            return json(res, 503, { error: "Usage service unavailable — please try again shortly." });
+          }
+          if (used !== null && used >= plan.generationsPerMonth) {
+            return json(res, 402, {
+              error: quotaMessage(plan),
+              plan: plan.id,
+              used,
+              limit: plan.generationsPerMonth
+            });
+          }
+        }
+      }
       // Per-user taste: soft hints from this customer's history, scoped by
       // RLS through their own bearer token. Fails soft in every direction.
-      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
       const taste = looksLikeUserToken(bearer) ? await fetchTaste(bearer) : null;
       const hint = tasteHintLine(taste);
       const before = { ...usageTally };
@@ -565,13 +640,19 @@ const server = createServer(async (req, res) => {
           (hint
             ? `\n\n[Platform taste hints — soft preferences from this customer's history; use ONLY for unspecified details, never override the request: ${hint}]`
             : ""),
-        input_image_urls: imageUrls
+        input_image_urls: imageUrls,
+        // Certification console pins the exact catalog product under test.
+        product_id: typeof (body as { product_id?: unknown }).product_id === "number"
+          ? (body as { product_id: number }).product_id
+          : undefined
       });
       if (result.status === "completed" && result.intent && looksLikeUserToken(bearer)) {
         const userId = decodeUserId(bearer);
         if (userId) {
           void updateTaste(bearer, userId, result.intent, result.product.name, taste);
         }
+        // Meter AFTER success: failed runs never consume the user's budget.
+        if (!isTestCall) void recordUsage(bearer);
       }
       const variations = [...new Set(result.mockups.map((m) => m.mockup_url))]
         .slice(0, 4)
