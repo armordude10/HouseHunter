@@ -1246,6 +1246,18 @@ const main = async () => {
       );
       const hoodAvg = await avg("hood", "all");
       check("hood is EXACTLY black", !!hoodAvg && hoodAvg.r < 40 && hoodAvg.g < 40 && hoodAvg.b < 40, JSON.stringify(hoodAvg));
+      // The pocket got NO directive: it must continue the front's orange->tan
+      // fill at its worn position (never stray generated art).
+      const pocketAvg = await avg("pocket", "all");
+      const pocketPanel = result.panels.find((p) => p.placement === "pocket");
+      check(
+        "undirected pocket inherits the front gradient at its worn position",
+        !!pocketAvg &&
+          pocketAvg.r > 170 &&
+          pocketAvg.b < 170 &&
+          /inherits the front fill/.test(pocketPanel?.notes ?? ""),
+        `${JSON.stringify(pocketAvg)} ${pocketPanel?.notes?.slice(0, 60)}`
+      );
       check(
         "panel-specific typography generated for the front only",
         media.prompts.some((p) => /THREAD/.test(p)),
