@@ -10,9 +10,9 @@
  *   - Transparent asset generation (LayerDiffuse arXiv:2402.17113):
  *     gpt-image-1.5 native-alpha elements; opacity is verified per asset and
  *     repaired with background removal when a backend ignored the request.
- *   - Typography (vs AnyText arXiv:2311.03054 / Glyph-ByT5 arXiv:2403.09622):
- *     text layers are CODE-RENDERED (SVG -> raster, bundled fonts) — perfect
- *     spelling, kerning and scale by construction, not by sampling luck.
+ *   - Typography: ALL placed text is GENERATED lettering (styled to the
+ *     design) — plain code-rendered fonts are retired; only the placement
+ *     of the lockup is deterministic.
  *
  * Coordinates: layer boxes are fractions of the VISIBLE PIECE. The engine
  * maps piece space -> file-canvas pixels through the same piece-within-canvas
@@ -32,22 +32,6 @@ export const MAX_LAYERS = 6;
 const clampPx = (value: number) => Math.min(16000, Math.max(16, Math.round(value)));
 const clamp01 = (value: number, fallback: number) =>
   typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
-
-const escapeXml = (text: string) =>
-  text.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c] as string);
-
-/** Code-rendered typography: exact string, exact width, zero hallucination. */
-const renderTextLayer = async (content: string, widthPx: number, color: string): Promise<Buffer> => {
-  const text = content.slice(0, 120);
-  const fill = color.trim() || "#111111";
-  // Render oversized, trim to ink, then scale to the exact grounded width.
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="500">
-    <text x="24" y="330" font-family="DejaVu Sans" font-weight="bold" font-size="240"
-      fill="${escapeXml(fill)}">${escapeXml(text)}</text></svg>`;
-  const inked = await sharp(Buffer.from(svg)).png().toBuffer();
-  const trimmed = await sharp(inked).trim().png().toBuffer();
-  return sharp(trimmed).resize({ width: clampPx(widthPx) }).png().toBuffer();
-};
 
 /** True-alpha check: does the image actually carry meaningful transparency? */
 const hasRealAlpha = async (buffer: Buffer): Promise<boolean> => {
@@ -116,10 +100,7 @@ export const renderLayerOverlay = async (params: {
     const widthPx = Math.max(16, Math.round(pieceW * clamp01(layer.width_frac, 0.4)));
     let asset: Buffer;
 
-    if (layer.kind === "text") {
-      asset = await renderTextLayer(layer.content, widthPx, layer.color);
-      promptParts.push(`text("${layer.content.slice(0, 60)}")`);
-    } else if (layer.kind === "customer_image") {
+    if (layer.kind === "customer_image") {
       const index = layer.image_index ?? 0;
       const url = imageUrls[index];
       if (!url) throw new Error(`layer references attached image ${index + 1}, which was not provided`);
@@ -128,9 +109,16 @@ export const renderLayerOverlay = async (params: {
       promptParts.push(`customer_image(${index})`);
     } else {
       // Generated element with native alpha; verified, repaired if opaque.
+      // Stray "text" layers are impossible to render plainly: they become
+      // generated typography here (defense-in-depth for the Gunner rule).
+      const elementPrompt =
+        layer.kind === "text"
+          ? `the exact text "${layer.content.slice(0, 80)}" as expressive hand-crafted lettering` +
+            `${layer.color ? `, ${layer.color.slice(0, 24)} lettering` : ""}, never a plain default font`
+          : layer.content.slice(0, 1500);
       const generated = await media.generateImage({
         positivePrompt:
-          `${layer.content.slice(0, 1500)}. Single isolated subject on a fully transparent background, ` +
+          `${elementPrompt}. Single isolated subject on a fully transparent background, ` +
           `no backdrop, no shadow box, no frame. Crisp print-ready edges.`,
         width: 1024,
         height: 1024,
@@ -144,7 +132,7 @@ export const renderLayerOverlay = async (params: {
         bytes = await fetchBuffer(cutout.imageURL);
       }
       asset = await sharp(bytes).trim().resize({ width: widthPx }).png().toBuffer();
-      promptParts.push(`element("${layer.content.slice(0, 60)}")`);
+      promptParts.push(`element("${elementPrompt.slice(0, 60)}")`);
     }
 
     if (layer.rotation_deg) {

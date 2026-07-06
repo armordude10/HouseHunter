@@ -322,15 +322,21 @@ export const runExpress = async (
     // never code-rendered — flat SVG type is retired. Any "text" layer the
     // intent emits becomes a generated-typography element.
     const typographyPrompt = (content: string, color: string) =>
-      `the exact text "${content.slice(0, 80)}" rendered as beautiful ` +
-      `${(intent.style_terms.slice(0, 3).join(" ") || "clean modern").slice(0, 60)} typography, ` +
-      `${color ? `${color.slice(0, 24)} lettering, ` : ""}single isolated text lockup, ` +
-      `perfect spelling, high contrast print-ready lettering`;
-    const effectiveLayers: DesignLayer[] = intent.layers.slice(0, MAX_LAYERS).map((layer) =>
-      layer.kind === "text"
-        ? { ...layer, kind: "element" as const, content: typographyPrompt(layer.content, layer.color) }
-        : layer
-    );
+      `the exact text "${content.slice(0, 80)}" as expressive hand-crafted ` +
+      `${(intent.style_terms.concat(intent.mood_terms).slice(0, 4).join(" ") || "artful").slice(0, 70)} lettering, ` +
+      `${color ? `${color.slice(0, 24)} lettering, ` : ""}single isolated text lockup that matches the artwork's aesthetic, ` +
+      `perfect spelling, never a plain default font`;
+    const convertedTexts = new Map<DesignLayer, string>();
+    const effectiveLayers: DesignLayer[] = intent.layers.slice(0, MAX_LAYERS).map((layer) => {
+      if (layer.kind !== "text") return layer;
+      const converted = {
+        ...layer,
+        kind: "element" as const,
+        content: typographyPrompt(layer.content, layer.color)
+      };
+      convertedTexts.set(converted, layer.content);
+      return converted;
+    });
 
     // ANTI-DUPLICATION: text carried by a layer must not ALSO ride the
     // master/panel prompts (the double-print bug). Strip covered strings.
@@ -342,6 +348,26 @@ export const runExpress = async (
       if (layerText.has(low)) return false;
       return !effectiveLayers.some((l) => l.content.toLowerCase().includes(`"${low}"`));
     });
+
+    // ANTI-DOUBLE-PRINT, second door: the intent's image_prompt is written
+    // "faithful to the customer's words" and often carries `says "X"` — if a
+    // lockup layer carries X, the master must not paint it too. Scrub the
+    // string AND its framing verb from every generation brief.
+    const scrubTextFromBrief = (brief: string, texts: string[]): string => {
+      let out = brief;
+      for (const t of texts) {
+        if (!t.trim()) continue;
+        const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        out = out.replace(
+          new RegExp(
+            `(that says|which says|saying|says|that said|with the (words|text|phrase)|reading)?\\s*[\"'\u201c\u2018]?${escaped}[\"'\u201d\u2019]?`,
+            "gi"
+          ),
+          ""
+        );
+      }
+      return out.replace(/\s{2,}/g, " ").trim();
+    };
 
     const groupLayers = (layers: DesignLayer[]) => {
       const grouped = new Map<string, DesignLayer[]>();
@@ -427,12 +453,23 @@ export const runExpress = async (
       const built = buildExpressJobs(product, specs, intent);
       activeSpecs = built.activeSpecs;
 
-      // PANEL CONTROL FOR TEXT: on multi-panel products, text in the master
-      // could straddle a cut line or land on the wrong panel. It therefore
-      // NEVER rides the master prompt — it becomes a generated-typography
-      // layer grounded on the primary panel at piece coordinates. On
-      // single-panel products the text stays in the generation prompt
-      // (the model composes it into the art beautifully there).
+      // TEXT POLICY (the Gunner rule): text is part of the image generation
+      // wherever the generator can handle it — any single-panel product. On
+      // single-panel plans, lockup layers that merely carry request text are
+      // DROPPED and the text returns to the generation prompt. Lockups exist
+      // only for multi-panel products, where in-master text could straddle a
+      // cut line; there, the text is scrubbed from every other prompt.
+      if (activeSpecs.length === 1 && convertedTexts.size) {
+        for (const [layer, original] of convertedTexts) {
+          const at = effectiveLayers.indexOf(layer);
+          if (at >= 0) {
+            effectiveLayers.splice(at, 1);
+            if (!requiredText.some((t) => t.toLowerCase() === original.toLowerCase())) {
+              requiredText.push(original);
+            }
+          }
+        }
+      }
       if (requiredText.length && activeSpecs.length > 1) {
         const primary = pickPrimaryPlacement(activeSpecs);
         requiredText.slice(0, 2).forEach((text, i) => {
@@ -452,8 +489,14 @@ export const runExpress = async (
         requiredText = [];
       }
 
+      const layerCarriedTexts = [
+        ...convertedTexts.values(),
+        ...effectiveLayers
+          .filter((l) => l.kind === "element" && /"([^"]{1,80})"/.test(l.content))
+          .map((l) => (l.content.match(/"([^"]{1,80})"/) ?? [])[1] ?? "")
+      ].filter((t) => t && !requiredText.some((r) => r.toLowerCase() === t.toLowerCase()));
       const design: DesignSpec = {
-        artwork_brief: brief,
+        artwork_brief: scrubTextFromBrief(brief, layerCarriedTexts),
         style_terms: intent.style_terms,
         palette: intent.palette,
         mood_terms: intent.mood_terms,

@@ -784,7 +784,10 @@ const main = async () => {
             all_over: true,
             layers_only: false,
             artwork_brief: "a bouquet of sunflowers, red roses and dark blue roses",
-            image_prompt: "lush painted bouquet of sunflowers, crimson roses, deep navy roses",
+            // The intent model writes image_prompt faithful to the customer's
+            // words — it WILL carry `that says "X"`. Scrubbing must strip it.
+            image_prompt:
+              'lush painted bouquet of sunflowers, crimson roses, deep navy roses that says "The Arndt Wedding"',
             required_text: ["The Arndt Wedding"]
           })
         );
@@ -820,6 +823,56 @@ const main = async () => {
         check("lockup composited onto exactly one grounded panel", Boolean(frontPanel), frontPanel?.placement);
         check("all 4 panels still submitted", mockups.calls[0]?.placements.length === 4);
       }
+    }
+
+    console.log("\n== 12b. THE GUNNER RULE: single-panel text lives IN the generation ==");
+    {
+      // The reported failure's other half: on a SINGLE-panel product the
+      // model composes text beautifully inside the artwork — a separate
+      // lockup layer is pure double-print risk. Even when the intent emits
+      // both required_text AND a text layer (belt and suspenders gone wrong),
+      // the layer must be dropped and the text returned to the one prompt.
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "t-shirt",
+          layers_only: false,
+          artwork_brief: "playful bones and paw prints motif",
+          image_prompt: 'playful bones and paw prints motif that says "Gunner" in bold friendly lettering',
+          required_text: ["Gunner"],
+          layers: [
+            {
+              kind: "text" as const,
+              content: "Gunner",
+              image_index: null,
+              placement: "front",
+              cx_frac: 0.5,
+              cy_frac: 0.5,
+              width_frac: 0.6,
+              rotation_deg: 0,
+              color: "",
+              order: 0
+            }
+          ]
+        })
+      );
+      const result = await runExpress({ input_as_text: 'a shirt that says "Gunner"' }, deps);
+      check("Gunner run completed", result.status === "completed", result.message);
+      check("single panel plan", result.panels.length === 1, `${result.panels.length}`);
+      check(
+        "exactly ONE generation — the text rides it, no separate lockup",
+        media.generateCalls === 1,
+        `${media.generateCalls}`
+      );
+      check(
+        "generation prompt quotes the exact text",
+        media.prompts[0]?.includes('"Gunner"') === true,
+        media.prompts[0]?.slice(0, 90)
+      );
+      check(
+        "no overlay pass ran (nothing stamped over the art)",
+        result.panels.every((p) => !/Layered overlay applied/.test(p.notes)) &&
+          !result.design_genome?.panels.some((p) => /^overlay_/.test(p.job_id))
+      );
     }
 
     console.log("\n== 13. THE PILLOW CASE: real-record e2e for the reported product ==");

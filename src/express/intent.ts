@@ -50,9 +50,9 @@ export const ImagePlanSchema = z.object({
  * LLM-as-layout-planner, per Ranni arXiv:2311.17002 / RPG arXiv:2401.11708),
  * and the layer engine places it with exact pixel math (box grounding per
  * GLIGEN arXiv:2301.07093, executed as deterministic compositing instead of
- * attention steering). Text layers are code-rendered — perfect spelling by
- * construction, where diffusion typography (AnyText arXiv:2311.03054) still
- * gambles. Element layers are generated with native alpha
+ * attention steering). ALL text is GENERATED lettering styled to the design —
+ * plain code-rendered fonts are retired; only the lockup's placement is
+ * deterministic. Element layers are generated with native alpha
  * (LayerDiffuse-class transparency, arXiv:2402.17113).
  */
 export const LayerSchema = z.object({
@@ -166,7 +166,7 @@ Return JSON with:
 - coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
 - all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe"), use the industry terms "AOP"/"all-over print"/"sublimation" (including typo'd forms), OR the concept itself inherently demands continuous full-surface coverage even if they never say so: repeating patterns, tie-dye, camo, galaxy/space wash, gradients, "make it look like it's made of flames/water/fur", full-scene artwork. Translating what the DESIGN needs into this flag is your job.
 - artwork_brief: one rich paragraph describing the artwork — subject, composition, mood — faithful to their words and the reference captions.
-- image_prompt: a fully-engineered image-generation prompt: subject with concrete visual detail, composition and framing, art style/technique, lighting, color palette, texture and finish quality terms. Faithful to the customer; add professional craft they didn't articulate. NEVER mention garments, panels, seams, mockups, or printing.
+- image_prompt: a fully-engineered image-generation prompt (when a layer carries text, image_prompt and artwork_brief must NOT contain that text string — the lockup layer owns it): subject with concrete visual detail, composition and framing, art style/technique, lighting, color palette, texture and finish quality terms. Faithful to the customer; add professional craft they didn't articulate. NEVER mention garments, panels, seams, mockups, or printing.
 - style_terms / palette / mood_terms: short descriptor arrays (may be empty).
 - required_text: exact strings they want printed (empty if none). forbidden_text: strings they banned.
 - wants_repeat_pattern: true only for repeating/tiled pattern requests.
