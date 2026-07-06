@@ -75,13 +75,15 @@ export const tasteHintLine = (taste: { profile: TasteProfile; runs: number } | n
   if (!taste || taste.runs < 2) return null; // don't infer from a single run
   const styles = topKeys(taste.profile.styles, 4);
   const palettes = topKeys(taste.profile.palettes, 3);
-  const products = topKeys(taste.profile.products, 2);
   const colors = topKeys(taste.profile.colors, 2);
+  // Product history is deliberately EXCLUDED: hinting "typical products"
+  // steered the intent's product_query over an explicit ask (live incident:
+  // "dark blue shirt with this logo" -> sports bra, because the account had
+  // just made one). Taste may color the art, never choose the product.
   const parts = [
     styles.length ? `styles they gravitate to: ${styles.join(", ")}` : "",
     palettes.length ? `palettes: ${palettes.join(", ")}` : "",
-    colors.length ? `garment colors: ${colors.join(", ")}` : "",
-    products.length ? `typical products: ${products.join(", ")}` : ""
+    colors.length ? `garment colors: ${colors.join(", ")}` : ""
   ].filter(Boolean);
   return parts.length ? parts.join("; ") : null;
 };

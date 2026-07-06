@@ -64,6 +64,7 @@ class StubMedia implements MediaLike {
   generateCalls = 0;
   removeBackgroundCalls = 0;
   prompts: string[] = [];
+  transparents: boolean[] = [];
   lastGenerate: {
     positivePrompt: string;
     referenceImages?: unknown[];
@@ -79,6 +80,7 @@ class StubMedia implements MediaLike {
   }) {
     this.generateCalls++;
     this.prompts.push(params.positivePrompt);
+    this.transparents.push(Boolean(params.transparentBackground));
     this.lastGenerate = {
       positivePrompt: params.positivePrompt,
       referenceImages: params.referenceImages,
@@ -580,7 +582,11 @@ const main = async () => {
         intentFor({ product_query: "hoodie", garment_color: "black", size_preference: "XL" })
       );
       await runExpress({ input_as_text: "black koi hoodie in XL" }, deps);
-      check("color+size preference reaches variant resolution", truth.lastPick === "black XL", String(truth.lastPick));
+      check(
+        "size reaches variant resolution; color stays in the ART on printed-surface hoodies",
+        truth.lastPick === "XL",
+        String(truth.lastPick)
+      );
     }
     {
       check(
@@ -983,6 +989,102 @@ const main = async () => {
         "square asset fitted into the 8x-wide strip (composite cannot outsize canvas)",
         dims.width === overlay.canvasW && dims.height === overlay.canvasH && overlay.canvasH < 900,
         `${dims.width}x${dims.height}`
+      );
+    }
+
+    console.log("\n== 13c. QUEUE FIXES: explicit nouns beat steered intents; color lands in the art ==");
+    {
+      // Live incident: taste history steered product_query to "sports bra"
+      // while the customer typed "shirt". The words must win.
+      const { deps } = makeDeps(
+        intentFor({ product_query: "sports bra", garment_color: "dark blue" })
+      );
+      const result = await runExpress(
+        { input_as_text: "Dark blue shirt with this logo on chest" },
+        deps
+      );
+      check(
+        "explicit 'shirt' overrides a steered product_query of 'sports bra'",
+        /shirt/i.test(result.product.name) && !/bra/i.test(result.product.name),
+        result.product.name
+      );
+    }
+    {
+      // Live incident: "red sports bra" came back white — on printed-surface
+      // products the color is the ART's base, not a variant pick.
+      const { deps, media, truth } = makeDeps(
+        intentFor({
+          product_query: "sports bra",
+          coverage: "full",
+          all_over: true,
+          garment_color: "red",
+          artwork_brief: "bold athletic design"
+        })
+      );
+      const result = await runExpress({ input_as_text: "a red sports bra" }, deps);
+      check("bra run completed", result.status === "completed", result.message);
+      check(
+        "printed-surface color rides the ART (base-color directive in the master prompt)",
+        media.prompts[0]?.includes("base color is red") === true &&
+          media.prompts[0]?.includes("no white background") === true,
+        media.prompts[0]?.slice(0, 90)
+      );
+      check(
+        "color EXCLUDED from variant hints on printed-surface products",
+        !(truth.lastPick ?? "").includes("red"),
+        String(truth.lastPick)
+      );
+    }
+    {
+      // Live incidents (white bra / white laptop sleeve): layers-only designs
+      // composite onto TRANSPARENT, so a stated color on a printed-surface
+      // product must veto standalone mode and generate a colored base under
+      // the layers.
+      const layerBase = { image_index: null, placement: "front", rotation_deg: 0, color: "", order: 0 };
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "laptop sleeve",
+          layers_only: true,
+          garment_color: "", // live incident: model leaves this empty for non-garments
+          artwork_brief: "a golden lion emblem centered",
+          image_prompt: "a golden lion emblem, regal, centered",
+          layers: [
+            { ...layerBase, kind: "element" as const, content: "a golden lion emblem, regal, metallic", cx_frac: 0.5, cy_frac: 0.5, width_frac: 0.4 }
+          ]
+        })
+      );
+      deps.truth = new PrintfulTruth(); // real sleeve: sublimation surface
+      const result = await runExpress(
+        { input_as_text: "Laptop case sleeve that is dark blue and has a golden lion emblem on it" },
+        deps
+      );
+      check("dark blue sleeve run completed", result.status === "completed", result.message);
+      check(
+        "stated color vetoes layers-only: a base IS generated with the color directive",
+        media.generateCalls >= 2 && media.prompts[0]?.includes("base color is dark blue") === true,
+        `${media.generateCalls} gens — ${media.prompts[0]?.slice(0, 80)}`
+      );
+      check(
+        "sublimation master generated OPAQUE (transparent flag would erase the blue)",
+        media.transparents[0] === false,
+        JSON.stringify(media.transparents)
+      );
+      check(
+        "lion layer composited ON TOP of the colored base",
+        result.panels.some((p) => /Layered overlay applied/.test(p.notes)),
+        result.panels[0]?.notes?.slice(0, 60)
+      );
+    }
+    {
+      // DTG garments keep the old (correct) behavior: color picks the variant.
+      const { deps, truth } = makeDeps(
+        intentFor({ product_query: "t-shirt", garment_color: "dark blue" })
+      );
+      await runExpress({ input_as_text: "a dark blue t-shirt with a koi fish" }, deps);
+      check(
+        "DTG color still resolves the variant",
+        (truth.lastPick ?? "").includes("dark blue"),
+        String(truth.lastPick)
       );
     }
 

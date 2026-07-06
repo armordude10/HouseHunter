@@ -62,6 +62,15 @@ export const buildExpressJobs = (
     design_action: action,
     must_generate: true,
     must_render_in_mockup: true,
+    // Transparency is a TECHNIQUE property: fabric-decoration prints (dtg/
+    // dtfilm/embroidery) float on a colored garment, so cutouts are right;
+    // printed-surface techniques (sublimation/cut-sew/digital/uv) ARE the
+    // product's visible surface — transparent means "white product", which
+    // silently discarded requested background colors (dark blue sleeve came
+    // back white: the API's transparent flag overrides the prompt).
+    output_contract: {
+      transparent_background: /^(dtg|dtfilm|embroidery)$/.test(spec.technique)
+    },
     geometry_contract: {
       width_px: Math.round(spec.widthIn * spec.dpi),
       height_px: Math.round(spec.heightIn * spec.dpi),

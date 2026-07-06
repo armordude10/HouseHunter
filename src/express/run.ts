@@ -30,7 +30,13 @@ import {
 import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 import { normalizeCustomerImages } from "../workflow.js";
 import { hostedImageUrl, putHostedImage } from "../hosting.js";
-import { DEFAULT_PRODUCT_ID, ExpressProduct, getExpressProduct, matchExpressProduct } from "./catalog.js";
+import {
+  DEFAULT_PRODUCT_ID,
+  ExpressProduct,
+  getCatalogRecord,
+  getExpressProduct,
+  matchExpressProduct
+} from "./catalog.js";
 import { deriveIntent, DesignLayer, ExpressIntent, screenRequest } from "./intent.js";
 import sharp from "sharp";
 import { compileLayeredPanel, MAX_LAYERS, renderLayerOverlay } from "./layers.js";
@@ -87,6 +93,8 @@ export interface ExpressResult {
   design_genome: DesignGenome | null;
   missing_required_placements: Array<{ placement: string; reason: string }>;
   economics: ExpressEconomics;
+  /** Front-to-back decision log: every judgment, prompt, and outcome. */
+  trace: Array<{ ms: number; stage: string; info: string }>;
 }
 
 export interface ExpressDeps {
@@ -161,6 +169,7 @@ const baseResult = (runId: string, product: ExpressProduct | null): ExpressResul
   mockups: [],
   design_genome: null,
   missing_required_placements: [],
+  trace: [],
   economics: {
     llm_calls: 0,
     image_generations: 0,
@@ -207,11 +216,17 @@ export const runExpress = async (
   let llmCalls = 0;
 
   const text = (input.input_as_text ?? "").trim();
+  const tRun = Date.now();
+  const trace: Array<{ ms: number; stage: string; info: string }> = [];
+  const note = (stage: string, info: unknown) =>
+    trace.push({ ms: Date.now() - tRun, stage, info: String(info).slice(0, 2000) });
+  note("input", text);
 
   // 1. $0 policy pre-gate — refuse before any paid call.
   const screened = screenRequest(text);
   if (screened.blocked) {
     const result = baseResult(runId, null);
+    result.trace = trace;
     result.status = "refused";
     result.message = screened.reason;
     finishEconomics(result, meter, llmCalls);
@@ -242,8 +257,10 @@ export const runExpress = async (
   const { intent, degraded } = await deriveIntent(resolved.provider, text, captions);
   stageMs.intent = Date.now() - tIntent;
   if (!degraded) llmCalls += 1;
+  note("intent" + (degraded ? " (DEGRADED heuristic)" : ""), JSON.stringify(intent));
   if (!intent.allowed) {
     const result = baseResult(runId, null);
+    result.trace = trace;
     result.status = "refused";
     result.intent = intent;
     result.message =
@@ -260,13 +277,41 @@ export const runExpress = async (
     intent.all_over ||
     intent.wants_repeat_pattern ||
     /\baop\b|\ball[- ]?over\b|\bsublimation\b/i.test(text);
+  // EXPLICIT-NOUN GUARD: the customer's own words outrank the model's
+  // product_query. If the raw text names a product family (its match shares
+  // a name word with the text) and the combined match does NOT, the model
+  // was steered (live incident: taste history turned "dark blue shirt with
+  // this logo" into a sports bra) — trust the words.
+  const nameNamedInText = (name: string, rawText: string): boolean => {
+    const low = ` ${rawText.toLowerCase()} `;
+    return name
+      .split("|")[0]
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length >= 3 && !["all", "over", "print", "the", "unisex", "recycled"].includes(w))
+      .some((w) => low.includes(` ${w}`) || low.includes(`${w.slice(0, -1)}s `));
+  };
+  const chooseProduct = () => {
+    if (!intent.product_query && !text) return getExpressProduct(DEFAULT_PRODUCT_ID)!;
+    const combined = matchExpressProduct(`${intent.product_query} ${text}`, { preferAop });
+    if (!intent.product_query) return combined;
+    const rawOnly = matchExpressProduct(text, { preferAop });
+    if (
+      rawOnly.productId !== combined.productId &&
+      nameNamedInText(rawOnly.name, text) &&
+      !nameNamedInText(combined.name, text)
+    ) {
+      note("product_guard", `explicit noun override: ${combined.name} -> ${rawOnly.name}`);
+      return rawOnly;
+    }
+    return combined;
+  };
   const product =
-    (input.product_id ? getExpressProduct(input.product_id) : undefined) ??
-    (intent.product_query || text
-      ? matchExpressProduct(`${intent.product_query} ${text}`, { preferAop })
-      : getExpressProduct(DEFAULT_PRODUCT_ID)!);
+    (input.product_id ? getExpressProduct(input.product_id) : undefined) ?? chooseProduct();
 
   const result = baseResult(runId, product);
+  result.trace = trace;
+  note("product", `#${product.productId} ${product.name} (aop=${product.aop}, preferAop=${preferAop})`);
   result.intent = intent;
   result.degraded_intent = degraded;
   result.coverage = product.aop ? intent.coverage : "single";
@@ -293,10 +338,60 @@ export const runExpress = async (
     .join(". ");
 
   try {
+    // COLOR SEMANTICS: on printed-surface products (AOP / sublimation) the
+    // requested color IS the artwork's base — bases only come white, so
+    // "red sports bra" means red art edge-to-edge, not a red variant (live
+    // incident: red bra came back white). On fabric-color products (DTG)
+    // the color picks the variant, as before.
+    const record = getCatalogRecord(product.productId);
+    // Printed-surface techniques: the print IS the product's visible surface
+    // (dtg/dtfilm/embroidery decorate a colored fabric instead).
+    const printedSurface =
+      product.aop ||
+      Boolean(
+        record?.placements?.some(
+          (p) =>
+            !/label/i.test(p.placement) &&
+            /sublimation|cut-sew|digital|^uv$|direct-to-fabric/.test(p.technique)
+        )
+      );
+    // The intent model often leaves garment_color empty for non-garments
+    // ("laptop sleeve that is dark blue" — live incident), so the stated
+    // base color is ALSO extracted from the raw words: either "that is /
+    // in / make it <color>", or a color immediately before a product-name
+    // word ("red sports bra"). Subject colors ("golden lion") don't match.
+    const COLOR_WORD =
+      "(?:(?:dark|light|deep|bright|royal|hot|navy|forest|sky|baby|blood|matte)\\s+)?" +
+      "(?:black|white|red|blue|green|yellow|orange|purple|violet|pink|brown|tan|beige|cream|gray|grey|teal|cyan|turquoise|navy|maroon|burgundy|crimson|gold|silver|charcoal)";
+    const extractStatedBaseColor = (): string => {
+      if (intent.garment_color) return intent.garment_color;
+      const low = text.toLowerCase();
+      // NOTE: no bare "in <color>" pattern — "says sugar baby in yellow"
+      // names the TEXT color, not the base.
+      const phrased = low.match(
+        new RegExp(`(?:that is|that's|which is|make it|colou?red)\\s+(${COLOR_WORD})\\b`)
+      );
+      if (phrased) return phrased[1];
+      const nameWords = new Set(
+        product.name.split("|")[0].toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 3)
+      );
+      const adjacent = [...low.matchAll(new RegExp(`\\b(${COLOR_WORD})\\s+([a-z]+)`, "g"))];
+      for (const m of adjacent) {
+        if (nameWords.has(m[2])) return m[1];
+      }
+      return "";
+    };
+    const statedBaseColor = printedSurface ? extractStatedBaseColor() : intent.garment_color;
+    note("surface", `printedSurface=${printedSurface} statedBaseColor="${statedBaseColor}" garment_color="${intent.garment_color}"`);
+
     // 5. Product truth (free, cached) BEFORE any paid image work.
     // Variant: stated color/size preferences win (one free cached read);
     // otherwise the committed index default.
-    const variantHints = [intent.variant_hint, intent.garment_color, intent.size_preference]
+    const variantHints = [
+      intent.variant_hint,
+      printedSurface ? "" : intent.garment_color,
+      intent.size_preference
+    ]
       .filter(Boolean)
       .join(" ")
       .trim();
@@ -310,11 +405,24 @@ export const runExpress = async (
       resolved.truth.productOptionNames(product.productId)
     ]);
     result.product.variant_id = variantId;
+    note("variant", `hints="${variantHints}" -> variant ${variantId}; options=${JSON.stringify(optionNames)}`);
 
-    const metered = meteredMedia(resolved.media, meter);
-    const brief = [intent.image_prompt || intent.artwork_brief || text, planNotes]
-      .filter(Boolean)
-      .join(". ");
+    const rawMetered = meteredMedia(resolved.media, meter);
+    const metered: MediaLike = {
+      ...rawMetered,
+      generateImage: (params) => {
+        note("generate_prompt", (params as { positivePrompt?: string }).positivePrompt ?? "");
+        return rawMetered.generateImage(params);
+      }
+    };
+    const surfaceColorDirective =
+      printedSurface && statedBaseColor
+        ? `. The design's base color is ${statedBaseColor.slice(0, 30)}: it fills the entire printable surface edge to edge — the printed art IS the product's color, no white background anywhere.`
+        : "";
+    const brief =
+      [intent.image_prompt || intent.artwork_brief || text, planNotes].filter(Boolean).join(". ") +
+      surfaceColorDirective;
+    note("brief", brief);
     let activeSpecs;
 
     // Shared layer plumbing (standalone and overlay modes).
@@ -408,14 +516,20 @@ export const runExpress = async (
     }
 
     // Layers ARE the whole design only when the intent says so AND there is
-    // no all-over/pattern artwork underneath them.
+    // no all-over/pattern artwork underneath them. On printed-surface
+    // products a stated color VETOES standalone: layers composite onto
+    // transparent (= white product), so "red sports bra that says X" must
+    // instead generate a red base and overlay the layers on top of it
+    // (live incidents: white bra, white laptop sleeve).
     const layersStandalone =
       effectiveLayers.length > 0 &&
       intent.layers_only &&
       !intent.all_over &&
       !intent.wants_repeat_pattern &&
-      !preferAop;
+      !preferAop &&
+      !(printedSurface && statedBaseColor);
 
+    note("route", `layersStandalone=${layersStandalone} layers=${effectiveLayers.length} layers_only=${intent.layers_only}`);
     if (layersStandalone) {
       // 6-pre. LAYERED COMPOSITION: the intent call planned grounded layers
       // (specific text/elements at specific piece positions); the engine
@@ -523,11 +637,21 @@ export const runExpress = async (
       const design: DesignSpec = {
         artwork_brief: scrubTextFromBrief(brief, layerCarriedTexts),
         style_terms: intent.style_terms,
-        palette: intent.palette,
+        // Printed-surface color rides the palette (and the brief directive);
+        // base_product_color is fabric-variant context, DTG only.
+        palette:
+          printedSurface && statedBaseColor
+            ? [statedBaseColor, ...intent.palette]
+            : intent.palette,
         mood_terms: intent.mood_terms,
         required_text: requiredText,
-        forbidden_text: intent.forbidden_text,
-        base_product_color: intent.garment_color || undefined,
+        // When a lockup layer owns the text, the master must paint ZERO
+        // lettering of its own (live incident: ghost yellow letterforms
+        // behind the real lockup on the red sports bra).
+        forbidden_text: layerCarriedTexts.length
+          ? [...intent.forbidden_text, "any words, letters, or typography (text is applied separately)"]
+          : intent.forbidden_text,
+        base_product_color: printedSurface ? undefined : intent.garment_color || undefined,
         customer_image_urls: referenceUrls,
         customer_image_captions: captions
       };
@@ -641,6 +765,19 @@ export const runExpress = async (
     result.product_options = productOptions;
     stageMs.panels = Date.now() - tIntent - (stageMs.intent ?? 0);
     const tMockups = Date.now();
+    note(
+      "mockup_submit",
+      JSON.stringify({
+        productId: product.productId,
+        variantId,
+        styleIds,
+        productOptions,
+        placements: result.submitted_placements.map((p) => ({ placement: p.placement, technique: p.technique, url: p.fileUrl }))
+      })
+    );
+    for (const panel of result.panels) {
+      note("panel", `${panel.placement}: ${panel.status} — ${panel.notes.slice(0, 120)}`);
+    }
     const rendered = await resolved.renderMockups({
       productId: product.productId,
       variantIds: [variantId],
@@ -660,6 +797,7 @@ export const runExpress = async (
       intervalSeconds: 5
     });
     stageMs.mockups = Date.now() - tMockups;
+    note("mockup_result", `${rendered.status} via=${rendered.via ?? "?"} mockups=${rendered.mockups.length}`);
 
     if (rendered.status === "completed" && rendered.mockups.length) {
       result.mockups = rendered.mockups;

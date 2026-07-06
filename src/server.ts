@@ -58,6 +58,18 @@ const commerceTruth = new PrintfulTruth();
 /** Stripe sessions already fulfilled (webhooks redeliver; orders must not). */
 const processedCheckoutSessions = new Set<string>();
 
+/** Ring buffer of complete run results (trace included) for /debug/runs. */
+const recentRuns: Array<{ at: string; result: Record<string, unknown> }> = [];
+const keepRun = (result: unknown) => {
+  recentRuns.unshift({ at: new Date().toISOString(), result: result as Record<string, unknown> });
+  if (recentRuns.length > 40) recentRuns.pop();
+};
+const debugKeyOk = (url: URL): boolean => {
+  const key = url.searchParams.get("key") ?? "";
+  const expected = process.env.THREADBOT_DEBUG_TOKEN || process.env.THREADBOT_TEST_KEY || "";
+  return Boolean(expected) && key === expected;
+};
+
 /**
  * Post-payment return page: confirms the outcome and deep-links back into
  * the app (scheme is env-tunable; default matches the mobile appId).
@@ -536,6 +548,39 @@ const server = createServer(async (req, res) => {
       res.end(checkoutReturnPage(url.pathname === "/checkout/success"));
       return;
     }
+    // ------------------------------------------------------------------------
+    // Owner diagnostics: the ENTIRE pipeline, front to back, per run —
+    // intent JSON, product decision, prompts, panels, mockup payload,
+    // stage timings. /debug/runs lists; /debug/runs/:id is the full record.
+    // ------------------------------------------------------------------------
+    const debugRunMatch = url.pathname.match(/^\/debug\/runs(?:\/([a-z0-9-]+))?$/);
+    if (req.method === "GET" && debugRunMatch) {
+      if (!debugKeyOk(url)) return json(res, 403, { error: "bad key" });
+      if (debugRunMatch[1]) {
+        const hit = recentRuns.find((r) => (r.result as { run_id?: string }).run_id === debugRunMatch[1]);
+        return hit ? json(res, 200, hit) : json(res, 404, { error: "run not in the last 40" });
+      }
+      return json(res, 200, {
+        count: recentRuns.length,
+        runs: recentRuns.map((r) => {
+          const result = r.result as {
+            run_id?: string;
+            status?: string;
+            product?: { name?: string };
+            trace?: Array<{ stage: string; info: string }>;
+            economics?: { stage_ms?: unknown };
+          };
+          return {
+            at: r.at,
+            run_id: result.run_id,
+            status: result.status,
+            product: result.product?.name,
+            prompt: result.trace?.find((t) => t.stage === "input")?.info?.slice(0, 120),
+            stage_ms: result.economics?.stage_ms
+          };
+        })
+      });
+    }
     if (req.method === "GET" && url.pathname === "/debug/hosting") {
       let total = 0;
       for (const record of hostedImages.values()) total += record.bytes.length;
@@ -646,6 +691,7 @@ const server = createServer(async (req, res) => {
           ? (body as { product_id: number }).product_id
           : undefined
       });
+      keepRun(result);
       if (result.status === "completed" && result.intent && looksLikeUserToken(bearer)) {
         const userId = decodeUserId(bearer);
         if (userId) {
