@@ -1110,6 +1110,61 @@ const main = async () => {
       );
     }
 
+    console.log("\n== 13e. SLEEVE WORN-VIEW: halves continue their true body panels ==");
+    {
+      // Full-bleed run (containment opted out) so the master is ONE gradient
+      // whose red channel encodes global X — continuity becomes measurable.
+      const { deps } = makeDeps(
+        intentFor({
+          product_query: "aop shirt",
+          coverage: "full",
+          all_over: true,
+          artwork_brief: "one continuous mural wrapping around the whole shirt"
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "a mural wrapping around the whole aop shirt" },
+        deps
+      );
+      check("worn-view run completed", result.status === "completed", result.message);
+      const panelBuf = async (placement: string) => {
+        const panel = result.panels.find((p) => p.placement === placement)!;
+        return Buffer.from((panel.file_url as string).split(",")[1], "base64");
+      };
+      const colRed = async (buf: Buffer, which: "first" | "last" | "midL" | "midR") => {
+        const meta = await sharp(buf).metadata();
+        const w = meta.width ?? 1;
+        const x = which === "first" ? 0 : which === "last" ? w - 1 : which === "midL" ? Math.floor(w / 2) - 2 : Math.floor(w / 2) + 2;
+        const col = await sharp(buf).extract({ left: x, top: 0, width: 1, height: meta.height ?? 1 }).raw().toBuffer({ resolveWithObject: true });
+        let sum = 0;
+        for (let i = 0; i < col.info.height; i++) sum += col.data[i * col.info.channels];
+        return sum / col.info.height;
+      };
+      const sleeve = await panelBuf("sleeve_left");
+      const front = await panelBuf("front");
+      const sFirst = await colRed(sleeve, "first");
+      const sLast = await colRed(sleeve, "last");
+      const fFirst = await colRed(front, "first");
+      const fLast = await colRed(front, "last");
+      check(
+        "left sleeve FRONT half opens exactly where the front print's right edge ends",
+        Math.abs(sFirst - fLast) < 14,
+        `sleeve[0]=${sFirst.toFixed(0)} vs front[last]=${fLast.toFixed(0)}`
+      );
+      check(
+        "left sleeve BACK half (mirrored) meets the back print's right edge",
+        Math.abs(sLast - fFirst) < 14,
+        `sleeve[last]=${sLast.toFixed(0)} vs back-right(=front[0])=${fFirst.toFixed(0)}`
+      );
+      const midL = await colRed(sleeve, "midL");
+      const midR = await colRed(sleeve, "midR");
+      check(
+        "hard line at the sleeve centerline (the two worn views split there)",
+        Math.abs(midL - midR) > 25,
+        `centerline jump ${Math.abs(midL - midR).toFixed(0)}`
+      );
+    }
+
     console.log("\n== 13d. SLEEVE DROP: underarm points align across the body->sleeve seam ==");
     {
       const plane = buildGarmentPlane([

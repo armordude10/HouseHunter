@@ -672,6 +672,70 @@ export class PanelCompiler {
     // the "clocked forever" hot path). Results record in job order so bundles
     // stay deterministic. The Printful file-library mirror is fire-and-forget:
     // mockups and orders both consume our hosted URLs, never the mirror.
+    // SLEEVE WORN-VIEW ASSEMBLY (owner-verified on a physical hoodie): a
+    // sleeve print's vertical CENTERLINE divides what shows from the FRONT
+    // view (one half) vs the BACK view (other half), with a hard line at the
+    // centerline. Wearer's LEFT arm adjoins the front print's RIGHT edge
+    // (front view) and the back print's RIGHT edge (back view); the right
+    // arm mirrors this. Each sleeve file is therefore built from TWO strips
+    // sampled at those exact junctions — the back-visible strip is placed
+    // MIRRORED so its body-adjacent edge lands on the underarm seam (the
+    // owner's own mirrored back-half artwork confirms this convention).
+    const frontPlane = planeByPlacement.get("front");
+    const backPlane = [...planeByPlacement.values()].find((p) => p.role === "back");
+    const buildSleeveBuffer = async (
+      job: CompileJob,
+      role: "left_sleeve" | "right_sleeve",
+      outWidth: number,
+      outHeight: number,
+      dpi: number
+    ): Promise<Buffer> => {
+      const panel = planeByPlacement.get(job.placement)!;
+      const halfIn = panel.widthIn / 2;
+      const yPx = (panel.yIn - bound.y0) * pxPerIn.y;
+      const hPx = panel.heightIn * pxPerIn.y;
+      const halfPx = halfIn * pxPerIn.x;
+      const stripAt = async (xIn: number, mirrored: boolean): Promise<Buffer> => {
+        const raw = await cropExact(master, {
+          left: (xIn - bound.x0) * pxPerIn.x,
+          top: yPx,
+          width: halfPx,
+          height: hPx,
+          outWidth: Math.max(8, Math.round(outWidth / 2)),
+          outHeight: outHeight,
+          dpi
+        });
+        if (!mirrored) return raw;
+        return sharp(raw).flop().png().toBuffer();
+      };
+      const front = frontPlane!;
+      const back = backPlane ?? front;
+      let leftHalf: Buffer;
+      let rightHalf: Buffer;
+      if (role === "left_sleeve") {
+        // LEFT half (front-visible): continues front print's RIGHT edge.
+        leftHalf = await stripAt(front.xIn + front.widthIn, false);
+        // RIGHT half (back-visible): continues back print's RIGHT edge
+        // (= the strip just right of the back|front cut), mirrored inward.
+        rightHalf = await stripAt(back.xIn + back.widthIn, true);
+      } else {
+        // RIGHT half (front-visible): continues front print's LEFT edge.
+        rightHalf = await stripAt(front.xIn - halfIn, false);
+        // LEFT half (back-visible): continues back print's LEFT edge, mirrored.
+        leftHalf = await stripAt(back.xIn - halfIn, true);
+      }
+      const leftW = Math.max(8, Math.round(outWidth / 2));
+      return sharp({
+        create: { width: outWidth, height: outHeight, channels: 3, background: { r: 255, g: 255, b: 255 } }
+      })
+        .composite([
+          { input: leftHalf, left: 0, top: 0 },
+          { input: rightHalf, left: leftW, top: 0 }
+        ])
+        .png()
+        .toBuffer();
+    };
+
     const sliceOne = async (job: CompileJob): Promise<Parameters<typeof record> | { failure: string }> => {
       const panel = planeByPlacement.get(job.placement)!;
       const target = jobTarget(job);
@@ -685,13 +749,18 @@ export class PanelCompiler {
         height: panel.canvasHIn * pxPerIn.y
       };
       const transparent = wantsTransparency(job);
+      const sleeveRole =
+        panel.role === "left_sleeve" || panel.role === "right_sleeve" ? panel.role : null;
       try {
-        const buffer = await cropExact(master, {
-          ...crop,
-          outWidth: sizing.width,
-          outHeight: sizing.height,
-          dpi: target.dpi
-        });
+        const buffer =
+          sleeveRole && frontPlane
+            ? await buildSleeveBuffer(job, sleeveRole, sizing.width, sizing.height, target.dpi)
+            : await cropExact(master, {
+                ...crop,
+                outWidth: sizing.width,
+                outHeight: sizing.height,
+                dpi: target.dpi
+              });
         const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
         // File-library mirroring is RETIRED from the run path: nothing consumes
         // it (orders/mockups use our URLs), and its print-res ingest saturated
@@ -712,7 +781,10 @@ export class PanelCompiler {
             source_job_id: job.source_job_id ?? null,
             source_parent_url: masterUrl,
             geometry_applied: true,
-            notes: "Cut from shared master at garment-plane rect; seam continuity guaranteed by shared cut lines."
+            notes:
+              sleeveRole && frontPlane
+                ? "Sleeve worn-view assembly: front-visible half continues the front print, back-visible half continues the back print (mirrored), hard centerline per garment construction."
+                : "Cut from shared master at garment-plane rect; seam continuity guaranteed by shared cut lines."
           },
           {
             job_id: job.job_id,
