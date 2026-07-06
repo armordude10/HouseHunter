@@ -29,6 +29,7 @@ import {
 import { ExpressIntent, heuristicIntent, screenRequest } from "../src/express/intent.js";
 import { buildExpressJobs, pickStitchColor } from "../src/express/plan.js";
 import { runExpress, ExpressDeps } from "../src/express/run.js";
+import { buildGarmentPlane } from "../src/engine/garmentSpace.js";
 import { renderLayerOverlay } from "../src/express/layers.js";
 import { PlacementSpec, PrintfulTruth, ProductTruth } from "../src/express/truth.js";
 import { createAndWaitForMockups, parseAvailableStyleIds } from "../src/integrations/printfulMockups.js";
@@ -1106,6 +1107,31 @@ const main = async () => {
         "DTG color still resolves the variant",
         (truth.lastPick ?? "").includes("dark blue"),
         String(truth.lastPick)
+      );
+    }
+
+    console.log("\n== 13d. SLEEVE DROP: underarm points align across the body->sleeve seam ==");
+    {
+      const plane = buildGarmentPlane([
+        { placement: "front", width_px: 3000, height_px: 3000, dpi: 100 },
+        { placement: "back", width_px: 3000, height_px: 3000, dpi: 100 },
+        { placement: "sleeve_left", width_px: 2000, height_px: 2400, dpi: 100 },
+        { placement: "sleeve_right", width_px: 2000, height_px: 2400, dpi: 100 }
+      ]);
+      const byRole = Object.fromEntries(plane.panels.map((p) => [p.role, p]));
+      const body = byRole["front"];
+      const sleeve = byRole["left_sleeve"];
+      const bodyUnderarm = body.yIn + 0.28 * body.heightIn;
+      const sleeveUnderarm = sleeve.yIn + 0.17 * sleeve.heightIn;
+      check(
+        "sleeves drop below the shoulder line (cap joins the armhole, not the collar)",
+        sleeve.yIn > body.yIn,
+        `sleeve y=${sleeve.yIn.toFixed(1)} body y=${body.yIn.toFixed(1)}`
+      );
+      check(
+        "underarm points meet within a quarter inch",
+        Math.abs(bodyUnderarm - sleeveUnderarm) < 0.25,
+        `body ${bodyUnderarm.toFixed(2)}in vs sleeve ${sleeveUnderarm.toFixed(2)}in`
       );
     }
 

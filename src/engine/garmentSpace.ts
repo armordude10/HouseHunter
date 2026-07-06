@@ -251,10 +251,24 @@ export const buildGarmentPlane = (
   // A single body panel is still master-sliced when overlay/attached pieces
   // (pocket, hood) must continue its art — e.g. backpack front + pocket.
   const bodySeamBound = row.length > 1 || Boolean(pocket) || Boolean(hood);
+  // SLEEVE DROP: on a sewn garment the sleeve cap joins the armhole BELOW
+  // the shoulder line — the underarm points are what physically meet. Align
+  // them instead of the panel tops: armhole depth ~28% of body height on the
+  // body side, cap height ~17% of sleeve length on the sleeve side. This puts
+  // horizontal features (horizons, stripes, waterlines) at the same WORN
+  // height across the body->sleeve seam.
+  const bodyHeightIn = Math.max(
+    0,
+    ...row.filter((p) => p.role === "front" || p.role === "back").map((p) => p.heightIn)
+  );
+  const sleeveDrop = (panel: (typeof row)[number]): number =>
+    (panel.role === "left_sleeve" || panel.role === "right_sleeve") && bodyHeightIn > 0
+      ? Math.max(0, 0.28 * bodyHeightIn - 0.17 * panel.heightIn)
+      : 0;
   let cursorX = 0;
   let previous: (typeof row)[number] | null = null;
   for (const panel of row) {
-    push(panel, cursorX, hoodHeight, bodySeamBound, panels);
+    push(panel, cursorX, hoodHeight + sleeveDrop(panel), bodySeamBound, panels);
     if (previous) {
       seams.push({
         a: previous.input.placement,
