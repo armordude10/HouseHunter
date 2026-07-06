@@ -190,6 +190,11 @@ export const compileLayeredPanel = async (params: {
   const overlay = await renderLayerOverlay(params);
   const { canvasW, canvasH, sourceUrls, promptParts } = overlay;
   const fileUrl = await host(overlay.buffer);
+  // Mockup-sized copy (<=1600px): the generator renders at <=2000px and
+  // chokes preprocessing print-res files.
+  const smallW = Math.min(1600, canvasW);
+  const small = await sharp(overlay.buffer).resize({ width: smallW }).png().toBuffer();
+  const mockupUrl = await host(small);
 
   return {
     panel: {
@@ -198,6 +203,7 @@ export const compileLayeredPanel = async (params: {
       status: "success",
       generation_mode: "derived",
       file_url: fileUrl,
+      mockup_file_url: mockupUrl,
       file_type: "png",
       public_url: true,
       transparent_background: true,

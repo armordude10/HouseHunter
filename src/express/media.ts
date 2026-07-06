@@ -50,6 +50,13 @@ class FallbackMedia implements MediaLike {
   uploadImage(image: string) {
     return (this.demoted ? this.secondary : this.primary).uploadImage(image);
   }
+  hostImage(base64: string, contentType?: string) {
+    const active = this.demoted ? this.secondary : this.primary;
+    const other = this.demoted ? this.primary : this.secondary;
+    const impl = active.hostImage?.bind(active) ?? other.hostImage?.bind(other);
+    if (!impl) return Promise.reject(new Error("no hostImage backend"));
+    return impl(base64, contentType);
+  }
 }
 
 export const buildExpressMedia = async (): Promise<MediaLike> => {

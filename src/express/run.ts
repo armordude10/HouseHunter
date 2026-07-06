@@ -513,6 +513,11 @@ export const runExpress = async (
             .jpeg({ quality: 92 })
             .toBuffer();
           panel.file_url = await hostImage(composed, "image/jpeg");
+          const smallComposite = await sharp(composed)
+            .resize({ width: Math.min(1800, overlay.canvasW) })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+          panel.mockup_file_url = await hostImage(smallComposite, "image/jpeg");
           panel.notes = `${panel.notes} Layered overlay applied: ${overlay.promptParts.join(" + ")} (grounded piece-space compositing).`;
           result.design_genome?.panels.push({
             job_id: `overlay_${placement}`,
@@ -541,7 +546,9 @@ export const runExpress = async (
       .map((panel) => ({
         placement: panel.placement,
         technique: techniqueByPlacement.get(panel.placement) ?? "dtg",
-        fileUrl: panel.file_url as string,
+        // Mockup tasks get the <=2048px copy (Printful renders at <=2000px;
+        // print-res files made tasks take minutes); orders use file_url.
+        fileUrl: (panel.mockup_file_url ?? panel.file_url) as string,
         file_url: panel.file_url as string
       }));
 
@@ -551,7 +558,7 @@ export const runExpress = async (
     // weight scales with styles x placements: heavy products get ONE style
     // so Printful renders within our patience window (leggings proved 2
     // styles x 3 placements can exceed 400s).
-    const styleBudget = activeSpecs.length >= 3 ? 1 : 2;
+    const styleBudget = 2; // small mockup files keep task weight low even multi-panel
     const styleIds = (
       pickPrimaryPlacement(activeSpecs).styleIds.length
         ? pickPrimaryPlacement(activeSpecs).styleIds

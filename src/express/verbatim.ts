@@ -42,6 +42,10 @@ export const buildVerbatimPanel = async (
     .toBuffer();
   const uploaded = await media.uploadImage(`data:image/png;base64,${working.toString("base64")}`);
   const hosted = await media.upscale(uploaded, 2);
+  // The pre-upscale working copy is already mockup-sized (<=2048px).
+  const mockupUrl = media.hostImage
+    ? await media.hostImage(working.toString("base64"), "image/png").catch(() => hosted.imageURL)
+    : hosted.imageURL;
 
   return {
     panel: {
@@ -50,6 +54,7 @@ export const buildVerbatimPanel = async (
       status: "success",
       generation_mode: "derived",
       file_url: hosted.imageURL,
+      mockup_file_url: mockupUrl,
       file_type: "png",
       public_url: true,
       transparent_background: true,

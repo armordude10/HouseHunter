@@ -96,6 +96,9 @@ class StubMedia implements MediaLike {
     this.uploads.set(uuid, Buffer.from(image.split(",")[1] ?? "", "base64"));
     return uuid;
   }
+  async hostImage(base64: string, contentType = "image/png") {
+    return `data:${contentType};base64,${base64}`;
+  }
 }
 
 class StubProvider implements LlmProvider {
@@ -301,10 +304,16 @@ const main = async () => {
       payload.placements.length === 6 &&
         payload.placements.every((p) => p.technique === "cut-sew")
     );
-    check(
-      "heavy products (3+ placements) request ONE style to fit Printful's render window",
-      payload.styleIds.join(",") === "11"
-    );
+    check("two mockup styles requested (small files keep task weight low)", payload.styleIds.join(",") === "11,12");
+    // THE SPEED CONTRACT: every file submitted to the mockup generator must
+    // be <=2048px — print-res submissions are what made tasks take minutes.
+    let allSmall = true;
+    for (const pl of payload.placements) {
+      const buf = Buffer.from(pl.fileUrl.split(",")[1] ?? "", "base64");
+      const meta = await sharp(buf).metadata();
+      if (Math.max(meta.width ?? 0, meta.height ?? 0) > 2048) allSmall = false;
+    }
+    check("ALL mockup submissions <=2048px (print-res never hits the generator)", allSmall);
     check(
       "stitch_color resolved deterministically (dark palette -> black)",
       payload.productOptions?.stitch_color === "black"

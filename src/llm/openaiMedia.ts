@@ -137,6 +137,11 @@ export class OpenAIMedia implements MediaLike {
     }
   }
 
+  /** Host raw bytes as-is (mockup-sized copies; no upscale). */
+  async hostImage(base64: string, contentType = "image/png"): Promise<string> {
+    return hostedImageUrl(putHostedImage(Buffer.from(base64, "base64"), contentType));
+  }
+
   async uploadImage(image: string): Promise<string> {
     const id = `local-${this.buffers.size}-${Date.now()}`;
     this.buffers.set(id, Buffer.from(image.replace(/^data:[^,]*,/, ""), "base64"));

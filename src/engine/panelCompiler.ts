@@ -35,6 +35,7 @@
  * File Library mirroring makes files durable beyond Runware's URL retention.
  */
 
+import sharp from "sharp";
 import { clampFluxDimension } from "../runware/media.js";
 import { IMAGE } from "../runware/models.js";
 import {
@@ -112,6 +113,8 @@ export interface MediaLike {
   removeBackground(imageUrl: string): Promise<{ imageURL: string }>;
   upscale(image: string, factor: 2 | 3 | 4): Promise<{ imageURL: string }>;
   uploadImage(image: string): Promise<string>;
+  /** Host raw bytes at a public URL as-is (no upscale). Optional. */
+  hostImage?(base64: string, contentType?: string): Promise<string>;
 }
 
 // -----------------------------------------------------------------------------
@@ -124,6 +127,8 @@ export interface CompiledPanel {
   status: "success" | "blank" | "failed";
   generation_mode: "generated" | "sliced" | "derived" | "repeated" | "mirrored" | "blank";
   file_url: string | null;
+  /** Lightweight (<=2048px) copy submitted to the mockup generator. */
+  mockup_file_url: string | null;
   file_type: "png" | "none";
   public_url: boolean;
   transparent_background: boolean;
@@ -368,6 +373,7 @@ export class PanelCompiler {
           status: "blank",
           generation_mode: "blank",
           file_url: null,
+          mockup_file_url: null,
           file_type: "none",
           public_url: false,
           transparent_background: false,
@@ -437,17 +443,44 @@ export class PanelCompiler {
 
   // ---------------------------------------------------------------------------
 
-  /** Locally-produced pixels -> hosted public URL at >= print spec. */
+  /**
+   * Locally-produced pixels -> hosted public URLs.
+   *
+   * Returns TWO urls per panel:
+   *  - fileUrl: print-resolution (upscaled) — what an ORDER submits
+   *  - mockupUrl: the working buffer as-is (already <=2048px) — what the
+   *    MOCKUP task submits. Printful renders mockups at <=2000px and
+   *    preprocessing giant print files is what made tasks take minutes
+   *    ("downscale your print file to 2000px... reduces processing time",
+   *    per Printful's own docs). Falls back to fileUrl when the media
+   *    backend cannot host raw buffers.
+   */
   private async hostWorkingBuffer(
     buffer: Buffer,
     factor: 2 | 3 | 4,
     transparent: boolean
-  ): Promise<string> {
+  ): Promise<{ fileUrl: string; mockupUrl: string }> {
     const uuid = await this.media.uploadImage(toBase64Png(buffer));
     const upscaled = await this.media.upscale(uuid, factor);
-    if (!transparent) return upscaled.imageURL;
-    const cutout = await this.media.removeBackground(upscaled.imageURL);
-    return cutout.imageURL;
+    let fileUrl = upscaled.imageURL;
+    if (transparent) {
+      fileUrl = (await this.media.removeBackground(fileUrl)).imageURL;
+    }
+    let mockupUrl = fileUrl;
+    if (this.media.hostImage) {
+      try {
+        const small = transparent
+          ? await sharp(buffer).png().toBuffer()
+          : await sharp(buffer).flatten({ background: "#ffffff" }).jpeg({ quality: 85 }).toBuffer();
+        mockupUrl = await this.media.hostImage(
+          small.toString("base64"),
+          transparent ? "image/png" : "image/jpeg"
+        );
+      } catch {
+        // mockup copy is an optimization; the print file always works
+      }
+    }
+    return { fileUrl, mockupUrl };
   }
 
   private async compileMasterSlice(
@@ -538,7 +571,7 @@ export class PanelCompiler {
           outHeight: sizing.height,
           dpi: target.dpi
         });
-        const fileUrl = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
+        const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
         const printfulRef = printfulEnabled()
           ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
           : null;
@@ -549,6 +582,7 @@ export class PanelCompiler {
             status: "success",
             generation_mode: "sliced",
             file_url: fileUrl,
+            mockup_file_url: mockupUrl,
             file_type: "png",
             public_url: true,
             transparent_background: transparent,
@@ -662,7 +696,7 @@ export class PanelCompiler {
           offsetY: phase.y,
           dpi: target.dpi
         });
-        const fileUrl = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
+        const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
         const printfulRef = printfulEnabled()
           ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
           : null;
@@ -673,6 +707,7 @@ export class PanelCompiler {
             status: "success",
             generation_mode: "repeated",
             file_url: fileUrl,
+            mockup_file_url: mockupUrl,
             file_type: "png",
             public_url: true,
             transparent_background: transparent,
@@ -788,6 +823,7 @@ export class PanelCompiler {
       }
 
       let fileUrl = generated.imageURL;
+      const preUpscaleUrl = generated.imageURL;
       let factor: 2 | 4 | null = null;
       if (Math.max(target.width, target.height) > Math.max(genW, genH)) {
         const ratio = Math.max(target.width, target.height) / Math.max(genW, genH);
@@ -802,6 +838,10 @@ export class PanelCompiler {
         const cutout = await this.media.removeBackground(fileUrl);
         fileUrl = cutout.imageURL;
       }
+      // Mockup copy: the pre-upscale generation is already <=2048px — exactly
+      // what the mockup generator wants. Transparent panels keep the final
+      // cutout (alpha must survive on the garment mockup).
+      const mockupUrl = factor !== null && !transparent ? preUpscaleUrl : fileUrl;
       const printfulRef = printfulEnabled()
         ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
         : null;
@@ -813,6 +853,7 @@ export class PanelCompiler {
           status: "success",
           generation_mode: derives ? "derived" : "generated",
           file_url: fileUrl,
+          mockup_file_url: mockupUrl,
           file_type: "png",
           public_url: true,
           transparent_background: transparent,
@@ -871,7 +912,7 @@ export class PanelCompiler {
     try {
       const sourceImage = await fetchImage(source.file_url);
       const mirrored = await mirrorHorizontal(sourceImage, target.dpi);
-      const fileUrl = await this.hostWorkingBuffer(mirrored, 2, false);
+      const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(mirrored, 2, false);
       const printfulRef = printfulEnabled()
         ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
         : null;
@@ -882,6 +923,7 @@ export class PanelCompiler {
           status: "success",
           generation_mode: "mirrored",
           file_url: fileUrl,
+          mockup_file_url: mockupUrl,
           file_type: "png",
           public_url: true,
           transparent_background: false,
@@ -929,6 +971,7 @@ export class PanelCompiler {
         status: "failed",
         generation_mode: "generated",
         file_url: null,
+        mockup_file_url: null,
         file_type: "none",
         public_url: false,
         transparent_background: false,
