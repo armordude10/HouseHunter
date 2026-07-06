@@ -123,6 +123,60 @@ const printfulHeaders = () => {
   };
 };
 
+/** Customer-language order status (supplier vocabulary never leaks). */
+export interface OrderStatus {
+  state: string;
+  label: string;
+  tracking_url?: string;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Order received",
+  pending: "Processing",
+  inprocess: "In production",
+  onhold: "On hold — we're on it",
+  partial: "Partially shipped",
+  fulfilled: "Shipped",
+  canceled: "Canceled",
+  failed: "Payment issue"
+};
+
+const statusCache = new Map<string, { status: OrderStatus; at: number }>();
+const STATUS_TTL_MS = 60 * 1000;
+
+/**
+ * Live order status by Stripe session id (the order's external_id at the
+ * supplier — v1 lookup by `@external_id`). 404 means the webhook hasn't
+ * placed the order yet: payment pending or abandoned.
+ */
+export const lookupOrderStatus = async (sessionId: string): Promise<OrderStatus> => {
+  const externalId = sessionId.slice(0, 32);
+  const cached = statusCache.get(externalId);
+  if (cached && Date.now() - cached.at < STATUS_TTL_MS) return cached.status;
+  const response = await fetch(`${PRINTFUL_API_BASE}/orders/@${encodeURIComponent(externalId)}`, {
+    headers: printfulHeaders()
+  });
+  let status: OrderStatus;
+  if (response.status === 404) {
+    status = { state: "awaiting_payment", label: "Awaiting payment" };
+  } else if (!response.ok) {
+    status = { state: "unknown", label: "Status unavailable" };
+  } else {
+    const body = (await response.json().catch(() => null)) as {
+      result?: { status?: string; shipments?: Array<{ tracking_url?: string }> };
+    } | null;
+    const raw = body?.result?.status ?? "unknown";
+    const tracking = body?.result?.shipments?.find((s) => s.tracking_url)?.tracking_url;
+    status = {
+      state: raw,
+      label: STATUS_LABELS[raw] ?? "Processing",
+      ...(tracking ? { tracking_url: tracking } : {})
+    };
+  }
+  if (status.state !== "unknown") statusCache.set(externalId, { status, at: Date.now() });
+  return status;
+};
+
 export const placePrintfulOrder = async (
   params: PlaceOrderParams
 ): Promise<{ order_id: number; status: string; confirmed: boolean }> => {

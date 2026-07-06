@@ -186,15 +186,35 @@
         </section>
         </sc-if>
 
-        <!-- ============ EXPLORE ============ -->
+        <!-- ============ ORDERS ============ -->
         <sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
-        <section data-screen-label="Explore" style="padding:10px 22px 28px; animation:tbRise .4s ease both;">
-          <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// SIGNAL FEED</p>
-          <h1 style="margin:0 0 16px; font-family:'Chakra Petch'; font-weight:600; font-size:26px; color:#eafcff;">Explore</h1>
+        <section data-screen-label="Orders" style="padding:10px 22px 28px; animation:tbRise .4s ease both;">
+          <p style="margin:14px 0 2px; font-size:12px; letter-spacing:2px; color:#00E5FF;">// ORDER LOG</p>
+          <h1 style="margin:0 0 16px; font-family:'Chakra Petch'; font-weight:600; font-size:26px; color:#eafcff;">Orders</h1>
+          <sc-if value="{{ hasNoOrders }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:54px 24px; border-radius:18px; border:1px dashed rgba(0,229,255,0.2); background:rgba(12,17,23,0.4);">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2b6b78" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M16 8l-2.4 5.6L8 16l2.4-5.6z"/></svg>
-            <p style="margin:16px 0 4px; font-size:14px; color:#9fd9e3;">Community feed is on the way</p>
-            <p style="margin:0; font-size:11px; color:#5b6b73; max-width:230px;">Designs shared by the Threadbot community will show up here.</p>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2b6b78" stroke-width="1.4"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5M12 13l9-5M12 13v9"/></svg>
+            <p style="margin:16px 0 4px; font-size:14px; color:#9fd9e3;">No orders yet</p>
+            <p style="margin:0; font-size:11px; color:#5b6b73; max-width:230px;">Everything you order lands here with live production and shipping status.</p>
+          </div>
+          </sc-if>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <sc-for list="{{ orderItems }}" as="o" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:13px; padding:13px; border-radius:16px; border:1px solid rgba(0,229,255,0.14); background:rgba(12,17,23,0.55);">
+                <img src="{{ o.image }}" alt="design" style="width:56px; height:56px; border-radius:12px; object-fit:cover; border:1px solid rgba(0,229,255,0.2); flex:none;">
+                <div style="flex:1; min-width:0;">
+                  <p style="margin:0; font-size:13px; color:#eafcff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ o.name }}</p>
+                  <p style="margin:4px 0 0; font-size:10px; color:#5b6b73;">{{ o.meta }}</p>
+                  <p style="margin:6px 0 0; font-size:11px; font-weight:700; letter-spacing:.5px; color:{{ o.statusColor }};">{{ o.status }}</p>
+                </div>
+                <sc-if value="{{ o.canTrack }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ o.track }}" style="height:34px; padding:0 13px; border-radius:11px; border:1px solid rgba(25,240,196,0.4); background:rgba(25,240,196,0.1); color:#19f0c4; font-family:'Chakra Petch'; font-weight:700; font-size:11px; letter-spacing:1px; cursor:pointer; flex:none;">TRACK</button>
+                </sc-if>
+                <sc-if value="{{ o.canRemove }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ o.remove }}" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#5b6b73; font-size:13px; cursor:pointer; flex:none; padding:0;">✕</button>
+                </sc-if>
+              </div>
+            </sc-for>
           </div>
         </section>
         </sc-if>
@@ -468,7 +488,7 @@ class Component extends DCLogic {
   REFINE = ['Increase tactical styling','Add premium embroidery','Make more minimal','Enhance neon details','Boost contrast','Vary the palette'];
 
   // ---- persistence ----
-  K = { designs:'tb_designs', profile:'tb_profile', prefs:'tb_prefs' };
+  K = { designs:'tb_designs', profile:'tb_profile', prefs:'tb_prefs', orders:'tb_orders' };
   CLOSET_MAX = 20;
   load(key, fb){ try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch(e){ return fb; } }
   store(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
@@ -478,6 +498,7 @@ class Component extends DCLogic {
       designs: this.load(this.K.designs, []),
       profile: this.load(this.K.profile, this.state.profile),
       prefs: this.load(this.K.prefs, this.state.prefs),
+      orders: this.load(this.K.orders, []),
     });
     this._ex = setInterval(() => {
       if (this.state.phase === 'input' && !this.state.prompt) {
@@ -535,7 +556,7 @@ class Component extends DCLogic {
 
   // Haptics — respects the Settings toggle; uses the WebView vibration API.
   buzz = (ms = 12) => { try { if (this.state.prefs.haptics && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-  selTab = (t) => () => { this.buzz(8); this.setState({ tab:t, phase:'input', profileOpen:false }); };
+  selTab = (t) => () => { this.buzz(8); this.setState({ tab:t, phase:'input', profileOpen:false }); if (t === 'explore') this.refreshOrders(); };
 
   // ---- image upload ----
   fileRef = (el) => { this._file = el; };
@@ -748,6 +769,21 @@ class Component extends DCLogic {
       if (!res.ok) throw new Error('Checkout failed (' + res.status + ')');
       const data = await res.json();
       if (!data || !data.url) throw new Error('No checkout URL returned');
+      // Log the order locally (synced to the account) so the Orders tab can
+      // follow it; live status comes from the backend by session id.
+      if (data.sessionId) {
+        const entry = {
+          id: data.sessionId,
+          name: (this._commerce && this._commerce.product_name) || 'Custom design',
+          image: v.image,
+          price: (this._commerce && this._commerce.retail_usd) || null,
+          size: c.size, country: c.country || 'US', ts: Date.now(),
+          state: 'awaiting_payment', status: 'Awaiting payment',
+        };
+        const orders = [entry, ...this.state.orders.filter(o => o.id !== entry.id)].slice(0, 30);
+        this.store(this.K.orders, orders);
+        this.setState({ orders });
+      }
       const caps = (window.Capacitor && window.Capacitor.Plugins) || {};
       if (caps.Browser && caps.Browser.open) await caps.Browser.open({ url: data.url });
       else window.open(data.url, '_system');
@@ -755,6 +791,37 @@ class Component extends DCLogic {
     } catch (e) {
       this.setState({ checkout: null, dialog: { title:'Checkout error', body:(e && e.message) || 'Could not start checkout. Please try again.', primaryLabel:'OK' } });
     }
+  };
+
+  // ---- orders: live status via backend (session id is the join key) ----
+  refreshOrders = async () => {
+    const cfg = window.THREADBOT_CONFIG || {};
+    const base = (cfg.backendUrl || '').replace(/\/generate\/?$/, '');
+    if (!base || this._ordersBusy) return;
+    this._ordersBusy = true;
+    try {
+      const fresh = [...this.state.orders];
+      const live = fresh.filter(o => o.state !== 'fulfilled' && o.state !== 'canceled').slice(0, 10);
+      for (const o of live) {
+        try {
+          const r = await fetch(base + '/orders/status?session_id=' + encodeURIComponent(o.id));
+          if (!r.ok) continue;
+          const st = await r.json();
+          if (st && st.label && st.state !== 'unknown') {
+            const i = fresh.findIndex(x => x.id === o.id);
+            if (i >= 0) fresh[i] = { ...fresh[i], state: st.state, status: st.label, tracking: st.tracking_url || fresh[i].tracking || null };
+          }
+        } catch (e) {}
+      }
+      this.store(this.K.orders, fresh);
+      this.setState({ orders: fresh });
+    } finally { this._ordersBusy = false; }
+  };
+  removeOrder = (id) => () => {
+    const orders = this.state.orders.filter(o => o.id !== id);
+    this.store(this.K.orders, orders);
+    this.setState({ orders });
+    this.buzz(10);
   };
 
   // ---- closet: delete / multi-select / dialogs ----
@@ -865,7 +932,7 @@ class Component extends DCLogic {
     const navDef = [
       { id:'create', label:'CREATE', d:'M12 5v14M5 12h14' },
       { id:'closet', label:'CLOSET', d:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
-      { id:'explore', label:'EXPLORE', d:'M12 22a10 10 0 100-20 10 10 0 000 20zM16 8l-2.5 5.5L8 16l2.5-5.5z' },
+      { id:'explore', label:'ORDERS', d:'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5M12 13l9-5M12 13v9' },
       { id:'settings', label:'SETTINGS', d:'M4 7h10M18 7h2M4 17h2M10 17h10M14 7a2 2 0 104 0 2 2 0 10-4 0M6 17a2 2 0 104 0 2 2 0 10-4 0' },
     ];
     const navItems = navDef.map(n => {
@@ -942,6 +1009,23 @@ class Component extends DCLogic {
       ]},
     ];
 
+    // orders
+    const ORDER_COLORS = {
+      awaiting_payment:'#7d8c94', draft:'#FFD400', pending:'#FFD400', inprocess:'#00E5FF',
+      onhold:'#ff9f43', partial:'#19f0c4', fulfilled:'#19f0c4', canceled:'#ff7b7b', failed:'#ff7b7b',
+    };
+    const orderItems = (s.orders || []).map(o => ({
+      image: o.image,
+      name: o.name,
+      meta: new Date(o.ts).toLocaleDateString() + (o.size ? ' · ' + o.size : '') + (o.price ? ' · $' + Number(o.price).toFixed(2) : ''),
+      status: (o.status || 'Awaiting payment').toUpperCase(),
+      statusColor: ORDER_COLORS[o.state] || '#7d8c94',
+      canTrack: !!o.tracking,
+      track: () => { const cp=(window.Capacitor&&window.Capacitor.Plugins)||{}; if (cp.Browser&&cp.Browser.open) cp.Browser.open({url:o.tracking}); else window.open(o.tracking,'_system'); },
+      canRemove: o.state === 'awaiting_payment' || o.state === 'canceled',
+      remove: this.removeOrder(o.id),
+    }));
+
     // generation
     const genSteps = this.GEN.map((label,i)=>{
       const done = i < s.genStep, cur = i === s.genStep;
@@ -991,6 +1075,7 @@ class Component extends DCLogic {
       designCount: s.designs.length,
 
       closetTabs, closetItems, closetEmpty, closetEmptyTitle,
+      orderItems, hasNoOrders: !(s.orders && s.orders.length),
       closetHasItems: closetCount > 0,
       selectMode: selMode,
       toggleSelectMode: this.toggleSelectMode,

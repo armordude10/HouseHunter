@@ -43,6 +43,7 @@ import { normalizeShippingCountry, quoteShipping } from "./commerce/shipping.js"
 import {
   designRegistrySize,
   getDesign,
+  lookupOrderStatus,
   placePrintfulOrder,
   registerDesign,
   type OrderRecipient
@@ -467,6 +468,20 @@ const server = createServer(async (req, res) => {
         }
       }
       return json(res, 200, { received: true });
+    }
+    // Live order status for the app's Orders tab (session ids are the join
+    // key and are unguessable; supplier vocabulary is translated).
+    if (req.method === "GET" && url.pathname === "/orders/status") {
+      const sessionId = url.searchParams.get("session_id") ?? "";
+      if (!/^cs_[A-Za-z0-9_]{10,120}$/.test(sessionId)) {
+        return json(res, 400, { error: "bad session id" });
+      }
+      try {
+        return json(res, 200, await lookupOrderStatus(sessionId));
+      } catch (error) {
+        console.error(`[orders] status lookup failed: ${(error as Error).message}`);
+        return json(res, 200, { state: "unknown", label: "Status unavailable" });
+      }
     }
     if (req.method === "GET" && (url.pathname === "/checkout/success" || url.pathname === "/checkout/cancel")) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
