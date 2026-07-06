@@ -65,10 +65,28 @@
     p.App.addListener("pause", function () { try { sb.auth.stopAutoRefresh(); } catch (e) {} });
   })();
 
+  /* A failed boot must NEVER be a silent black screen: if the app runtime
+     hasn't mounted shortly after injection, say so and offer a reload. */
+  function bootFailsafe() {
+    setTimeout(function () {
+      if (document.getElementById("dc-root") || document.getElementById("tb-bootfail")) return;
+      var d = document.createElement("div");
+      d.id = "tb-bootfail";
+      d.setAttribute("style",
+        "position:fixed;inset:0;z-index:2147483646;background:radial-gradient(120% 90% at 50% -10%,#0c1622,#07080a 60%);color:#cfe9ee;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Chakra Petch',system-ui,sans-serif;text-align:center;padding:30px");
+      d.innerHTML =
+        '<div style="font-size:20px;color:#ff7b7b;letter-spacing:1px;margin-bottom:10px">STARTUP HICCUP</div>' +
+        '<div style="font-size:13px;opacity:.75;max-width:300px;line-height:1.6;margin-bottom:26px">Threadbot didn\'t finish loading. This is usually momentary.</div>' +
+        '<button onclick="location.reload()" style="padding:14px 34px;border:0;border-radius:12px;background:#00E5FF;color:#04181c;font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer">RELOAD</button>';
+      document.body.appendChild(d);
+    }, 12000);
+  }
   function loadApp() {
     var s = document.createElement("script");
     s.src = "support.js";
+    s.onerror = function () { bootFailsafe(); };
     document.body.appendChild(s);
+    bootFailsafe();
   }
 
   /* Device-local keys never mirrored to the account: the Supabase session
