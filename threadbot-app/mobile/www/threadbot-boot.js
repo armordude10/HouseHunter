@@ -160,7 +160,11 @@
           if (ss.error) throw ss.error;
           if (ss.data && ss.data.session) return onAuthed(ss.data.session, document.getElementById("tb-auth"));
         }
-      } catch (e) { console.warn("OAuth callback failed", e); }
+      } catch (e) {
+        console.warn("OAuth callback failed", e);
+        var box = document.getElementById("a-msg");
+        if (box) { box.style.color = "#ff7b7b"; box.textContent = "Sign-in failed: " + ((e && e.message) || "please try again."); }
+      }
     });
   }
   var oauthWatchdog = null;

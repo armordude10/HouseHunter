@@ -6,9 +6,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="threadbot-config.js"></script>
 <link rel="stylesheet" href="threadbot-mobile.css">
-<!-- Pre-hydration cloak: the raw template (with {{ }} placeholders) must
-     never flash before React mounts; the runtime replaces <x-dc> with
-     #dc-root, so this rule self-retires at mount. -->
+<!-- Pre-hydration cloak: hide the raw template until React mounts.
+     CAUTION: the runtime regex-scans this file's text for the template
+     element's opening tag — never write that tag name in angle brackets
+     anywhere above the real one (a previous comment here did, and the
+     scanner ate the comment as the template: black screen). -->
 <style>x-dc{display:none}</style>
 <script src="threadbot-boot.js"></script>
 </head>
