@@ -533,61 +533,139 @@ export class PanelCompiler {
     const pxPerIn = { x: masterW / boundW, y: masterH / boundH };
 
     const seed = stableSeed(runId, "master");
-    // HERO CONTAINMENT: the plane math knows exactly where the front piece
-    // sits inside the master, so the main subject is directed into that zone
-    // and reads complete on the garment's front — the rest of the canvas
-    // carries continuous environment (the customer's "image blown up too
-    // large" report: the scene spanned panels, so the front showed a crop).
-    let heroZone = "";
-    if (design.hero_containment !== false) {
-      const frontPanel =
-        planeByPlacement.get("front") ??
-        (sliceJobs[0] ? planeByPlacement.get(sliceJobs[0].placement) : undefined);
-      if (frontPanel) {
-        const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 100);
-        const l = pct((frontPanel.xIn - bound.x0) / boundW);
-        const r = pct((frontPanel.xIn + frontPanel.widthIn - bound.x0) / boundW);
-        const t = pct((frontPanel.yIn - bound.y0) / boundH);
-        const b = pct((frontPanel.yIn + frontPanel.heightIn - bound.y0) / boundH);
-        if (r - l < 100 || b - t < 100) {
-          const cx = Math.round((l + r) / 2);
-          const cy = Math.round((t + b) / 2);
-          const horiz = cx < 40 ? "left part" : cx > 60 ? "right part" : "horizontal center";
-          const vert = cy < 40 ? "upper part" : cy > 60 ? "lower part" : "vertical middle";
-          heroZone =
-            ` COMPOSITION LAW: this is a WIDE ESTABLISHING SHOT. The complete main subject appears ` +
-            `SMALL — it occupies at most ${Math.max(10, Math.round((r - l) * 0.6))}% of the image width — ` +
-            `positioned in the ${horiz}, ${vert} of the canvas (centered near ${cx}% across, ${cy}% down), ` +
-            `entirely visible head-to-toe with generous space around it. ` +
-            `Every other area of the canvas is pure environment: ground, sky, atmosphere, texture — ` +
-            `no additional subjects, nothing cropped at any edge.`;
+    // PIXEL-PERFECT HERO CONTAINMENT (owner-mandated for all AOP masters):
+    // 1) generate the complete hero scene alone at the front piece's aspect,
+    // 2) paste it into the front-piece rect by math and OUTPAINT only the
+    //    surroundings, 3) re-paste the pristine hero pixel-for-pixel — the
+    // front panel is byte-identical to the hero by construction, and any
+    // outpaint blend mismatch lands exactly on sewing seams. Falls back to
+    // single-generation zone-law composition on any error.
+    const frontPanel =
+      planeByPlacement.get("front") ??
+      (sliceJobs[0] ? planeByPlacement.get(sliceJobs[0].placement) : undefined);
+    const frontRect = frontPanel
+      ? {
+          left: Math.round((frontPanel.xIn - bound.x0) * pxPerIn.x),
+          top: Math.round((frontPanel.yIn - bound.y0) * pxPerIn.y),
+          width: Math.max(16, Math.round(frontPanel.widthIn * pxPerIn.x)),
+          height: Math.max(16, Math.round(frontPanel.heightIn * pxPerIn.y))
         }
-      }
-    }
-    const prompt = masterPrompt(design, heroZone !== "") + heroZone;
+      : null;
+    const references = design.customer_image_urls?.length
+      ? design.customer_image_urls.map((image) => ({ image }))
+      : undefined;
 
-    let master: RasterImage;
+    let master: RasterImage | null = null;
     let masterUrl: string | null = null;
-    try {
-      const generated = await this.media.generateImage({
-        model: IMAGE.FLUX_2_FLEX,
-        positivePrompt: prompt,
-        negativePrompt: negativeFor(design),
-        width: masterW,
-        height: masterH,
-        seed,
-        referenceImages: design.customer_image_urls?.length
-          ? design.customer_image_urls.map((image) => ({ image }))
-          : undefined
-      });
-      masterUrl = generated.imageURL;
-      master = await fetchImage(masterUrl);
-    } catch (error) {
-      for (const job of jobs) {
-        this.recordFailure(job, `Master generation failed: ${(error as Error).message}`, record);
+    let heroMode = "single";
+    if (
+      design.hero_containment !== false &&
+      frontRect &&
+      this.media.hostImage &&
+      (frontRect.width < masterW * 0.96 || frontRect.height < masterH * 0.96)
+    ) {
+      try {
+        // 1) The hero scene, complete and self-contained, at piece aspect.
+        const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
+        const heroW = clampFluxDimension(frontRect.width * k);
+        const heroH = clampFluxDimension(frontRect.height * k);
+        const heroGen = await this.media.generateImage({
+          model: IMAGE.FLUX_2_FLEX,
+          positivePrompt:
+            `A complete self-contained scene: every subject entirely visible with comfortable ` +
+            `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
+            `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
+            `No borders, no frames, no split composition.`,
+          negativePrompt: negativeFor(design),
+          width: heroW,
+          height: heroH,
+          seed,
+          referenceImages: references
+        });
+        const heroResponse = await fetch(heroGen.imageURL);
+        if (!heroResponse.ok) throw new Error(`hero fetch HTTP ${heroResponse.status}`);
+        const heroBuf = Buffer.from(await heroResponse.arrayBuffer());
+        const hero = await sharp(heroBuf)
+          .resize(frontRect.width, frontRect.height, { fit: "fill" })
+          .png()
+          .toBuffer();
+        // 2) Seed canvas (hero pasted on its own mean color) -> outpaint.
+        const mean = await sharp(heroBuf).resize(1, 1).removeAlpha().raw().toBuffer();
+        const seedCanvas = await sharp({
+          create: {
+            width: masterW,
+            height: masterH,
+            channels: 3,
+            background: { r: mean[0], g: mean[1], b: mean[2] }
+          }
+        })
+          .composite([{ input: hero, left: frontRect.left, top: frontRect.top }])
+          .jpeg({ quality: 92 })
+          .toBuffer();
+        const seedUrl = await this.media.hostImage(seedCanvas.toString("base64"), "image/jpeg");
+        const outpainted = await this.media.generateImage({
+          model: IMAGE.FLUX_2_FLEX,
+          positivePrompt:
+            `Extend this artwork outward so it fills the entire canvas as one continuous mural. ` +
+            `Keep the existing detailed scene EXACTLY as it is, same position and scale. ` +
+            `Replace every flat solid-color area with seamlessly matching environment: ground, sky, ` +
+            `atmosphere, texture continuing the scene's world. No new focal subjects, no people, ` +
+            `no animals, no text, no borders. ${designCore(design).slice(0, 600)}`,
+          width: masterW,
+          height: masterH,
+          seed,
+          referenceImages: [{ image: seedUrl }]
+        });
+        const outResponse = await fetch(outpainted.imageURL);
+        if (!outResponse.ok) throw new Error(`outpaint fetch HTTP ${outResponse.status}`);
+        // 3) Deterministic re-paste: the front zone is the hero, by law.
+        const finalBuf = await sharp(Buffer.from(await outResponse.arrayBuffer()))
+          .resize(masterW, masterH, { fit: "fill" })
+          .composite([{ input: hero, left: frontRect.left, top: frontRect.top }])
+          .png()
+          .toBuffer();
+        masterUrl = await this.media.hostImage(finalBuf.toString("base64"), "image/png");
+        master = { buffer: finalBuf, width: masterW, height: masterH };
+        heroMode = "hero_outpaint";
+      } catch (error) {
+        master = null;
+        masterUrl = null;
+        heroMode = `fallback: ${(error as Error).message.slice(0, 80)}`;
       }
-      return masterUrl;
     }
+    if (!master) {
+      // Fallback / opt-out: single master generation with zone-law guidance.
+      let heroZone = "";
+      if (design.hero_containment !== false && frontRect && (frontRect.width < masterW || frontRect.height < masterH)) {
+        const cx = Math.round(((frontRect.left + frontRect.width / 2) / masterW) * 100);
+        const cy = Math.round(((frontRect.top + frontRect.height / 2) / masterH) * 100);
+        heroZone =
+          ` COMPOSITION LAW: this is a WIDE ESTABLISHING SHOT. The complete main subject appears ` +
+          `SMALL, centered near ${cx}% across and ${cy}% down the canvas, entirely visible with ` +
+          `generous space around it. Everything else is pure environment — no additional subjects, ` +
+          `nothing cropped at any edge.`;
+      }
+      const prompt = masterPrompt(design, heroZone !== "") + heroZone;
+      try {
+        const generated = await this.media.generateImage({
+          model: IMAGE.FLUX_2_FLEX,
+          positivePrompt: prompt,
+          negativePrompt: negativeFor(design),
+          width: masterW,
+          height: masterH,
+          seed,
+          referenceImages: references
+        });
+        masterUrl = generated.imageURL;
+        master = await fetchImage(masterUrl);
+      } catch (error) {
+        for (const job of jobs) {
+          this.recordFailure(job, `Master generation failed: ${(error as Error).message}`, record);
+        }
+        return masterUrl;
+      }
+    }
+    const prompt = `master(${heroMode})`;
 
     // Panels are independent once the master exists: slice/upscale/host them
     // CONCURRENTLY (an AOP hoodie is 6-7 panels of 6000px work — serial was

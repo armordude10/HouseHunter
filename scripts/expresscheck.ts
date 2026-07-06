@@ -306,7 +306,11 @@ const main = async () => {
       !result.panels.some((panel) => panel.placement.includes("label"))
     );
     check("exactly 1 structured LLM call", provider.structuredCalls === 1);
-    check("exactly 1 image generation (master)", media.generateCalls === 1, `got ${media.generateCalls}`);
+    check(
+      "AOP master = hero + outpaint (pixel-perfect containment), exactly 2 generations",
+      media.generateCalls === 2,
+      `got ${media.generateCalls}`
+    );
     check("official mockups returned", result.mockups.length > 0);
     const payload = mockups.calls[0];
     check(
@@ -764,7 +768,11 @@ const main = async () => {
         check("745 run completed", result.status === "completed", result.message);
         check("an AOP shirt selected, not the plain tee", getCatalogRecord(result.product.id)?.aop === true, result.product.name);
         check("full multi-panel artwork (master_slice, 4 panels)", result.strategy === "master_slice" && result.panels.length === 4, `${result.strategy}/${result.panels.length}`);
-        check("master + typography lockup = exactly 2 generations", media.generateCalls === 2, `${media.generateCalls}`);
+        check(
+          "hero + outpaint + typography lockup = exactly 3 generations",
+          media.generateCalls === 3,
+          `${media.generateCalls}`
+        );
         const front = result.panels.find((p) => p.placement === "front")!;
         check("front panel carries the layered overlay", /Layered overlay applied/.test(front.notes), front.notes.slice(0, 80));
         check("all 4 panels submitted to mockups", mockups.calls[0]?.placements.length === 4);
@@ -780,8 +788,10 @@ const main = async () => {
           media.prompts[0]?.slice(0, 70)
         );
         check(
-          "hero containment: wide-shot law directs the subject into the front-piece zone",
-          media.prompts[0].includes("COMPOSITION LAW") && /centered near \d+% across/.test(media.prompts[0])
+          "PIXEL-PERFECT CONTAINMENT: hero scene generated alone, then outpainted",
+          media.prompts[0].includes("complete self-contained scene") &&
+            media.prompts[1].includes("Extend this artwork outward"),
+          media.prompts[1]?.slice(0, 60)
         );
         check(
           "overlay recorded in the genome",
@@ -833,8 +843,8 @@ const main = async () => {
           `${result.product.name} / ${result.panels.length}`
         );
         check(
-          "text auto-synthesized as grounded typography (master + lockup = 2 gens)",
-          media.generateCalls === 2,
+          "text auto-synthesized as grounded typography (hero + outpaint + lockup = 3 gens)",
+          media.generateCalls === 3,
           `${media.generateCalls}`
         );
         check(
@@ -844,8 +854,8 @@ const main = async () => {
         );
         check(
           "typography prompt quotes the exact string",
-          media.prompts[1]?.includes('"The Arndt Wedding"') === true,
-          media.prompts[1]?.slice(0, 80)
+          media.prompts[2]?.includes('"The Arndt Wedding"') === true,
+          media.prompts[2]?.slice(0, 80)
         );
         const frontPanel = result.panels.find((p) => /Layered overlay applied/.test(p.notes));
         check("lockup composited onto exactly one grounded panel", Boolean(frontPanel), frontPanel?.placement);
@@ -922,7 +932,7 @@ const main = async () => {
         result.panels.length === renderableCount && mockups.calls[0]?.placements.length === renderableCount,
         result.panels.map((p) => p.placement).join(",")
       );
-      check("one master generation", media.generateCalls === 1);
+      check("hero + outpaint master (pixel-perfect containment)", media.generateCalls === 2);
       check("style ids present in mockup payload", (mockups.calls[0]?.styleIds.length ?? 0) > 0);
     }
 
