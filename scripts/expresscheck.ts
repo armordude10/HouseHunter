@@ -780,6 +780,10 @@ const main = async () => {
           media.prompts[0]?.slice(0, 70)
         );
         check(
+          "hero containment: wide-shot law directs the subject into the front-piece zone",
+          media.prompts[0].includes("COMPOSITION LAW") && /centered near \d+% across/.test(media.prompts[0])
+        );
+        check(
           "overlay recorded in the genome",
           result.design_genome?.panels.some((p) => p.job_id === "overlay_front") === true
         );

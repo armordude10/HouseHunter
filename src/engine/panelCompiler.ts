@@ -91,6 +91,10 @@ export interface DesignSpec {
   required_text?: string[];
   forbidden_text?: string[];
   base_product_color?: string;
+  /** Compose the hero subject inside the primary (front) piece zone of the
+   *  master (default true). False when the customer asks for oversized /
+   *  wrapping art ("giant robot spanning the whole hoodie"). */
+  hero_containment?: boolean;
   customer_image_urls?: string[];
   customer_image_captions?: string[];
   /** Physical repeat size for pattern strategies ("statement" ~12-16, "micro" ~3-4). */
@@ -206,13 +210,16 @@ const negativeFor = (design: DesignSpec): string => {
  * "black lines" defect). The master is described purely as a continuous
  * mural; panel structure exists only in the slicing math.
  */
-const masterPrompt = (design: DesignSpec): string =>
+const masterPrompt = (design: DesignSpec, zoned = false): string =>
   `One single continuous mural artwork filling the entire canvas edge to edge. ` +
   `${designCore(design)}. ` +
   `The scene flows uninterrupted across the whole canvas: no borders, no frames, no straight dividing lines, ` +
   `no outlines, no diagrams, no split composition, no text. ` +
-  `Evenly distributed organic composition; important subjects spread across the middle of the canvas ` +
-  `and kept away from all edges. Flat print-ready textile artwork, rich detail, cohesive color and lighting.`;
+  (zoned
+    ? ""
+    : `Evenly distributed organic composition; important subjects spread across the middle of the canvas ` +
+      `and kept away from all edges. `) +
+  `Flat print-ready textile artwork, rich detail, cohesive color and lighting.`;
 
 const tilePrompt = (design: DesignSpec): string =>
   `Seamless repeating textile pattern swatch, edges wrap perfectly for infinite tiling in all directions, ` +
@@ -526,7 +533,38 @@ export class PanelCompiler {
     const pxPerIn = { x: masterW / boundW, y: masterH / boundH };
 
     const seed = stableSeed(runId, "master");
-    const prompt = masterPrompt(design);
+    // HERO CONTAINMENT: the plane math knows exactly where the front piece
+    // sits inside the master, so the main subject is directed into that zone
+    // and reads complete on the garment's front — the rest of the canvas
+    // carries continuous environment (the customer's "image blown up too
+    // large" report: the scene spanned panels, so the front showed a crop).
+    let heroZone = "";
+    if (design.hero_containment !== false) {
+      const frontPanel =
+        planeByPlacement.get("front") ??
+        (sliceJobs[0] ? planeByPlacement.get(sliceJobs[0].placement) : undefined);
+      if (frontPanel) {
+        const pct = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 100);
+        const l = pct((frontPanel.xIn - bound.x0) / boundW);
+        const r = pct((frontPanel.xIn + frontPanel.widthIn - bound.x0) / boundW);
+        const t = pct((frontPanel.yIn - bound.y0) / boundH);
+        const b = pct((frontPanel.yIn + frontPanel.heightIn - bound.y0) / boundH);
+        if (r - l < 100 || b - t < 100) {
+          const cx = Math.round((l + r) / 2);
+          const cy = Math.round((t + b) / 2);
+          const horiz = cx < 40 ? "left part" : cx > 60 ? "right part" : "horizontal center";
+          const vert = cy < 40 ? "upper part" : cy > 60 ? "lower part" : "vertical middle";
+          heroZone =
+            ` COMPOSITION LAW: this is a WIDE ESTABLISHING SHOT. The complete main subject appears ` +
+            `SMALL — it occupies at most ${Math.max(10, Math.round((r - l) * 0.6))}% of the image width — ` +
+            `positioned in the ${horiz}, ${vert} of the canvas (centered near ${cx}% across, ${cy}% down), ` +
+            `entirely visible head-to-toe with generous space around it. ` +
+            `Every other area of the canvas is pure environment: ground, sky, atmosphere, texture — ` +
+            `no additional subjects, nothing cropped at any edge.`;
+        }
+      }
+    }
+    const prompt = masterPrompt(design, heroZone !== "") + heroZone;
 
     let master: RasterImage;
     let masterUrl: string | null = null;

@@ -656,6 +656,8 @@ export const runExpress = async (
           ? [...intent.forbidden_text, "any words, letters, or typography (text is applied separately)"]
           : intent.forbidden_text,
         base_product_color: printedSurface ? undefined : intent.garment_color || undefined,
+        // Oversized/wrapping requests opt OUT of front-zone hero containment.
+        hero_containment: !/\bwrap|spann?ing|across the (whole|entire)|oversiz|blown[- ]?up|zoomed/i.test(text),
         customer_image_urls: referenceUrls,
         customer_image_captions: captions
       };
