@@ -72,6 +72,8 @@ export const createAndWaitForMockups = async (params: {
   widthPx?: number;
   maxAttempts?: number;
   intervalSeconds?: number;
+  /** Diagnostic hook: called with poll/webhook lifecycle events. */
+  onEvent?: (info: string) => void;
 }): Promise<{
   status: string;
   mockups: MockupRender[];
@@ -138,6 +140,7 @@ export const createAndWaitForMockups = async (params: {
       );
     }
     taskId = created.data[0].id;
+    params.onEvent?.(`task created: ${taskId}`);
     break;
   }
   if (taskId === null) {
@@ -160,13 +163,30 @@ export const createAndWaitForMockups = async (params: {
     task ? finish(task as TaskData, "webhook") : null
   );
   const pollWait = (async () => {
+    let lastSeen = "";
     for (let poll = 0; poll < maxAttempts; poll++) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      const response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks?id=${taskId}`, {
-        headers: headers()
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${PRINTFUL_API_BASE}/v2/mockup-tasks?id=${taskId}`, {
+          headers: headers()
+        });
+      } catch (error) {
+        params.onEvent?.(`poll ${poll}: FETCH ERROR ${(error as Error).message.slice(0, 120)}`);
+        continue;
+      }
+      if (response.status === 429) {
+        params.onEvent?.(`poll ${poll}: 429 rate limited — backing off`);
+        await new Promise((resolve) => setTimeout(resolve, 30000));
+        continue;
+      }
       const polled = (await response.json().catch(() => null)) as { data?: TaskData[] } | null;
       const task = polled?.data?.[0];
+      const seen = `HTTP ${response.status} status=${task?.status ?? "none"}`;
+      if (seen !== lastSeen || poll % 10 === 0) {
+        params.onEvent?.(`poll ${poll}: ${seen}${task ? "" : ` body=${JSON.stringify(polled)?.slice(0, 160)}`}`);
+        lastSeen = seen;
+      }
       if (!task) continue;
       if (task.status === "completed" || task.status === "failed") {
         return finish(task, "poll");

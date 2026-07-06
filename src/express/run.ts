@@ -798,7 +798,8 @@ export const runExpress = async (
       // hoodie needs >150s and 3-placement leggings exceeded 400s.
       // Patience is free — regeneration is not.
       maxAttempts: 100,
-      intervalSeconds: 5
+      intervalSeconds: 5,
+      onEvent: (info) => note("mockup_poll", info)
     });
     stageMs.mockups = Date.now() - tMockups;
     note("mockup_result", `${rendered.status} via=${rendered.via ?? "?"} mockups=${rendered.mockups.length}`);
