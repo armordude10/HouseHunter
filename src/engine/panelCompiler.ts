@@ -52,7 +52,7 @@ import {
   toBase64Png
 } from "./raster.js";
 import { DesignGenome, PanelProvenance, stableSeed } from "./provenance.js";
-import { mirrorToPrintfulFileLibrary, printfulEnabled } from "../integrations/printful.js";
+// printful file-library mirroring retired: see notes at former call sites.
 
 // -----------------------------------------------------------------------------
 // Inputs.
@@ -577,11 +577,10 @@ export class PanelCompiler {
           dpi: target.dpi
         });
         const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
-        if (printfulEnabled()) {
-          void mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`).catch((error) =>
-            console.warn(`[compiler] background mirror failed: ${(error as Error).message}`)
-          );
-        }
+        // File-library mirroring is RETIRED from the run path: nothing consumes
+        // it (orders/mockups use our URLs), and its print-res ingest saturated
+        // Printful's per-store queue — mockup tasks sat 'pending' forever
+        // behind it (the AOP-hoodie stall, proven by payload replay).
         return [
           {
             job_id: job.job_id,
@@ -718,9 +717,7 @@ export class PanelCompiler {
           dpi: target.dpi
         });
         const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, transparent);
-        const printfulRef = printfulEnabled()
-          ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
-          : null;
+        const printfulRef = null as { id: number } | null; // mirror retired (starved mockup ingest)
         record(
           {
             job_id: job.job_id,
@@ -863,9 +860,7 @@ export class PanelCompiler {
       // what the mockup generator wants. Transparent panels keep the final
       // cutout (alpha must survive on the garment mockup).
       const mockupUrl = factor !== null && !transparent ? preUpscaleUrl : fileUrl;
-      const printfulRef = printfulEnabled()
-        ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
-        : null;
+      const printfulRef = null as { id: number } | null; // mirror retired (starved mockup ingest)
 
       record(
         {
@@ -934,9 +929,7 @@ export class PanelCompiler {
       const sourceImage = await fetchImage(source.file_url);
       const mirrored = await mirrorHorizontal(sourceImage, target.dpi);
       const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(mirrored, 2, false);
-      const printfulRef = printfulEnabled()
-        ? await mirrorToPrintfulFileLibrary(fileUrl, `${runId}-${job.placement}.png`)
-        : null;
+      const printfulRef = null as { id: number } | null; // mirror retired (starved mockup ingest)
       record(
         {
           job_id: job.job_id,
