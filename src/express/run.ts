@@ -136,7 +136,11 @@ const meteredMedia = (media: MediaLike, meter: { generations: number; upscales: 
     meter.upscales += 1;
     return media.upscale(image, factor);
   },
-  uploadImage: (image) => media.uploadImage(image)
+  uploadImage: (image) => media.uploadImage(image),
+  // CRITICAL passthrough: dropping hostImage silently disabled the <=2048px
+  // mockup copies — every multi-panel mockup task got print-res files
+  // (6x ~2.8MB) and blew Printful's render window. THE AOP-hoodie timeout.
+  ...(media.hostImage ? { hostImage: media.hostImage.bind(media) } : {})
 });
 
 const fetchPanelBytes = async (url: string): Promise<Buffer> => {

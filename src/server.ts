@@ -22,7 +22,7 @@ import path from "node:path";
 import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
 import { runExpress } from "./express/run.js";
 import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
-import { hostedImages, putHostedImage } from "./hosting.js";
+import { fetchDurableImage, hostedImages, putHostedImage } from "./hosting.js";
 import { resolveTaskWebhook, webhookStats } from "./integrations/mockupWaiters.js";
 import { PrintfulTruth } from "./express/truth.js";
 import {
@@ -821,7 +821,9 @@ const server = createServer(async (req, res) => {
     // HEAD must work: Printful preflights print files with HEAD before
     // downloading — a GET-only route made it read live files as missing.
     if ((req.method === "GET" || req.method === "HEAD") && uploadMatch) {
-      const record = hostedImages.get(uploadMatch[1]);
+      // Memory first; the durable Supabase mirror second — a restart between
+      // panel hosting and Printful's fetch can no longer 404 a live file.
+      const record = hostedImages.get(uploadMatch[1]) ?? (await fetchDurableImage(uploadMatch[1]));
       if (!record) return json(res, 404, { error: "upload not found or expired" });
       res.writeHead(200, {
         "Content-Type": record.contentType,

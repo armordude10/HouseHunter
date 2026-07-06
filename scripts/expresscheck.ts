@@ -318,6 +318,13 @@ const main = async () => {
       "heavy product (6 placements) requests ONE style — task weight stays renderable",
       payload.styleIds.join(",") === "11"
     );
+    check(
+      "mockup copies are REAL (hostImage survives metering; print-res never submitted)",
+      result.panels
+        .filter((p) => p.status === "success")
+        .every((p) => p.mockup_file_url && p.mockup_file_url !== p.file_url),
+      result.panels[0]?.mockup_file_url === result.panels[0]?.file_url ? "mockup==print!" : "ok"
+    );
     // THE SPEED CONTRACT: every file submitted to the mockup generator must
     // be <=2048px — print-res submissions are what made tasks take minutes.
     let allSmall = true;
