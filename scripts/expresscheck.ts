@@ -16,7 +16,7 @@
  */
 
 import sharp from "sharp";
-import { MediaLike } from "../src/engine/panelCompiler.js";
+import { baseFillSvg, MediaLike, resolveCssColor } from "../src/engine/panelCompiler.js";
 import { LlmProvider, StructuredParams } from "../src/llm/provider.js";
 import { ChatCompletionParams, ChatCompletionResult } from "../src/runware/client.js";
 import {
@@ -308,8 +308,8 @@ const main = async () => {
     );
     check("exactly 1 structured LLM call", provider.structuredCalls === 1);
     check(
-      "AOP master = hero + outpaint (pixel-perfect containment), exactly 2 generations",
-      media.generateCalls === 2,
+      "AOP worn views = hero + front view + back view, exactly 3 generations",
+      media.generateCalls === 3,
       `got ${media.generateCalls}`
     );
     check("official mockups returned", result.mockups.length > 0);
@@ -770,8 +770,8 @@ const main = async () => {
         check("an AOP shirt selected, not the plain tee", getCatalogRecord(result.product.id)?.aop === true, result.product.name);
         check("full multi-panel artwork (master_slice, 4 panels)", result.strategy === "master_slice" && result.panels.length === 4, `${result.strategy}/${result.panels.length}`);
         check(
-          "hero + outpaint + typography lockup = exactly 3 generations",
-          media.generateCalls === 3,
+          "hero + front view + back view + typography lockup = exactly 4 generations",
+          media.generateCalls === 4,
           `${media.generateCalls}`
         );
         const front = result.panels.find((p) => p.placement === "front")!;
@@ -789,9 +789,9 @@ const main = async () => {
           media.prompts[0]?.slice(0, 70)
         );
         check(
-          "PIXEL-PERFECT CONTAINMENT: hero scene generated alone, then outpainted",
+          "PIXEL-PERFECT CONTAINMENT: hero scene generated alone, then extended",
           media.prompts[0].includes("complete self-contained scene") &&
-            media.prompts[1].includes("Extend this artwork outward"),
+            /Extend (this artwork|the existing scene) outward/.test(media.prompts[1] ?? ""),
           media.prompts[1]?.slice(0, 60)
         );
         check(
@@ -844,8 +844,8 @@ const main = async () => {
           `${result.product.name} / ${result.panels.length}`
         );
         check(
-          "text auto-synthesized as grounded typography (hero + outpaint + lockup = 3 gens)",
-          media.generateCalls === 3,
+          "text auto-synthesized as grounded typography (hero + 2 views + lockup = 4 gens)",
+          media.generateCalls === 4,
           `${media.generateCalls}`
         );
         check(
@@ -855,8 +855,8 @@ const main = async () => {
         );
         check(
           "typography prompt quotes the exact string",
-          media.prompts[2]?.includes('"The Arndt Wedding"') === true,
-          media.prompts[2]?.slice(0, 80)
+          media.prompts.some((p) => p.includes('"The Arndt Wedding"')),
+          media.prompts[media.prompts.length - 1]?.slice(0, 80)
         );
         const frontPanel = result.panels.find((p) => /Layered overlay applied/.test(p.notes));
         check("lockup composited onto exactly one grounded panel", Boolean(frontPanel), frontPanel?.placement);
@@ -1110,11 +1110,13 @@ const main = async () => {
       );
     }
 
-    console.log("\n== 13e. SLEEVE WORN-VIEW: halves continue their true body panels ==");
+    console.log("\n== 13e. SLEEVE WORN-VIEW: painter engages; NO hard line at the centerline ==");
     {
-      // Full-bleed run (containment opted out) so the master is ONE gradient
-      // whose red channel encodes global X — continuity becomes measurable.
-      const { deps } = makeDeps(
+      // Supersedes the hard-centerline assembly the owner rejected ("its
+      // unaligned and has a hard line at the seam which is ugly"): sleeved
+      // AOP garments now paint front/back WORN VIEWS and unfold each sleeve
+      // as front half + mirrored back half with a feathered cross-blend.
+      const { deps, media } = makeDeps(
         intentFor({
           product_query: "aop shirt",
           coverage: "full",
@@ -1127,41 +1129,133 @@ const main = async () => {
         deps
       );
       check("worn-view run completed", result.status === "completed", result.message);
+      check(
+        "worn-view painter engaged (front view AS WORN + back view continuation)",
+        media.prompts.some((p) => /AS WORN/i.test(p)) &&
+          media.prompts.some((p) => /BACK view/i.test(p)),
+        media.prompts.map((p) => p.slice(0, 48)).join(" | ")
+      );
       const panelBuf = async (placement: string) => {
         const panel = result.panels.find((p) => p.placement === placement)!;
         return Buffer.from((panel.file_url as string).split(",")[1], "base64");
       };
-      const colRed = async (buf: Buffer, which: "first" | "last" | "midL" | "midR") => {
+      const colRed = async (buf: Buffer, which: "midL" | "midR") => {
         const meta = await sharp(buf).metadata();
         const w = meta.width ?? 1;
-        const x = which === "first" ? 0 : which === "last" ? w - 1 : which === "midL" ? Math.floor(w / 2) - 2 : Math.floor(w / 2) + 2;
+        const x = which === "midL" ? Math.floor(w / 2) - 2 : Math.floor(w / 2) + 2;
         const col = await sharp(buf).extract({ left: x, top: 0, width: 1, height: meta.height ?? 1 }).raw().toBuffer({ resolveWithObject: true });
         let sum = 0;
         for (let i = 0; i < col.info.height; i++) sum += col.data[i * col.info.channels];
         return sum / col.info.height;
       };
       const sleeve = await panelBuf("sleeve_left");
-      const front = await panelBuf("front");
-      const sFirst = await colRed(sleeve, "first");
-      const sLast = await colRed(sleeve, "last");
-      const fFirst = await colRed(front, "first");
-      const fLast = await colRed(front, "last");
-      check(
-        "left sleeve FRONT half opens exactly where the front print's right edge ends",
-        Math.abs(sFirst - fLast) < 14,
-        `sleeve[0]=${sFirst.toFixed(0)} vs front[last]=${fLast.toFixed(0)}`
-      );
-      check(
-        "left sleeve BACK half (mirrored) meets the back print's right edge",
-        Math.abs(sLast - fFirst) < 14,
-        `sleeve[last]=${sLast.toFixed(0)} vs back-right(=front[0])=${fFirst.toFixed(0)}`
-      );
       const midL = await colRed(sleeve, "midL");
       const midR = await colRed(sleeve, "midR");
       check(
-        "hard line at the sleeve centerline (the two worn views split there)",
-        Math.abs(midL - midR) > 25,
-        `centerline jump ${Math.abs(midL - midR).toFixed(0)}`
+        "NO hard line at the sleeve centerline (feathered cross-blend)",
+        Math.abs(midL - midR) < 15,
+        `centerline jump ${Math.abs(midL - midR).toFixed(0)} (must be smooth)`
+      );
+    }
+
+    console.log("\n== 13f. PANEL DIRECTIVES: per-panel orders execute EXACTLY ==");
+    {
+      // Exact-color vocabulary and vector fills.
+      check("hex passes through", resolveCssColor("#ff8800") === "#ff8800");
+      check('"Dark Blue" resolves', resolveCssColor("Dark Blue") === "darkblue");
+      check('"sunset orange" salvages its hue', resolveCssColor("sunset orange") === "orange");
+      check('nonsense color is rejected', resolveCssColor("banana") === null);
+      const svg = baseFillSvg(100, 200, "gradient", "orange", "tan", 90);
+      check(
+        "gradient angle 90 = top-to-bottom",
+        svg.includes('y1="0.0000"') && svg.includes('y2="1.0000"') && svg.includes("orange") && svg.includes("tan"),
+        svg.slice(0, 160)
+      );
+
+      // The owner's acid test, end to end: yellow left sleeve, blue right
+      // sleeve, orange->tan gradient front, green->purple gradient back,
+      // black hood, panel-specific typography on the front.
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "hoodie",
+          coverage: "full",
+          all_over: true,
+          artwork_brief: "color-blocked hoodie with panel-specific colors",
+          panel_directives: [
+            { panel: "left_sleeve", fill: "solid", color_a: "yellow", color_b: "", angle_deg: 0, art_prompt: "", art_width_frac: 0 },
+            { panel: "right_sleeve", fill: "solid", color_a: "blue", color_b: "", angle_deg: 0, art_prompt: "", art_width_frac: 0 },
+            { panel: "front", fill: "gradient", color_a: "orange", color_b: "tan", angle_deg: 90, art_prompt: 'the exact text "THREAD" as varsity typography', art_width_frac: 0.6 },
+            { panel: "back", fill: "gradient", color_a: "green", color_b: "purple", angle_deg: 90, art_prompt: "", art_width_frac: 0 },
+            { panel: "hood", fill: "solid", color_a: "black", color_b: "", angle_deg: 0, art_prompt: "", art_width_frac: 0 }
+          ]
+        })
+      );
+      const result = await runExpress(
+        {
+          input_as_text:
+            "hoodie with a yellow left sleeve, a blue right sleeve, an orange to tan gradient front with THREAD across the chest, a green to purple gradient back, and a black hood"
+        },
+        deps
+      );
+      check("directive run completed", result.status === "completed", result.message);
+      check("strategy reports hybrid (directive engine)", result.strategy === "hybrid", result.strategy);
+      const avg = async (placement: string, region: "top" | "bottom" | "all") => {
+        const panel = result.panels.find((p) => p.placement === placement);
+        if (!panel?.file_url) return null;
+        const buf = Buffer.from((panel.file_url as string).split(",")[1], "base64");
+        const meta = await sharp(buf).metadata();
+        const h = meta.height ?? 1;
+        const strip = Math.max(1, Math.floor(h * 0.05));
+        const extracted =
+          region === "all"
+            ? sharp(buf)
+            : sharp(buf).extract({
+                left: 0,
+                top: region === "top" ? 0 : h - strip,
+                width: meta.width ?? 1,
+                height: strip
+              });
+        const px = await extracted.resize(1, 1, { fit: "fill" }).removeAlpha().raw().toBuffer();
+        return { r: px[0], g: px[1], b: px[2] };
+      };
+      const ls = await avg("sleeve_left", "all");
+      check(
+        "left sleeve is EXACTLY yellow",
+        !!ls && ls.r > 200 && ls.g > 200 && ls.b < 100,
+        JSON.stringify(ls)
+      );
+      const rsAvg = await avg("sleeve_right", "all");
+      check(
+        "right sleeve is EXACTLY blue (never a mirror of the left)",
+        !!rsAvg && rsAvg.b > 150 && rsAvg.r < 100,
+        JSON.stringify(rsAvg)
+      );
+      const frontTop = await avg("front", "top");
+      const frontBottom = await avg("front", "bottom");
+      check(
+        "front gradient runs orange (top) to tan (bottom)",
+        !!frontTop && !!frontBottom && frontTop.b < 80 && frontBottom.b > 100 && frontTop.r > 180,
+        `top=${JSON.stringify(frontTop)} bottom=${JSON.stringify(frontBottom)}`
+      );
+      const backTop = await avg("back", "top");
+      const backBottom = await avg("back", "bottom");
+      check(
+        "back gradient runs green (top) to purple (bottom)",
+        !!backTop && !!backBottom && backTop.g > backTop.b + 40 && backBottom.b > backBottom.g + 40,
+        `top=${JSON.stringify(backTop)} bottom=${JSON.stringify(backBottom)}`
+      );
+      const hoodAvg = await avg("hood", "all");
+      check("hood is EXACTLY black", !!hoodAvg && hoodAvg.r < 40 && hoodAvg.g < 40 && hoodAvg.b < 40, JSON.stringify(hoodAvg));
+      check(
+        "panel-specific typography generated for the front only",
+        media.prompts.some((p) => /THREAD/.test(p)),
+        media.prompts.filter((p) => /THREAD/.test(p)).length + " prompts"
+      );
+      const lsPanel = result.panels.find((p) => p.placement === "sleeve_left");
+      check(
+        "directive panels carry provenance strategy=panel_directive",
+        (result.design_genome?.panels ?? []).some((p) => p.strategy === "panel_directive"),
+        lsPanel?.notes ?? ""
       );
     }
 

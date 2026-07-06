@@ -41,7 +41,9 @@ import { IMAGE } from "../runware/models.js";
 import {
   buildGarmentPlane,
   CalibrationProfile,
-  classifyPlacement
+  classifyPlacement,
+  PanelPlan,
+  PanelRole
 } from "./garmentSpace.js";
 import {
   cropExact,
@@ -99,6 +101,28 @@ export interface DesignSpec {
   customer_image_captions?: string[];
   /** Physical repeat size for pattern strategies ("statement" ~12-16, "micro" ~3-4). */
   pattern_tile_inches?: number;
+  /**
+   * Per-panel build plan (the garment engine's decomposition layer). When
+   * present, panels with a directive are rendered DETERMINISTICALLY: exact
+   * vector base fills (solid/gradient — zero AI color drift) plus optional
+   * per-panel generated art. Panels without a directive keep normal
+   * generation. This is how "yellow left sleeve, blue right sleeve,
+   * orange-to-tan gradient front, black hood, different logo per panel"
+   * comes out EXACTLY as ordered.
+   */
+  panel_directives?: PanelDirectiveSpec[];
+}
+
+/** Engine-side mirror of the intent model's per-panel directive. */
+export interface PanelDirectiveSpec {
+  /** "front","back","left_sleeve","right_sleeve","hood","pocket","neck","all". */
+  panel: string;
+  fill: "solid" | "gradient" | "none";
+  color_a: string;
+  color_b: string;
+  angle_deg: number;
+  art_prompt: string;
+  art_width_frac: number;
 }
 
 /** Injectable media surface so the engine is testable offline. */
@@ -235,6 +259,83 @@ const panelPrompt = (design: DesignSpec, job: CompileJob): string => {
     `${designCore(design)}.${anchor} A single cohesive graphic composition centered on the canvas ` +
     `with generous margin on all sides; nothing important within the outer tenth of the image. ` +
     `No borders, no frames, no text unless specified. Flat print-ready apparel graphic, high detail.`
+  );
+};
+
+// -----------------------------------------------------------------------------
+// Deterministic base fills (panel directives).
+// -----------------------------------------------------------------------------
+
+/** The 148 CSS named colors — the vector renderer's exact-color vocabulary. */
+const CSS_COLOR_NAMES = new Set(
+  (
+    "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue " +
+    "blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk " +
+    "crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki " +
+    "darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen " +
+    "darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue " +
+    "dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite " +
+    "gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki " +
+    "lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan " +
+    "lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen " +
+    "lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen " +
+    "magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen " +
+    "mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream " +
+    "mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid " +
+    "palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum " +
+    "powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown " +
+    "seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen " +
+    "steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen"
+  ).split(/\s+/)
+);
+
+/**
+ * Normalize a customer/model color into something the vector renderer can
+ * print EXACTLY: hex passes through, CSS names (with or without spaces —
+ * "light blue") resolve, and descriptive phrases salvage their last real hue
+ * word ("sunset orange" -> orange). Null when no printable color exists.
+ */
+export const resolveCssColor = (raw: string): string | null => {
+  const text = (raw ?? "").trim().toLowerCase();
+  if (!text) return null;
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(text)) return text;
+  const joined = text.replace(/[^a-z]/g, "");
+  if (CSS_COLOR_NAMES.has(joined)) return joined;
+  const words = text.split(/[^a-z]+/).filter(Boolean).reverse();
+  for (const word of words) if (CSS_COLOR_NAMES.has(word)) return word;
+  return null;
+};
+
+/**
+ * Exact vector base surface for a directive panel. Solid or two-stop linear
+ * gradient; angle 0 = left-to-right, 90 = top-to-bottom (the natural garment
+ * gradient). SVG-rendered by sharp, so the ink color is mathematically the
+ * requested color — the red-bra-came-back-white class of drift is impossible.
+ */
+export const baseFillSvg = (
+  width: number,
+  height: number,
+  fill: "solid" | "gradient",
+  colorA: string,
+  colorB: string,
+  angleDeg: number
+): string => {
+  if (fill === "gradient") {
+    const rad = ((Number.isFinite(angleDeg) ? angleDeg : 90) * Math.PI) / 180;
+    const dx = 0.5 * Math.cos(rad);
+    const dy = 0.5 * Math.sin(rad);
+    const c = (v: number) => (0.5 + v).toFixed(4);
+    return (
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+      `<defs><linearGradient id="g" x1="${c(-dx)}" y1="${c(-dy)}" x2="${c(dx)}" y2="${c(dy)}">` +
+      `<stop offset="0" stop-color="${colorA}"/><stop offset="1" stop-color="${colorB}"/>` +
+      `</linearGradient></defs>` +
+      `<rect width="${width}" height="${height}" fill="url(#g)"/></svg>`
+    );
+  }
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+    `<rect width="${width}" height="${height}" fill="${colorA}"/></svg>`
   );
 };
 
@@ -414,31 +515,45 @@ export class PanelCompiler {
     const mirrorJobs = activeJobs.filter((job) => job.design_action === "mirror_from_pair");
     const primaryJobs = activeJobs.filter((job) => job.design_action !== "mirror_from_pair");
 
-    if (strategy === "pattern_tile") {
+    // Per-panel directives take over the whole plan: every active job (mirror
+    // jobs included — a "yellow left sleeve, blue right sleeve" order must
+    // never mirror one sleeve into the other) renders from its directive;
+    // jobs without one keep normal generation.
+    let deferredMirrors = mirrorJobs;
+    const directed = Boolean(design.panel_directives?.length);
+    if (directed) {
+      deferredMirrors = await this.compilePanelDirectives(runId, activeJobs, design, record);
+    } else if (strategy === "pattern_tile") {
       tileUrl = await this.compilePatternTile(runId, primaryJobs, design, record, profile);
     } else if (strategy === "master_slice") {
-      masterUrl = await this.compileMasterSlice(runId, primaryJobs, design, record, profile);
+      const roles = new Set(primaryJobs.map((job) => classifyPlacement(job.placement)));
+      const sleeved =
+        roles.has("front") && (roles.has("left_sleeve") || roles.has("right_sleeve"));
+      masterUrl = sleeved
+        ? await this.compileWornViews(runId, primaryJobs, design, record, profile)
+        : await this.compileMasterSlice(runId, primaryJobs, design, record, profile);
     } else {
       for (const job of primaryJobs) {
         await this.generateDirect(runId, job, design, null, record);
       }
     }
 
-    for (const job of mirrorJobs) {
+    for (const job of deferredMirrors) {
       await this.compileMirror(runId, job, panels, record);
     }
 
     const missing = computeMissingRequired(jobs, panels);
+    const effectiveStrategy = directed ? "hybrid" : strategy;
     const genome: DesignGenome = {
       version: "threadbot-genome/1",
       run_id: runId,
-      strategy,
+      strategy: effectiveStrategy,
       master_artwork_url: masterUrl,
       pattern_tile_url: tileUrl,
       panels: provenance
     };
     return {
-      strategy,
+      strategy: effectiveStrategy,
       master_artwork_url: masterUrl,
       pattern_tile_url: tileUrl,
       panels,
@@ -488,6 +603,574 @@ export class PanelCompiler {
       }
     }
     return { fileUrl, mockupUrl };
+  }
+
+  /**
+   * PANEL DIRECTIVE ENGINE — "literally do anything, per panel."
+   *
+   * The intent model decomposes explicit per-panel orders ("yellow left
+   * sleeve, blue right sleeve, orange-to-tan gradient front, green-to-purple
+   * back, black hood, a different logo on each panel") into one directive per
+   * panel. Execution is split by what each piece NEEDS:
+   *   - base fills render as VECTOR math (sharp/SVG) — the exact requested
+   *     color or gradient, deterministic to the pixel, zero AI drift;
+   *   - per-panel art/text generates with native alpha and composites into
+   *     the panel's print-safe zone;
+   *   - panels with no directive keep normal generation; mirror jobs whose
+   *     role has a directive render their OWN directive (never a copy of the
+   *     opposite sleeve).
+   *
+   * Returns the mirror jobs it did NOT handle (caller mirrors them normally).
+   */
+  private async compilePanelDirectives(
+    runId: string,
+    jobs: CompileJob[],
+    design: DesignSpec,
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void
+  ): Promise<CompileJob[]> {
+    const byRole = new Map<PanelRole, PanelDirectiveSpec>();
+    let fallbackDirective: PanelDirectiveSpec | null = null;
+    for (const directive of (design.panel_directives ?? []).slice(0, 16)) {
+      const key = (directive.panel ?? "").trim().toLowerCase();
+      if (["all", "everything", "rest", "other", "others"].includes(key)) {
+        fallbackDirective ??= directive;
+        continue;
+      }
+      const role = classifyPlacement(key);
+      if (!byRole.has(role)) byRole.set(role, directive);
+    }
+
+    const deferredMirrors: CompileJob[] = [];
+    for (const job of jobs) {
+      const role = classifyPlacement(job.placement);
+      const directive = byRole.get(role) ?? fallbackDirective;
+      const actionable =
+        directive && (directive.fill !== "none" || directive.art_prompt?.trim());
+      if (!actionable) {
+        if (job.design_action === "mirror_from_pair") deferredMirrors.push(job);
+        else await this.generateDirect(runId, job, design, null, record);
+        continue;
+      }
+      try {
+        await this.renderDirectivePanel(runId, job, design, directive, record);
+      } catch (error) {
+        this.recordFailure(job, `Panel directive failed: ${(error as Error).message}`, record);
+      }
+    }
+    return deferredMirrors;
+  }
+
+  /** Render ONE panel from its directive: vector base + optional generated art. */
+  private async renderDirectivePanel(
+    runId: string,
+    job: CompileJob,
+    design: DesignSpec,
+    directive: PanelDirectiveSpec,
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void
+  ): Promise<void> {
+    const target = jobTarget(job);
+    const sizing = workingSize(target.width, target.height);
+    const width = sizing.width;
+    const height = sizing.height;
+    const colorA = resolveCssColor(directive.color_a) ?? "#ffffff";
+    const colorB = resolveCssColor(directive.color_b) ?? colorA;
+    const fill = directive.fill === "gradient" && colorB === colorA ? "solid" : directive.fill;
+
+    // Base surface: exact vector fill; "none" prints white (sublimation's
+    // unprinted color) so the art still sits on a clean surface.
+    const base =
+      fill === "none"
+        ? await sharp({ create: { width, height, channels: 3, background: "#ffffff" } })
+            .png()
+            .toBuffer()
+        : await sharp(Buffer.from(baseFillSvg(width, height, fill, colorA, colorB, directive.angle_deg)))
+            .resize(width, height, { fit: "fill" })
+            .png()
+            .toBuffer();
+
+    let buffer = base;
+    const prompt = capField((directive.art_prompt ?? "").trim(), 1200);
+    const seed = stableSeed(runId, job.job_id, "directive-art");
+    let model: string | null = null;
+    if (prompt) {
+      // Art box inside the print-safe zone: sized by the directive's width
+      // fraction, capped so nothing crowds the panel edges.
+      const widthFrac = Math.min(0.9, Math.max(0.15, numberOr(directive.art_width_frac, 0.5)));
+      const artW = Math.max(64, Math.round(width * widthFrac));
+      const artH = Math.max(64, Math.min(Math.round(height * 0.55), artW));
+      const isTypography = /"[^"]+"|\btext\b|\btypograph|\bletter/i.test(prompt);
+      model = isTypography ? IMAGE.RECRAFT_V4_1_PRO : IMAGE.FLUX_1_DEV;
+      const genScale = Math.min(1536 / artW, 1536 / artH, 2);
+      let generated: { imageURL: string };
+      let nativeAlpha = !isTypography;
+      const artPrompt =
+        `${prompt}. Single isolated subject centered with clear margin on all sides, ` +
+        `nothing cropped, no background scenery.`;
+      try {
+        generated = await this.media.generateImage({
+          model,
+          positivePrompt: artPrompt,
+          negativePrompt: negativeFor(design),
+          width: clampFluxDimension(artW * genScale),
+          height: clampFluxDimension(artH * genScale),
+          seed,
+          ...(nativeAlpha ? { layerDiffuse: true } : {})
+        } as Parameters<MediaLike["generateImage"]>[0]);
+      } catch {
+        // LayerDiffuse/typography path failed — plain generation + cutout.
+        model = IMAGE.FLUX_2_FLEX;
+        nativeAlpha = false;
+        generated = await this.media.generateImage({
+          model,
+          positivePrompt: artPrompt,
+          negativePrompt: negativeFor(design),
+          width: clampFluxDimension(artW * genScale),
+          height: clampFluxDimension(artH * genScale),
+          seed
+        });
+      }
+      let artUrl = generated.imageURL;
+      if (!nativeAlpha) {
+        artUrl = (await this.media.removeBackground(artUrl)).imageURL;
+      }
+      const artResponse = await fetch(artUrl);
+      if (!artResponse.ok) throw new Error(`art fetch HTTP ${artResponse.status}`);
+      const art = await sharp(Buffer.from(await artResponse.arrayBuffer()))
+        .resize(artW, artH, { fit: "inside" })
+        .png()
+        .toBuffer();
+      const artMeta = await sharp(art).metadata();
+      const aw = artMeta.width ?? artW;
+      const ah = artMeta.height ?? artH;
+      const role = classifyPlacement(job.placement);
+      // Chest height on body panels; dead center everywhere else.
+      const cy = role === "front" || role === "back" ? 0.42 : 0.5;
+      buffer = await sharp(base)
+        .composite([
+          {
+            input: art,
+            left: Math.max(0, Math.round(width / 2 - aw / 2)),
+            top: Math.max(0, Math.min(height - ah, Math.round(height * cy - ah / 2)))
+          }
+        ])
+        .png()
+        .toBuffer();
+    }
+
+    const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, false);
+    const fillNote =
+      fill === "none"
+        ? "no base fill"
+        : fill === "solid"
+          ? `solid ${colorA}`
+          : `gradient ${colorA} -> ${colorB} @ ${Math.round(directive.angle_deg) || 90}°`;
+    record(
+      {
+        job_id: job.job_id,
+        placement: job.placement,
+        status: "success",
+        generation_mode: prompt ? "generated" : "derived",
+        file_url: fileUrl,
+        mockup_file_url: mockupUrl,
+        file_type: "png",
+        public_url: true,
+        transparent_background: false,
+        must_render_in_mockup: job.must_render_in_mockup !== false,
+        source_job_id: job.source_job_id ?? null,
+        source_parent_url: null,
+        geometry_applied: true,
+        notes: `Panel directive: ${fillNote} rendered as exact vector fill${
+          prompt ? "; panel-specific art composited in the print-safe zone" : ""
+        }.`
+      },
+      {
+        job_id: job.job_id,
+        placement: job.placement,
+        strategy: "panel_directive",
+        model,
+        seed: prompt ? seed : null,
+        prompt: prompt || `vector fill: ${fillNote}`,
+        plane_rect_in: null,
+        crop_px: null,
+        tile_phase_px: null,
+        upscale_factor: sizing.factor,
+        target_px: { width: target.width, height: target.height },
+        dpi: target.dpi,
+        transparent: false,
+        source_urls: [],
+        printful_file_id: null
+      }
+    );
+  }
+
+  /**
+   * WORN-VIEW PAINTER (the owner's "paint on the 3D garment, slice at the
+   * seams, unfold" — realized with the geometry we have). Instead of one
+   * flat plane row, the artwork is painted per WORN VIEW:
+   *
+   *   W_F (front view): [right-sleeve front half][FRONT][left-sleeve front
+   *   half], hood above, pocket on the front — one continuous painting in
+   *   true worn adjacency, hero scene guaranteed inside the front piece.
+   *
+   *   W_B (back view): [right-sleeve back half][BACK][left-sleeve back
+   *   half] — painted as a CONTINUATION: seeded with the top-of-arm ridge
+   *   strips and side-seam strips copied (mirrored) from W_F, so the two
+   *   paintings share their border pixels before the model ever runs.
+   *
+   * Unfolding: body/hood/pocket crop straight out of their view; each
+   * sleeve print is front half (from W_F) + back half (from W_B, mirrored
+   * so its body edge lands on the underarm seam), joined with a feathered
+   * cross-blend at the centerline — no hard line.
+   */
+  private async compileWornViews(
+    runId: string,
+    jobs: CompileJob[],
+    design: DesignSpec,
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void,
+    profile?: CalibrationProfile
+  ): Promise<string | null> {
+    const plane = buildGarmentPlane(
+      jobs.map((job) => ({
+        placement: job.placement,
+        width_px: job.geometry_contract?.width_px,
+        height_px: job.geometry_contract?.height_px,
+        dpi: job.geometry_contract?.dpi
+      })),
+      profile
+    );
+    const byRole = new Map(plane.panels.map((panel) => [panel.role, panel]));
+    const byPlacement = new Map(plane.panels.map((panel) => [panel.placement, panel]));
+    const front = byRole.get("front")!;
+    const back = byRole.get("back");
+    const ls = byRole.get("left_sleeve");
+    const rs = byRole.get("right_sleeve");
+    const hood = byRole.get("hood");
+    const pocket = byRole.get("pocket");
+
+    // Worn canvas layout (inches). Wearer-left arm sits at canvas-RIGHT in
+    // BOTH views; sleeves keep the underarm drop so features hold their
+    // worn height.
+    const halfL = ls ? ls.widthIn / 2 : 0;
+    const halfR = rs ? rs.widthIn / 2 : 0;
+    const bodyW = Math.max(front.widthIn, back?.widthIn ?? 0);
+    const bodyH = Math.max(front.heightIn, back?.heightIn ?? 0);
+    const hoodH = hood ? hood.heightIn : 0;
+    const drop = (sleeve: PanelPlan) => Math.max(0, 0.28 * bodyH - 0.17 * sleeve.heightIn);
+    const canvasWIn = halfR + bodyW + halfL;
+    const canvasHIn =
+      hoodH +
+      Math.max(
+        bodyH,
+        ...(ls ? [drop(ls) + ls.heightIn] : [0]),
+        ...(rs ? [drop(rs) + rs.heightIn] : [0])
+      );
+    const scale = Math.min(2048 / canvasWIn, 2048 / canvasHIn);
+    const W = clampFluxDimension(canvasWIn * scale);
+    const H = clampFluxDimension(canvasHIn * scale);
+    const px = { x: W / canvasWIn, y: H / canvasHIn };
+    const rect = (xIn: number, yIn: number, wIn: number, hIn: number) => ({
+      left: Math.max(0, Math.round(xIn * px.x)),
+      top: Math.max(0, Math.round(yIn * px.y)),
+      width: Math.max(8, Math.round(wIn * px.x)),
+      height: Math.max(8, Math.round(hIn * px.y))
+    });
+    const frontRect = rect(halfR, hoodH, front.widthIn, front.heightIn);
+    const backRect = back ? rect(halfR, hoodH, back.widthIn, back.heightIn) : null;
+    const lsZone = ls ? rect(halfR + bodyW, hoodH + drop(ls), halfL, ls.heightIn) : null;
+    const rsZone = rs ? rect(0, hoodH + drop(rs), halfR, rs.heightIn) : null;
+    const hoodRect = hood
+      ? rect(halfR + (bodyW - hood.widthIn) / 2, 0, hood.widthIn, hood.heightIn)
+      : null;
+    // Pocket keeps its calibrated offset relative to the front piece.
+    const pocketRect = pocket
+      ? rect(
+          halfR + (pocket.xIn - front.xIn),
+          hoodH + (pocket.yIn - front.yIn),
+          pocket.widthIn,
+          pocket.heightIn
+        )
+      : null;
+
+    const seed = stableSeed(runId, "master");
+    const references = design.customer_image_urls?.length
+      ? design.customer_image_urls.map((image) => ({ image }))
+      : undefined;
+    const fetchBuf = async (url: string): Promise<Buffer> => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`fetch HTTP ${response.status}`);
+      return Buffer.from(await response.arrayBuffer());
+    };
+
+    let wfBuf: Buffer;
+    let wbBuf: Buffer | null = null;
+    let masterUrl: string | null = null;
+    try {
+      if (!this.media.hostImage) throw new Error("hostImage unavailable for worn-view painting");
+      // ---- 1) Hero scene inside the front piece (containment law). ----
+      const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
+      const heroGen = await this.media.generateImage({
+        model: IMAGE.FLUX_2_FLEX,
+        positivePrompt:
+          `A complete self-contained scene: every subject entirely visible with comfortable ` +
+          `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
+          `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
+          `No borders, no frames, no split composition.`,
+        negativePrompt: negativeFor(design),
+        width: clampFluxDimension(frontRect.width * k),
+        height: clampFluxDimension(frontRect.height * k),
+        seed,
+        referenceImages: references
+      });
+      const heroBufRaw = await fetchBuf(heroGen.imageURL);
+      const hero = await sharp(heroBufRaw)
+        .resize(frontRect.width, frontRect.height, { fit: "fill" })
+        .png()
+        .toBuffer();
+      const mean = await sharp(heroBufRaw).resize(1, 1).removeAlpha().raw().toBuffer();
+      const bg = { r: mean[0], g: mean[1], b: mean[2] };
+
+      // ---- 2) Front worn view: outpaint sleeves/hood around the hero. ----
+      const wfSeed = await sharp({ create: { width: W, height: H, channels: 3, background: bg } })
+        .composite([{ input: hero, left: frontRect.left, top: frontRect.top }])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+      const wfSeedUrl = await this.media.hostImage(wfSeed.toString("base64"), "image/jpeg");
+      const wfGen = await this.media.generateImage({
+        model: IMAGE.FLUX_2_FLEX,
+        positivePrompt:
+          `This is a garment painted AS WORN, seen from the front: torso center, sleeves at the ` +
+          `sides, hood at the top. Extend the existing scene outward to fill the entire canvas as ` +
+          `one continuous painting across the whole garment. Keep the existing detailed scene ` +
+          `EXACTLY as it is. Fill all flat areas with seamlessly matching environment continuing ` +
+          `the scene's world — no new focal subjects, no text. ${designCore(design).slice(0, 500)}`,
+        width: W,
+        height: H,
+        seed,
+        referenceImages: [{ image: wfSeedUrl }]
+      });
+      wfBuf = await sharp(await fetchBuf(wfGen.imageURL))
+        .resize(W, H, { fit: "fill" })
+        .composite([{ input: hero, left: frontRect.left, top: frontRect.top }])
+        .png()
+        .toBuffer();
+
+      // ---- 3) Back worn view: continuation seeded with shared borders. ----
+      if (back || ls || rs) {
+        const ridgeComposites: Array<{ input: Buffer; left: number; top: number }> = [];
+        const ridgeW = Math.max(8, Math.round((lsZone ?? rsZone ?? frontRect).width * 0.25));
+        const flopStrip = async (zone: { left: number; top: number; width: number; height: number }, atOuterRight: boolean) => {
+          const stripLeft = atOuterRight ? zone.left + zone.width - ridgeW : zone.left;
+          const strip = await sharp(wfBuf)
+            .extract({ left: stripLeft, top: zone.top, width: ridgeW, height: zone.height })
+            .flop()
+            .png()
+            .toBuffer();
+          return { input: strip, left: stripLeft, top: zone.top };
+        };
+        if (lsZone) ridgeComposites.push(await flopStrip(lsZone, true));
+        if (rsZone) ridgeComposites.push(await flopStrip(rsZone, false));
+        // Side seams: the front piece's outer columns wrap to the back piece.
+        if (backRect) {
+          const seamW = Math.max(8, Math.round(frontRect.width * 0.06));
+          for (const side of ["left", "right"] as const) {
+            const stripLeft = side === "left" ? frontRect.left : frontRect.left + frontRect.width - seamW;
+            const strip = await sharp(wfBuf)
+              .extract({ left: stripLeft, top: frontRect.top, width: seamW, height: frontRect.height })
+              .flop()
+              .png()
+              .toBuffer();
+            ridgeComposites.push({
+              input: strip,
+              left: side === "left" ? backRect.left : backRect.left + backRect.width - seamW,
+              top: backRect.top
+            });
+          }
+        }
+        const wbSeed = await sharp({ create: { width: W, height: H, channels: 3, background: bg } })
+          .composite(ridgeComposites)
+          .jpeg({ quality: 92 })
+          .toBuffer();
+        const wbSeedUrl = await this.media.hostImage(wbSeed.toString("base64"), "image/jpeg");
+        const wbGen = await this.media.generateImage({
+          model: IMAGE.FLUX_2_FLEX,
+          positivePrompt:
+            `The BACK view of the same worn garment, one continuous painting. The already-painted ` +
+            `edge strips are the arm ridges and side seams shared with the front view — keep them ` +
+            `EXACTLY and continue the same scene's world naturally across the whole canvas: same ` +
+            `palette, same lighting, environment only, no new focal subjects, no text. ` +
+            `${designCore(design).slice(0, 400)}`,
+          width: W,
+          height: H,
+          seed: stableSeed(runId, "master", "back"),
+          referenceImages: [{ image: wbSeedUrl }]
+        });
+        wbBuf = await sharp(await fetchBuf(wbGen.imageURL)).resize(W, H, { fit: "fill" }).png().toBuffer();
+      }
+      masterUrl = await this.media.hostImage(wfBuf.toString("base64"), "image/png");
+    } catch (error) {
+      // Painting failed — the proven single-master plane path takes over.
+      console.warn(`[compiler] worn-view painting failed, falling back: ${(error as Error).message}`);
+      return this.compileMasterSlice(runId, jobs, design, record, profile);
+    }
+    const wbUrl = wbBuf ? await this.media.hostImage(wbBuf.toString("base64"), "image/png") : null;
+
+    // ---- 4) Unfold: crop each print file from its worn view. ----
+    const viewOf = (role: PanelRole): { buf: Buffer; url: string | null } =>
+      role === "back" && wbBuf ? { buf: wbBuf, url: wbUrl } : { buf: wfBuf, url: masterUrl };
+    const cropView = async (
+      buf: Buffer,
+      zone: { left: number; top: number; width: number; height: number },
+      outWidth: number,
+      outHeight: number
+    ): Promise<Buffer> =>
+      sharp(buf)
+        .extract({
+          left: Math.min(Math.max(0, zone.left), W - 8),
+          top: Math.min(Math.max(0, zone.top), H - 8),
+          width: Math.min(zone.width, W - zone.left),
+          height: Math.min(zone.height, H - zone.top)
+        })
+        .resize(outWidth, outHeight, { fit: "fill" })
+        .png()
+        .toBuffer();
+
+    const sleeveFile = async (
+      zone: { left: number; top: number; width: number; height: number },
+      outWidth: number,
+      outHeight: number,
+      wearerLeft: boolean
+    ): Promise<Buffer> => {
+      // Front half from W_F, back half from W_B (mirrored); feathered
+      // cross-blend across a 12% band at the centerline — no hard line.
+      const halfW = Math.round(outWidth / 2);
+      const blend = Math.max(8, Math.round(outWidth * 0.12));
+      const wide = halfW + Math.round(blend / 2);
+      const frontHalf = await cropView(wfBuf, zone, wide, outHeight);
+      const backSrc = wbBuf ?? wfBuf;
+      const backHalfRaw = await cropView(backSrc, zone, wide, outHeight);
+      const backHalf = await sharp(backHalfRaw).flop().png().toBuffer();
+      // Alpha ramp over the blend band on the back half's inner edge.
+      const ramp = Buffer.alloc(wide * outHeight * 4);
+      for (let y = 0; y < outHeight; y++) {
+        for (let x = 0; x < wide; x++) {
+          const i = (y * wide + x) * 4;
+          const into = x - (wide - blend);
+          const a = into <= 0 ? 255 : Math.max(0, Math.round(255 * (1 - into / blend)));
+          ramp[i] = 255; ramp[i + 1] = 255; ramp[i + 2] = 255; ramp[i + 3] = a;
+        }
+      }
+      const rampPng = await sharp(ramp, { raw: { width: wide, height: outHeight, channels: 4 } }).png().toBuffer();
+      const frontFaded = await sharp(frontHalf)
+        .ensureAlpha()
+        .composite([{ input: rampPng, blend: "dest-in" }])
+        .png()
+        .toBuffer();
+      const backFaded = await sharp(backHalf)
+        .ensureAlpha()
+        .composite([{ input: await sharp(rampPng).flop().png().toBuffer(), blend: "dest-in" }])
+        .png()
+        .toBuffer();
+      // wearer-left sleeve template: front half on the LEFT; wearer-right mirrored.
+      const composites = wearerLeft
+        ? [
+            { input: backFaded, left: outWidth - wide, top: 0 },
+            { input: frontFaded, left: 0, top: 0 }
+          ]
+        : [
+            { input: await sharp(backFaded).flop().png().toBuffer(), left: 0, top: 0 },
+            { input: await sharp(frontFaded).flop().png().toBuffer(), left: outWidth - wide, top: 0 }
+          ];
+      return sharp({ create: { width: outWidth, height: outHeight, channels: 3, background: { r: 255, g: 255, b: 255 } } })
+        .composite(composites)
+        .png()
+        .toBuffer();
+    };
+
+    const finishJob = async (job: CompileJob, buffer: Buffer, sourceUrls: string[], note: string) => {
+      const target = jobTarget(job);
+      const sizing = workingSize(target.width, target.height);
+      const sized = await sharp(buffer).resize(sizing.width, sizing.height, { fit: "fill" }).png().toBuffer();
+      const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(sized, sizing.factor, false);
+      record(
+        {
+          job_id: job.job_id,
+          placement: job.placement,
+          status: "success",
+          generation_mode: "sliced",
+          file_url: fileUrl,
+          mockup_file_url: mockupUrl,
+          file_type: "png",
+          public_url: true,
+          transparent_background: false,
+          must_render_in_mockup: job.must_render_in_mockup !== false,
+          source_job_id: job.source_job_id ?? null,
+          source_parent_url: masterUrl,
+          geometry_applied: true,
+          notes: note
+        },
+        {
+          job_id: job.job_id,
+          placement: job.placement,
+          strategy: "master_slice",
+          model: IMAGE.FLUX_2_FLEX,
+          seed,
+          prompt: "worn-view painting (front+back views, unfolded at seams)",
+          plane_rect_in: null,
+          crop_px: null,
+          tile_phase_px: null,
+          upscale_factor: sizing.factor,
+          target_px: { width: target.width, height: target.height },
+          dpi: target.dpi,
+          transparent: false,
+          source_urls: sourceUrls,
+          printful_file_id: null
+        }
+      );
+    };
+
+    for (const job of jobs) {
+      const role = classifyPlacement(job.placement);
+      const panel = byPlacement.get(job.placement)!;
+      const target = jobTarget(job);
+      try {
+        if (role === "left_sleeve" && lsZone) {
+          await finishJob(
+            job,
+            await sleeveFile(lsZone, target.width, target.height, true),
+            [masterUrl!, ...(wbUrl ? [wbUrl] : [])],
+            "Worn-view sleeve: front half continues the front view, back half the back view (mirrored), feathered centerline blend."
+          );
+        } else if (role === "right_sleeve" && rsZone) {
+          await finishJob(
+            job,
+            await sleeveFile(rsZone, target.width, target.height, false),
+            [masterUrl!, ...(wbUrl ? [wbUrl] : [])],
+            "Worn-view sleeve: front half continues the front view, back half the back view (mirrored), feathered centerline blend."
+          );
+        } else {
+          const zone =
+            role === "front"
+              ? frontRect
+              : role === "back" && backRect
+                ? backRect
+                : role === "hood" && hoodRect
+                  ? hoodRect
+                  : role === "pocket" && pocketRect
+                    ? pocketRect
+                    : rect(halfR, hoodH, panel.widthIn, panel.heightIn);
+          const view = viewOf(role);
+          await finishJob(
+            job,
+            await cropView(view.buf, zone, target.width, target.height),
+            view.url ? [view.url] : [],
+            "Unfolded from the worn-view painting at the piece's worn position."
+          );
+        }
+      } catch (error) {
+        this.recordFailure(job, `Worn-view unfold failed: ${(error as Error).message}`, record);
+      }
+    }
+    return masterUrl;
   }
 
   private async compileMasterSlice(

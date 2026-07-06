@@ -77,6 +77,34 @@ export const LayerSchema = z.object({
 
 export type DesignLayer = z.infer<typeof LayerSchema>;
 
+/**
+ * A per-panel build directive: the decomposition layer of the garment engine.
+ * When a customer assigns DIFFERENT treatments to specific garment areas
+ * ("yellow left sleeve, blue right sleeve, orange-to-tan gradient front,
+ * black hood, a different logo on each panel"), the intent model breaks the
+ * request into one directive per panel. Base fills (solid/gradient) are then
+ * rendered DETERMINISTICALLY with vector math — exact colors, zero AI drift —
+ * and only the per-panel art is generated.
+ */
+export const PanelDirectiveSchema = z.object({
+  /** Which panel: "front","back","left_sleeve","right_sleeve","hood","pocket","neck","all". */
+  panel: z.string(),
+  /** Base surface: exact solid color, two-color gradient, or none (art only). */
+  fill: z.enum(["solid", "gradient", "none"]),
+  /** CSS color: the solid color, or the gradient start. "" when fill=none. */
+  color_a: z.string(),
+  /** Gradient end color; "" unless fill=gradient. */
+  color_b: z.string(),
+  /** Gradient direction: 90 = top-to-bottom (typical for garments), 0 = left-to-right. */
+  angle_deg: z.number(),
+  /** Standalone generation prompt for artwork/logo/text unique to THIS panel; "" for fill-only. */
+  art_prompt: z.string(),
+  /** Art width as a fraction of panel width (~0.5 logo, ~0.7 chest text); 0 when no art. */
+  art_width_frac: z.number()
+});
+
+export type PanelDirective = z.infer<typeof PanelDirectiveSchema>;
+
 export const ExpressIntentSchema = z.object({
   allowed: z.boolean(),
   refusal_reason: z.string().nullable(),
@@ -115,7 +143,12 @@ export const ExpressIntentSchema = z.object({
    * true = the layers ARE the whole design (blank garment beneath);
    * false = the layers composite ON TOP of the full generated artwork.
    */
-  layers_only: z.boolean()
+  layers_only: z.boolean(),
+  /**
+   * Per-panel build plan — ONLY when the customer assigns different
+   * treatments to specific panels; empty for whole-design requests.
+   */
+  panel_directives: z.array(PanelDirectiveSchema)
 });
 
 export type ExpressIntent = z.infer<typeof ExpressIntentSchema>;
@@ -182,6 +215,7 @@ Return JSON with:
   instruction: precise plain-language directive for that image, always non-empty.
 - layers: a grounded layout plan, ONLY when the customer names specific elements or exact text at specific positions/sizes ("my name small across the chest", "an anchor on the left sleeve", "this photo big in the middle"). NEVER use kind "text" — ALL placed text is kind "element" with a typography generation prompt that quotes the exact string, e.g.: the exact text "Gunner" rendered as playful hand-painted typography, single isolated text lockup, perfect spelling. Style the typography to match the customer's vibe (grungy, elegant script, varsity, neon...). "element" content is otherwise a rich standalone generation prompt for one isolated object. "customer_image" uses image_index. placement ("front" unless they say otherwise); cx_frac/cy_frac = the layer's center within the visible piece (0.5,0.5 = center of chest; 0.5,0.2 = high chest); width_frac = its width as a fraction of the piece width (small logo ~0.25, across-the-chest text ~0.7); rotation_deg (usually 0); order (background elements lower). Leave layers EMPTY for whole-scene artwork requests where text can flow inside the artwork of a single-panel product.
 - layers_only: true when the design is NOTHING BUT the placed layers on the blank garment; false when the layers sit ON TOP of full artwork (e.g. "an AOP grunge shirt with '745' across the chest" = full artwork brief PLUS a layer, layers_only=false).
+- panel_directives: the PER-PANEL build plan — use ONLY when the customer assigns DIFFERENT treatments to specific garment areas ("yellow left sleeve and blue right sleeve", "orange-to-tan gradient on the front, green-to-purple on the back, black hood, a different logo on each sleeve"). One entry per mentioned area. panel: exactly one of "front","back","left_sleeve","right_sleeve","hood","pocket","neck","all" ("all" = every panel they did not name). fill: "solid" (color_a = CSS color name or hex), "gradient" (color_a start -> color_b end; angle_deg 90 = top-to-bottom which is the natural garment gradient, 0 = left-to-right), or "none" (art only, no base fill). art_prompt: a rich standalone generation prompt for artwork/logo/text belonging to THIS panel only — quote exact text strings and style the typography to the vibe; "" for fill-only panels. art_width_frac: ~0.5 for a logo, ~0.7 for across-the-panel text, 0 when no art. When panel fills are requested on apparel the whole surface prints, so also set all_over=true. Leave panel_directives EMPTY for ordinary whole-design requests — the scene engines handle those; this field exists so per-panel color/art assignments come out EXACTLY as ordered.
 - UPLOADED LOGO RULE: "this logo / my logo / this image on the chest (pocket, sleeve, front...)" with an attached image ALWAYS means a customer_image LAYER at that spot — image_plan role "use_verbatim" for that image, layers=[{kind:"customer_image", image_index, placement, cx_frac/cy_frac at the named spot, width_frac ~0.3 for a chest logo (never smaller than 0.2 — invisible logos are a defect)}], layers_only=true unless other artwork is requested. Never demote an explicit logo placement to a style reference.
 - product_query MUST name the product type from THIS request's words alone. Taste hints and history NEVER change the product type — "shirt" stays a shirt even if the customer usually buys something else.
 Return only JSON.`;
@@ -210,7 +244,8 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
   variant_hint: "",
   image_plan: [],
   layers: [],
-  layers_only: false
+  layers_only: false,
+  panel_directives: []
 });
 
 export const deriveIntent = async (
@@ -236,7 +271,7 @@ export const deriveIntent = async (
           $refStrategy: "none"
         }) as Record<string, unknown>
       },
-      maxTokens: 1200,
+      maxTokens: 2000,
       thinkingLevel: "low"
     });
     return { intent: ExpressIntentSchema.parse(JSON.parse(raw)), degraded: false };

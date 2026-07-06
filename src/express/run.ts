@@ -531,6 +531,9 @@ export const runExpress = async (
       !intent.all_over &&
       !intent.wants_repeat_pattern &&
       !preferAop &&
+      // Per-panel directives own the whole plan (fills + per-panel art);
+      // the standalone-layers shortcut would silently drop the fills.
+      !intent.panel_directives?.length &&
       !(printedSurface && statedBaseColor);
 
     note("route", `layersStandalone=${layersStandalone} layers=${effectiveLayers.length} layers_only=${intent.layers_only}`);
@@ -659,8 +662,19 @@ export const runExpress = async (
         // Oversized/wrapping requests opt OUT of front-zone hero containment.
         hero_containment: !/\bwrap|spann?ing|across the (whole|entire)|oversiz|blown[- ]?up|zoomed/i.test(text),
         customer_image_urls: referenceUrls,
-        customer_image_captions: captions
+        customer_image_captions: captions,
+        // Per-panel decomposition: explicit panel-by-panel orders execute as
+        // exact vector fills + per-panel art instead of one master scene.
+        panel_directives: intent.panel_directives?.slice(0, 16) ?? []
       };
+      if (design.panel_directives?.length) {
+        note(
+          "panel_directives",
+          design.panel_directives
+            .map((d) => `${d.panel}=${d.fill}${d.art_prompt ? "+art" : ""}`)
+            .join(", ")
+        );
+      }
       const compiler = new PanelCompiler(metered);
       const compiled = await compiler.compile(
         runId,

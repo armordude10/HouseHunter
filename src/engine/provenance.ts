@@ -23,7 +23,14 @@ export const stableSeed = (...parts: Array<string | number>): number => {
 export interface PanelProvenance {
   job_id: string;
   placement: string;
-  strategy: "direct" | "master_slice" | "pattern_tile" | "mirror" | "reference_derive" | "blank";
+  strategy:
+    | "direct"
+    | "master_slice"
+    | "pattern_tile"
+    | "mirror"
+    | "reference_derive"
+    | "panel_directive"
+    | "blank";
   model: string | null;
   seed: number | null;
   prompt: string | null;
