@@ -43,7 +43,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string org.artincpeoria.threadbot" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string com.threadbot.app" "$PLIST" 2>/dev/null || true
 
       - name: CocoaPods
         run: cd ios/App && pod install
@@ -61,7 +61,7 @@ jobs:
       # secrets (Settings → Secrets → Actions). Uses an App Store Connect API key (.p8):
       #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_API_KEY_B64
       # plus your Team ID. Requires an Apple Developer account and the bundle id
-      # `org.artincpeoria.threadbot` registered in App Store Connect.
+      # `com.threadbot.app` registered in App Store Connect.
       # ---------------------------------------------------------------------------------------
       - name: Archive + export IPA (signed)
         if: ${{ inputs.signed }}

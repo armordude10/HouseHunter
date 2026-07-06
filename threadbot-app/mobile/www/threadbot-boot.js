@@ -81,7 +81,7 @@
 
   // ---- Social OAuth (Google / Microsoft via Supabase) -------------------
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  var OAUTH_CB = "org.artincpeoria.threadbot://auth-callback";
+  var OAUTH_CB = "threadbot://auth-callback";
   function caps() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
   var oauthBound = false;
   function ensureOAuthListener() {

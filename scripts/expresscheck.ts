@@ -31,6 +31,8 @@ import { buildExpressJobs, pickStitchColor } from "../src/express/plan.js";
 import { runExpress, ExpressDeps } from "../src/express/run.js";
 import { PlacementSpec, PrintfulTruth, ProductTruth } from "../src/express/truth.js";
 import { createAndWaitForMockups } from "../src/integrations/printfulMockups.js";
+import { buildSessionForm, signStripePayload, verifyStripeSignature } from "../src/commerce/stripe.js";
+import { buildOrderPayload, getDesign, registerDesign } from "../src/commerce/orders.js";
 
 // -----------------------------------------------------------------------------
 // Stubs.
@@ -999,6 +1001,112 @@ const main = async () => {
       );
     }
     server.close();
+  }
+
+  console.log("\n== 15. COMMERCE BRIDGE: Stripe session + Printful order builders ==");
+  {
+    const secret = "whsec_test_abc123";
+    const payload = JSON.stringify({ type: "checkout.session.completed", data: { object: { id: "cs_1" } } });
+    check(
+      "webhook signature roundtrip verifies",
+      verifyStripeSignature(payload, signStripePayload(payload, secret), secret)
+    );
+    check(
+      "tampered payload is rejected",
+      !verifyStripeSignature(payload + " ", signStripePayload(payload, secret), secret)
+    );
+    check(
+      "wrong secret is rejected",
+      !verifyStripeSignature(payload, signStripePayload(payload, "whsec_other"), secret)
+    );
+    check(
+      "stale timestamp (replay) is rejected",
+      !verifyStripeSignature(
+        payload,
+        signStripePayload(payload, secret, Math.floor(Date.now() / 1000) - 3600),
+        secret
+      )
+    );
+    const form = buildSessionForm({
+      productName: "All-Over Print Basic Pillow",
+      description: "Custom pillow",
+      imageUrl: "https://printful.example/mock.jpg",
+      unitAmountCents: 2099,
+      quantity: 2,
+      shippingCents: 499,
+      successUrl: "https://x/checkout/success",
+      cancelUrl: "https://x/checkout/cancel",
+      metadata: { run_id: "r1", panel_0: "front|sublimation|https://x/uploads/a" }
+    });
+    check(
+      "session form carries server-priced line item",
+      form.get("line_items[0][price_data][unit_amount]") === "2099" &&
+        form.get("line_items[0][quantity]") === "2" &&
+        form.get("line_items[0][price_data][product_data][name]") === "All-Over Print Basic Pillow"
+    );
+    check(
+      "shipping + address collection + metadata present",
+      form.get("shipping_options[0][shipping_rate_data][fixed_amount][amount]") === "499" &&
+        form.get("shipping_address_collection[allowed_countries][0]") === "US" &&
+        form.get("metadata[panel_0]") === "front|sublimation|https://x/uploads/a"
+    );
+    const record = {
+      run_id: "run-77",
+      product_id: 358,
+      variant_id: 9498,
+      product_name: "All-Over Print Basic Pillow",
+      retail_usd: 20.99,
+      mockup_url: null,
+      placements: [
+        { placement: "front", technique: "sublimation", file_url: "https://x/uploads/f" },
+        { placement: "back", technique: "sublimation", file_url: "https://x/uploads/b" }
+      ],
+      product_options: { stitch_color: "black" },
+      created_at: Date.now()
+    };
+    registerDesign(record);
+    check(
+      "app designId `${run_id}-${i}` resolves to the registered run",
+      getDesign("run-77-2")?.product_id === 358 && getDesign("run-77")?.product_id === 358
+    );
+    check("unknown design is a miss, not a crash", getDesign("nope-0") === null);
+    const order = buildOrderPayload({
+      record,
+      catalogVariantId: 9502,
+      quantity: 1,
+      recipient: {
+        name: "Doug A",
+        address1: "1 Main St",
+        city: "Peoria",
+        state_code: "IL",
+        country_code: "US",
+        zip: "61602",
+        email: "d@example.com"
+      },
+      externalId: "cs_test_123",
+      retailPerItemUsd: 20.99,
+      confirm: false
+    });
+    const item = order.order_items[0];
+    check(
+      "printful v2 order: catalog source, resolved variant, exact retail",
+      item.source === "catalog" && item.catalog_variant_id === 9502 && item.retail_price === "20.99"
+    );
+    check(
+      "order prints the SAME files the mockups rendered (both panels, print-res)",
+      item.placements.length === 2 &&
+        item.placements[0].layers[0].url === "https://x/uploads/f" &&
+        item.placements[1].placement === "back"
+    );
+    check(
+      "product options (stitch_color) ride the order",
+      JSON.stringify((item as { product_options?: unknown }).product_options) ===
+        JSON.stringify([{ name: "stitch_color", value: "black" }])
+    );
+    check(
+      "recipient mapped from Stripe session shape",
+      order.recipient.name === "Doug A" && order.recipient.zip === "61602" && order.external_id === "cs_test_123"
+    );
   }
 
   console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} CHECK(S) FAILED`}\n`);

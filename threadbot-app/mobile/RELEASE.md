@@ -5,7 +5,7 @@ This covers what's already done, what only you can do, and the exact steps for e
 ---
 
 ## ✅ What's already set up (Android)
-- **App ID:** `org.artincpeoria.threadbot` · **Version:** 1.0 (versionCode 1)
+- **App ID:** `com.threadbot.app` · **Version:** 1.0 (versionCode 1)
 - **Release signing** configured (`app/build.gradle` + `keystore.properties`)
 - **Minimal permissions** — only `INTERNET` (clean Data Safety form)
 - **Adaptive launcher icons** present at all densities
@@ -37,7 +37,7 @@ without a Google key-reset request. Treat it like the master key to your app.
 
 ## 🍎 Apple App Store — Cloud/CI build (no Mac needed by you)
 > iOS can only be compiled on macOS, so we build it on a **GitHub-hosted macOS runner**. It
-> generates the iOS project from the same `www/`, registers the `org.artincpeoria.threadbot` URL
+> generates the iOS project from the same `www/`, registers the `com.threadbot.app` URL
 > scheme (OAuth + checkout return), and builds.
 
 **Setup (one-time):** the workflow file is provided at **`mobile/ci/ios-build.yml`**. Add it to
@@ -49,7 +49,7 @@ GitHub → Actions → "iOS build (App Store)" → Run workflow (leave `signed` 
 unsigned compile to confirm the app builds on iOS.
 
 **Step 2 — signed TestFlight/App Store build:** you need an **Apple Developer account** ($99/yr).
-1. Register the bundle id `org.artincpeoria.threadbot` and create the app in **App Store Connect**.
+1. Register the bundle id `com.threadbot.app` and create the app in **App Store Connect**.
 2. Create an **App Store Connect API key** (Users and Access → Integrations → App Store Connect API),
    download the `.p8`.
 3. Add these **GitHub repo secrets** (Settings → Secrets → Actions):

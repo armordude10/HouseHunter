@@ -79,6 +79,8 @@ export interface ExpressResult {
   degraded_intent: boolean;
   panels: CompiledPanel[];
   submitted_placements: Array<MockupPlacementFile & { file_url: string }>;
+  /** Required product options (e.g. stitch_color) — reused verbatim by orders. */
+  product_options?: Record<string, string>;
   mockups: MockupRender[];
   design_genome: DesignGenome | null;
   missing_required_placements: Array<{ placement: string; reason: string }>;
@@ -610,6 +612,7 @@ export const runExpress = async (
     const productOptions = optionNames.includes("stitch_color")
       ? { stitch_color: pickStitchColor(intent) }
       : undefined;
+    result.product_options = productOptions;
     const rendered = await resolved.renderMockups({
       productId: product.productId,
       variantIds: [variantId],

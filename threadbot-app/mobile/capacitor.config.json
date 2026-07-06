@@ -1,5 +1,5 @@
 {
-  "appId": "org.artincpeoria.threadbot",
+  "appId": "com.threadbot.app",
   "appName": "Threadbot",
   "webDir": "www",
   "android": {

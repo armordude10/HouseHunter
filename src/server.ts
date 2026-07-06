@@ -33,9 +33,43 @@ import {
   updateTaste
 } from "./express/taste.js";
 import { activeProviderName, usageTally } from "./llm/provider.js";
+import {
+  createCheckoutSession,
+  shippingFlatCents,
+  stripeConfigured,
+  verifyStripeSignature
+} from "./commerce/stripe.js";
+import {
+  designRegistrySize,
+  getDesign,
+  placePrintfulOrder,
+  registerDesign,
+  type OrderRecipient
+} from "./commerce/orders.js";
 
 /** Product truth for the /generate commerce block (cached, free reads). */
 const commerceTruth = new PrintfulTruth();
+
+/** Stripe sessions already fulfilled (webhooks redeliver; orders must not). */
+const processedCheckoutSessions = new Set<string>();
+
+/**
+ * Post-payment return page: confirms the outcome and deep-links back into
+ * the app (scheme is env-tunable; default matches the mobile appId).
+ */
+const checkoutReturnPage = (ok: boolean): string => {
+  const scheme = process.env.THREADBOT_APP_SCHEME ?? "threadbot";
+  const deepLink = `${scheme}://checkout?status=${ok ? "success" : "cancel"}`;
+  const title = ok ? "Payment complete" : "Checkout canceled";
+  const body = ok
+    ? "Your order is in. It's being sent to production — you can close this tab and return to Threadbot."
+    : "No charge was made. Return to Threadbot and try again whenever you're ready.";
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Threadbot</title>
+<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 50% -10%,#0c1622,#07080a 60%);color:#cfe9ee;font-family:system-ui,sans-serif;text-align:center;padding:24px}
+h1{color:${ok ? "#19f0c4" : "#ff7b7b"};font-size:23px;letter-spacing:1px;margin:0 0 10px}p{opacity:.72;font-size:14px;max-width:330px;line-height:1.55;margin:0}a{margin-top:24px;color:#04181c;background:#00E5FF;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:700;letter-spacing:1px}</style></head>
+<body><h1>${title}</h1><p>${body}</p><a href="${deepLink}">Return to Threadbot</a>
+<script>setTimeout(function(){try{location.href=${JSON.stringify(deepLink)}}catch(e){}},700)</script></body></html>`;
+};
 
 type RunMode = "express" | "agents";
 
@@ -192,7 +226,13 @@ const server = createServer(async (req, res) => {
         artwork: process.env.THREADBOT_ARTWORK_MCP_URL ? "hosted-artwork-mcp" : "runware-local",
         default_mode: defaultMode(),
         catalog_products: catalogSize(),
-        max_customer_images: MAX_CUSTOMER_IMAGES
+        max_customer_images: MAX_CUSTOMER_IMAGES,
+        commerce: {
+          stripe: stripeConfigured(),
+          webhook_secret: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+          order_mode: process.env.THREADBOT_ORDER_CONFIRM === "1" ? "auto-confirm" : "draft",
+          registered_designs: designRegistrySize()
+        }
       });
     }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
@@ -223,6 +263,199 @@ const server = createServer(async (req, res) => {
         resolveTaskWebhook(event.data as Parameters<typeof resolveTaskWebhook>[0]);
       }
       return json(res, 200, { ok: true });
+    }
+    // -------------------------------------------------------------------------
+    // Commerce bridge: Stripe Checkout in, Printful order out.
+    //   POST /checkout          app Buy button -> hosted Stripe payment page
+    //   POST /webhooks/stripe   checkout.session.completed -> Printful order
+    //   GET  /checkout/success|cancel   return pages that deep-link to the app
+    // -------------------------------------------------------------------------
+    if (req.method === "POST" && url.pathname === "/checkout") {
+      if (!stripeConfigured()) {
+        return json(res, 503, {
+          error: "Ordering isn't live yet — payments are still being connected. Your design is saved."
+        });
+      }
+      const raw = await readBody(req, 100_000);
+      let body: { designId?: unknown; size?: unknown; color?: unknown; quantity?: unknown };
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON" });
+      }
+      const designId = typeof body.designId === "string" ? body.designId : "";
+      const design = designId ? getDesign(designId) : null;
+      if (!design) {
+        return json(res, 404, {
+          error:
+            "This design's order window has expired. Open it in your closet and regenerate to order."
+        });
+      }
+      const quantity = Math.max(1, Math.min(10, Number(body.quantity) || 1));
+      const size = typeof body.size === "string" ? body.size.slice(0, 24) : "";
+      const color = typeof body.color === "string" ? body.color.slice(0, 40) : "";
+      // Size/color picks re-resolve the variant; price stays the run's
+      // server-computed retail (client-sent prices are never trusted).
+      let variantId = design.variant_id;
+      if (size || color) {
+        try {
+          variantId = await commerceTruth.resolveVariant(
+            design.product_id,
+            `${color} ${size}`.trim()
+          );
+        } catch (error) {
+          console.error(`[checkout] variant resolve failed: ${(error as Error).message}`);
+        }
+      }
+      const metadata: Record<string, string> = {
+        run_id: design.run_id,
+        design_id: designId,
+        product_id: String(design.product_id),
+        variant_id: String(variantId),
+        size,
+        color,
+        quantity: String(quantity),
+        product_name: design.product_name.slice(0, 120),
+        retail_usd: design.retail_usd.toFixed(2)
+      };
+      // Self-contained fulfillment: panels ride the session metadata, so a
+      // restart between checkout and webhook can't orphan the order.
+      design.placements.slice(0, 8).forEach((panel, i) => {
+        metadata[`panel_${i}`] = `${panel.placement}|${panel.technique}|${panel.file_url}`;
+      });
+      if (design.product_options) {
+        metadata.product_options = JSON.stringify(design.product_options).slice(0, 500);
+      }
+      try {
+        const base = publicBaseUrl(req);
+        const session = await createCheckoutSession({
+          productName: design.product_name,
+          description: `Custom ${design.product_name} — made to order from your Threadbot design`,
+          imageUrl: design.mockup_url ?? undefined,
+          unitAmountCents: Math.round(design.retail_usd * 100),
+          quantity,
+          shippingCents: shippingFlatCents(),
+          successUrl: `${base}/checkout/success`,
+          cancelUrl: `${base}/checkout/cancel`,
+          metadata
+        });
+        return json(res, 200, { url: session.url, sessionId: session.id });
+      } catch (error) {
+        console.error(`[checkout] ${(error as Error).message}`);
+        return json(res, 502, { error: "Checkout couldn't be started. Please try again." });
+      }
+    }
+    if (req.method === "POST" && url.pathname === "/webhooks/stripe") {
+      const secret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
+      const raw = await readBody(req, 2_000_000);
+      if (!verifyStripeSignature(raw, req.headers["stripe-signature"] as string | undefined, secret)) {
+        return json(res, 400, { error: "bad signature" });
+      }
+      let event: {
+        type?: string;
+        data?: { object?: Record<string, unknown> };
+      };
+      try {
+        event = JSON.parse(raw || "{}");
+      } catch {
+        return json(res, 400, { error: "body must be JSON" });
+      }
+      if (event.type === "checkout.session.completed" && event.data?.object) {
+        const session = event.data.object as {
+          id?: string;
+          metadata?: Record<string, string>;
+          amount_total?: number;
+          customer_details?: { email?: string; name?: string; address?: Record<string, string> };
+          shipping_details?: { name?: string; address?: Record<string, string> };
+          collected_information?: {
+            shipping_details?: { name?: string; address?: Record<string, string> };
+          };
+        };
+        const sessionId = session.id ?? "";
+        if (sessionId && !processedCheckoutSessions.has(sessionId)) {
+          processedCheckoutSessions.add(sessionId);
+          if (processedCheckoutSessions.size > 5000) {
+            const oldest = processedCheckoutSessions.values().next().value;
+            if (oldest) processedCheckoutSessions.delete(oldest);
+          }
+          const meta = session.metadata ?? {};
+          // Registry first (fresh instance), metadata fallback (restarted one).
+          const registered = meta.run_id ? getDesign(meta.run_id) : null;
+          const placements =
+            registered?.placements ??
+            Object.keys(meta)
+              .filter((key) => /^panel_\d+$/.test(key))
+              .sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
+              .map((key) => {
+                const [placement, technique, ...rest] = meta[key].split("|");
+                return { placement, technique, file_url: rest.join("|") };
+              })
+              .filter((panel) => panel.placement && /^https?:\/\//.test(panel.file_url));
+          const shipping =
+            session.collected_information?.shipping_details ??
+            session.shipping_details ??
+            session.customer_details ??
+            {};
+          const address = (shipping as { address?: Record<string, string> }).address ?? {};
+          const recipient: OrderRecipient = {
+            name:
+              (shipping as { name?: string }).name ?? session.customer_details?.name ?? "Customer",
+            address1: address.line1 ?? "",
+            ...(address.line2 ? { address2: address.line2 } : {}),
+            city: address.city ?? "",
+            ...(address.state ? { state_code: address.state } : {}),
+            country_code: address.country ?? "US",
+            zip: address.postal_code ?? "",
+            ...(session.customer_details?.email ? { email: session.customer_details.email } : {})
+          };
+          let productOptions: Record<string, string> | undefined = registered?.product_options;
+          if (!productOptions && meta.product_options) {
+            try {
+              productOptions = JSON.parse(meta.product_options);
+            } catch {
+              /* metadata was truncated — order proceeds without options */
+            }
+          }
+          if (!placements.length) {
+            console.error(`[orders] session ${sessionId} has no recoverable print files`);
+          } else {
+            try {
+              const order = await placePrintfulOrder({
+                record: {
+                  run_id: meta.run_id ?? sessionId,
+                  product_id: Number(meta.product_id) || 0,
+                  variant_id: Number(meta.variant_id) || 0,
+                  product_name: meta.product_name ?? "Threadbot custom product",
+                  retail_usd: Number(meta.retail_usd) || 0,
+                  mockup_url: null,
+                  placements,
+                  ...(productOptions ? { product_options: productOptions } : {}),
+                  created_at: Date.now()
+                },
+                catalogVariantId: Number(meta.variant_id) || 0,
+                quantity: Number(meta.quantity) || 1,
+                recipient,
+                externalId: sessionId,
+                retailPerItemUsd: Number(meta.retail_usd) || 0,
+                confirm: process.env.THREADBOT_ORDER_CONFIRM === "1"
+              });
+              console.log(
+                `[orders] session ${sessionId} -> printful order ${order.order_id} (${order.status}${order.confirmed ? ", confirmed" : ", draft"})`
+              );
+            } catch (error) {
+              // 200 to Stripe regardless — a retry storm can't fix a bad
+              // order; the failure is logged with the session id for replay.
+              console.error(`[orders] session ${sessionId} failed: ${(error as Error).message}`);
+            }
+          }
+        }
+      }
+      return json(res, 200, { received: true });
+    }
+    if (req.method === "GET" && (url.pathname === "/checkout/success" || url.pathname === "/checkout/cancel")) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(checkoutReturnPage(url.pathname === "/checkout/success"));
+      return;
     }
     if (req.method === "GET" && url.pathname === "/debug/hosting") {
       let total = 0;
@@ -324,6 +557,23 @@ const server = createServer(async (req, res) => {
           failure_details: result.missing_required_placements
         });
       }
+      // Order truth: what the Buy button purchases is EXACTLY what the
+      // mockups rendered — same print files, same variant, same options.
+      registerDesign({
+        run_id: result.run_id,
+        product_id: result.product.id,
+        variant_id: result.product.variant_id ?? 0,
+        product_name: result.product.name,
+        retail_usd: result.economics.retail_anchor_usd,
+        mockup_url: variations[0]?.image ?? null,
+        placements: result.submitted_placements.map(({ placement, technique, file_url }) => ({
+          placement,
+          technique,
+          file_url
+        })),
+        ...(result.product_options ? { product_options: result.product_options } : {}),
+        created_at: Date.now()
+      });
       // Checkout-sheet truth: real product name, price, and purchasable
       // size/color axes — never static placeholders.
       let matrix: { sizes: string[]; colors: string[] } = { sizes: [], colors: [] };

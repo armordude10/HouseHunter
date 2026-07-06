@@ -3,7 +3,7 @@
 _Last updated: [FILL IN DATE] • Effective: [FILL IN DATE]_
 
 > **Action needed:** replace the bracketed placeholders, have it reviewed, then host it at a
-> public URL (e.g. https://artincpeoria.org/threadbot/privacy). Both Google Play and the Apple
+> public URL (e.g. https://your-site.example/threadbot/privacy). Both Google Play and the Apple
 > App Store require a link to this page.
 
 Art Inc Peoria ("we", "us") operates the Threadbot mobile app ("the App"). This policy explains
@@ -44,7 +44,7 @@ You can edit or delete your saved designs in the App, and request full account d
 contacting us.
 
 ## Contact
-[Art Inc Peoria] — [doug@artincpeoria.org] — [mailing address if required by your jurisdiction]
+[Your business name] — [contact email] — [mailing address if required by your jurisdiction]
 
 _This template reflects the App's current data flows. It is not legal advice; please review it
 (and your local requirements, e.g. GDPR/CCPA) before publishing._

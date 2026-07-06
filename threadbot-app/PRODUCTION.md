@@ -21,7 +21,7 @@ sync that already work — no functional gain, so we stay on Supabase.
 - **DONE — Email + password** with **email verification** (confirm link + resend).
 - **DONE — Session persistence / auto-refresh**, per-account data isolation (RLS).
 - **DONE (code) — Google + Microsoft buttons** are in the app with the full native
-  flow (system browser → `org.artincpeoria.threadbot://auth-callback` deep-link →
+  flow (system browser → `threadbot://auth-callback` deep-link →
   exchange code for session). They light up the moment you enable each provider —
   **no reinstall needed.** Do this once:
 
@@ -38,7 +38,7 @@ sync that already work — no functional gain, so we stay on Supabase.
   4. Supabase → Authentication → Providers → **Azure** → enable → paste ID + secret → save.
 
   **Both** — Supabase → Authentication → **URL Configuration → Redirect URLs** → add
-  `org.artincpeoria.threadbot://auth-callback`.
+  `threadbot://auth-callback`.
 
   Ping me when they're enabled and I'll verify the deep-link round-trip on your device.
 

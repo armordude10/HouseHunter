@@ -24,7 +24,7 @@ export const config = {
   // Stripe checkout: unit price (cents) and the https base for hosted success/cancel pages.
   priceUsdCents: parseInt(process.env.PRICE_USD_CENTS ?? "2999", 10),
   checkoutBaseUrl: (process.env.CHECKOUT_BASE_URL ?? "https://threadbot-threadbot-backend.hf.space").replace(/\/+$/, ""),
-  appScheme: process.env.APP_SCHEME ?? "org.artincpeoria.threadbot",
+  appScheme: process.env.APP_SCHEME ?? "threadbot",
   generateVariations: parseInt(process.env.GENERATE_VARIATIONS ?? "1", 10),
   port: parseInt(process.env.PORT ?? "3000", 10),
 };

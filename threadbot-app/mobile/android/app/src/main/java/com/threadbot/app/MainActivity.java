@@ -1,4 +1,4 @@
-package org.artincpeoria.threadbot;
+package com.threadbot.app;
 
 import com.getcapacitor.BridgeActivity;
 
