@@ -18,6 +18,7 @@
  */
 
 import { dedupePlacements, getCatalogRecord } from "./catalog.js";
+import { nearestVariantColor } from "./colorMatch.js";
 
 const PRINTFUL_API_BASE = process.env.PRINTFUL_API_BASE ?? "https://api.printful.com";
 
@@ -161,6 +162,23 @@ export class PrintfulTruth implements ProductTruth {
   private async matchVariant(productId: number, pick?: string): Promise<number> {
     const variants = await this.loadVariants(productId);
     if (pick) {
+      // PERCEPTUAL COLOR FIRST: "bright green" must land on Irish Green, not
+      // whichever green-named variant the catalog lists first (live queue
+      // verdict: bright green shirt came back forest/berry). Both sides
+      // resolve to RGB, nearest wins; remaining tokens (size) pick within it.
+      const distinctColors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[];
+      const nearest = distinctColors.length >= 2 ? nearestVariantColor(pick, distinctColors) : null;
+      if (nearest) {
+        const inColor = variants.filter((v) => v.color === nearest);
+        const sizeTokens = pick.toLowerCase().split(/\s+/).filter(Boolean);
+        let bestInColor: { id: number; hits: number } | null = null;
+        for (const variant of inColor) {
+          const name = variant.name.toLowerCase();
+          const hits = sizeTokens.filter((token) => name.includes(token)).length;
+          if (!bestInColor || hits > bestInColor.hits) bestInColor = { id: variant.id, hits };
+        }
+        if (bestInColor) return bestInColor.id;
+      }
       // Token match, case-insensitive: "black xl" -> "... (Black / XL)".
       // All tokens first, then the most tokens, then exact substring.
       const tokens = pick.toLowerCase().split(/\s+/).filter(Boolean);

@@ -571,9 +571,12 @@ export const runExpress = async (
         pattern_tile_url: null,
         panels: provenance
       };
-    } else if (verbatimEntry) {
+    } else if (verbatimEntry && !(product.aop && (intent.all_over || intent.coverage === "full"))) {
       // 6a. VERBATIM: the uploaded image IS the artwork — zero generations,
-      // pixel-faithful placement on the primary print area.
+      // pixel-faithful placement on the primary print area. On AOP products
+      // with full coverage this shortcut is WRONG (it strands the other
+      // panels blank — live queue verdict); those runs fall through to 6b
+      // where the image becomes the painter's hero.
       const renderable = specs.filter((spec) => !/label/i.test(spec.placement));
       const primary = pickPrimaryPlacement(renderable);
       activeSpecs = [primary];
@@ -641,6 +644,23 @@ export const runExpress = async (
           .filter((l) => l.kind === "element" && /"([^"]{1,80})"/.test(l.content))
           .map((l) => (l.content.match(/"([^"]{1,80})"/) ?? [])[1] ?? "")
       ].filter((t) => t && !requiredText.some((r) => r.toLowerCase() === t.toLowerCase()));
+      // Verbatim image on a full-coverage canvas: the image IS the hero —
+      // pasted pixel-faithful into the front piece, surroundings painted
+      // outward to match ("remove the background, cover the front, paint out
+      // the sleeves and back"). Background removal honored before pasting.
+      let heroImageUrl: string | undefined;
+      if (verbatimEntry) {
+        const rawHero = imageUrls[verbatimEntry.index];
+        heroImageUrl = rawHero;
+        if (verbatimEntry.role === "verbatim_remove_background") {
+          try {
+            heroImageUrl = (await metered.removeBackground(rawHero)).imageURL;
+          } catch {
+            heroImageUrl = rawHero; // cutout is best-effort; the photo still prints
+          }
+        }
+        note("verbatim_hero", "customer image is the painter's hero (paint-out-to-match)");
+      }
       const design: DesignSpec = {
         artwork_brief: scrubTextFromBrief(brief, layerCarriedTexts),
         style_terms: intent.style_terms,
@@ -663,6 +683,7 @@ export const runExpress = async (
         hero_containment: !/\bwrap|spann?ing|across the (whole|entire)|oversiz|blown[- ]?up|zoomed/i.test(text),
         customer_image_urls: referenceUrls,
         customer_image_captions: captions,
+        hero_image_url: heroImageUrl,
         // Per-panel decomposition: explicit panel-by-panel orders execute as
         // exact vector fills + per-panel art instead of one master scene.
         panel_directives: intent.panel_directives?.slice(0, 16) ?? []

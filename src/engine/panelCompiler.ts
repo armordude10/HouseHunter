@@ -102,6 +102,13 @@ export interface DesignSpec {
   /** Physical repeat size for pattern strategies ("statement" ~12-16, "micro" ~3-4). */
   pattern_tile_inches?: number;
   /**
+   * Customer image used AS the hero scene: pasted pixel-faithful into the
+   * front piece and the surroundings painted outward to match ("place this
+   * photo covering the front and paint out the sleeves and back"). Set by
+   * the run pipeline when a verbatim image lands on a multi-panel product.
+   */
+  hero_image_url?: string;
+  /**
    * Per-panel build plan (the garment engine's decomposition layer). When
    * present, panels with a directive are rendered DETERMINISTICALLY: exact
    * vector base fills (solid/gradient — zero AI color drift) plus optional
@@ -1023,26 +1030,44 @@ export class PanelCompiler {
     try {
       if (!this.media.hostImage) throw new Error("hostImage unavailable for worn-view painting");
       // ---- 1) Hero scene inside the front piece (containment law). ----
-      const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
-      const heroGen = await this.media.generateImage({
-        model: IMAGE.FLUX_2_FLEX,
-        positivePrompt:
-          `A complete self-contained scene: every subject entirely visible with comfortable ` +
-          `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
-          `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
-          `No borders, no frames, no split composition.`,
-        negativePrompt: negativeFor(design),
-        width: clampFluxDimension(frontRect.width * k),
-        height: clampFluxDimension(frontRect.height * k),
-        seed,
-        referenceImages: references
-      });
-      const heroBufRaw = await fetchBuf(heroGen.imageURL);
+      // A customer image can BE the hero ("this photo covering the front,
+      // paint out the rest to match"): pasted pixel-faithful (contain, EXIF
+      // auto-oriented), never regenerated — only its surroundings are painted.
+      let heroBufRaw: Buffer;
+      if (design.hero_image_url) {
+        heroBufRaw = await fetchBuf(design.hero_image_url);
+      } else {
+        const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
+        const heroGen = await this.media.generateImage({
+          model: IMAGE.FLUX_2_FLEX,
+          positivePrompt:
+            `A complete self-contained scene: every subject entirely visible with comfortable ` +
+            `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
+            `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
+            `No borders, no frames, no split composition.`,
+          negativePrompt: negativeFor(design),
+          width: clampFluxDimension(frontRect.width * k),
+          height: clampFluxDimension(frontRect.height * k),
+          seed,
+          referenceImages: references
+        });
+        heroBufRaw = await fetchBuf(heroGen.imageURL);
+      }
       const hero = await sharp(heroBufRaw)
-        .resize(frontRect.width, frontRect.height, { fit: "fill" })
+        .rotate()
+        .resize(frontRect.width, frontRect.height, {
+          fit: design.hero_image_url ? "contain" : "fill",
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
         .png()
         .toBuffer();
-      const mean = await sharp(heroBufRaw).resize(1, 1).removeAlpha().raw().toBuffer();
+      const mean = await sharp(heroBufRaw)
+        .rotate()
+        .flatten({ background: "#a8a8a8" })
+        .resize(1, 1)
+        .removeAlpha()
+        .raw()
+        .toBuffer();
       const bg = { r: mean[0], g: mean[1], b: mean[2] };
 
       // ---- 2) Front worn view: outpaint sleeves/hood around the hero. ----
@@ -1361,38 +1386,56 @@ export class PanelCompiler {
     let masterUrl: string | null = null;
     let heroMode = "single";
     if (
-      design.hero_containment !== false &&
+      (design.hero_containment !== false || design.hero_image_url) &&
       frontRect &&
       this.media.hostImage &&
-      (frontRect.width < masterW * 0.96 || frontRect.height < masterH * 0.96)
+      (design.hero_image_url || frontRect.width < masterW * 0.96 || frontRect.height < masterH * 0.96)
     ) {
       try {
-        // 1) The hero scene, complete and self-contained, at piece aspect.
-        const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
-        const heroW = clampFluxDimension(frontRect.width * k);
-        const heroH = clampFluxDimension(frontRect.height * k);
-        const heroGen = await this.media.generateImage({
-          model: IMAGE.FLUX_2_FLEX,
-          positivePrompt:
-            `A complete self-contained scene: every subject entirely visible with comfortable ` +
-            `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
-            `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
-            `No borders, no frames, no split composition.`,
-          negativePrompt: negativeFor(design),
-          width: heroW,
-          height: heroH,
-          seed,
-          referenceImages: references
-        });
-        const heroResponse = await fetch(heroGen.imageURL);
-        if (!heroResponse.ok) throw new Error(`hero fetch HTTP ${heroResponse.status}`);
-        const heroBuf = Buffer.from(await heroResponse.arrayBuffer());
+        // 1) The hero scene: a customer image used verbatim ("this photo on
+        // the front, paint out the rest"), or generated self-contained.
+        let heroBuf: Buffer;
+        if (design.hero_image_url) {
+          const heroResponse = await fetch(design.hero_image_url);
+          if (!heroResponse.ok) throw new Error(`hero image HTTP ${heroResponse.status}`);
+          heroBuf = Buffer.from(await heroResponse.arrayBuffer());
+        } else {
+          const k = Math.min(1536 / frontRect.width, 1536 / frontRect.height, 1);
+          const heroW = clampFluxDimension(frontRect.width * k);
+          const heroH = clampFluxDimension(frontRect.height * k);
+          const heroGen = await this.media.generateImage({
+            model: IMAGE.FLUX_2_FLEX,
+            positivePrompt:
+              `A complete self-contained scene: every subject entirely visible with comfortable ` +
+              `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
+              `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
+              `No borders, no frames, no split composition.`,
+            negativePrompt: negativeFor(design),
+            width: heroW,
+            height: heroH,
+            seed,
+            referenceImages: references
+          });
+          const heroResponse = await fetch(heroGen.imageURL);
+          if (!heroResponse.ok) throw new Error(`hero fetch HTTP ${heroResponse.status}`);
+          heroBuf = Buffer.from(await heroResponse.arrayBuffer());
+        }
         const hero = await sharp(heroBuf)
-          .resize(frontRect.width, frontRect.height, { fit: "fill" })
+          .rotate()
+          .resize(frontRect.width, frontRect.height, {
+            fit: design.hero_image_url ? "contain" : "fill",
+            background: { r: 0, g: 0, b: 0, alpha: 0 }
+          })
           .png()
           .toBuffer();
         // 2) Seed canvas (hero pasted on its own mean color) -> outpaint.
-        const mean = await sharp(heroBuf).resize(1, 1).removeAlpha().raw().toBuffer();
+        const mean = await sharp(heroBuf)
+          .rotate()
+          .flatten({ background: "#a8a8a8" })
+          .resize(1, 1)
+          .removeAlpha()
+          .raw()
+          .toBuffer();
         const seedCanvas = await sharp({
           create: {
             width: masterW,

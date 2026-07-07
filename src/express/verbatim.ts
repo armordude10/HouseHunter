@@ -33,7 +33,11 @@ export const buildVerbatimPanel = async (
 
   // Fit inside the print canvas at half size, then use the hosting upscale
   // (x2) to land exactly on target — same working-size flow as the compiler.
+  // .rotate() applies EXIF orientation: phone photos store their pixels
+  // sideways and flag the rotation in metadata — without this the print
+  // comes out rotated 90° (live queue verdict).
   const working = await sharp(source)
+    .rotate()
     .resize(Math.ceil(targetW / 2), Math.ceil(targetH / 2), {
       fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 }

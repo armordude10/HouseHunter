@@ -518,6 +518,49 @@ const AOP_UPGRADES: Record<number, number> = {
 };
 
 /**
+ * Distinguishing product modifiers: when one appears in a product's NAME but
+ * nowhere in the customer's words, that product is a specialized variant the
+ * customer did not ask for — "shirt" must land on a basic tee, never a
+ * long-sleeve/pocket/v-neck cousin that happens to share the noun (live
+ * queue verdicts: "bright green shirt" -> garment-dyed POCKET tee, then a
+ * LONG SLEEVE Gildan 2400).
+ */
+const DISTINGUISHING_MODIFIERS = [
+  "long sleeve",
+  "3 4 sleeve",
+  "pocket",
+  "v neck",
+  "crop",
+  "tank",
+  "sleeveless",
+  "polo",
+  "raglan",
+  "ringer",
+  "garment dyed",
+  "oversized",
+  "muscle",
+  "zip",
+  "toddler",
+  "youth",
+  "baby",
+  "embroidered"
+];
+
+const normalizeWords = (value: string) => ` ${value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+/** Penalty per specialized modifier in the name that the query never asked for. */
+export const unrequestedModifierPenalty = (productName: string, query: string): number => {
+  const name = normalizeWords(productName);
+  const asked = normalizeWords(query);
+  let penalty = 0;
+  for (const modifier of DISTINGUISHING_MODIFIERS) {
+    const needle = ` ${modifier} `;
+    if (name.includes(needle) && !asked.includes(needle)) penalty += 5;
+  }
+  return penalty;
+};
+
+/**
  * Deterministic full-catalog product match. EVERY indexed product is
  * reachable from lay language: query tokens are synonym-expanded (customers
  * don't know supplier vocabulary), matched exactly or typo-tolerantly
@@ -542,6 +585,9 @@ export const matchExpressProduct = (
       if (!score) continue;
       // Exact-phrase presence in the product name is the strongest signal.
       if (phrase.trim().length >= 6 && ` ${entry.haystack} `.includes(phrase)) score += 6;
+      // Specialized variants (long sleeve, pocket, v-neck...) only win when
+      // the customer actually asked for the specialization.
+      score -= unrequestedModifierPenalty(entry.record.name, text);
       // Curated best-sellers get a small TIEBREAK nudge for generic words —
       // never enough to beat a product that matches more of the query.
       const hero = HERO_CATALOG.find((product) => product.productId === entry.record.id);

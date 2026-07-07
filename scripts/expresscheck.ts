@@ -24,8 +24,10 @@ import {
   getCatalogRecord,
   getExpressProduct,
   matchExpressProduct,
-  searchCatalog
+  searchCatalog,
+  unrequestedModifierPenalty
 } from "../src/express/catalog.js";
+import { nearestVariantColor } from "../src/express/colorMatch.js";
 import { ExpressIntent, heuristicIntent, screenRequest } from "../src/express/intent.js";
 import { buildExpressJobs, pickStitchColor } from "../src/express/plan.js";
 import { runExpress, ExpressDeps } from "../src/express/run.js";
@@ -560,6 +562,46 @@ const main = async () => {
       );
       check("verbatim+bg-removal completed", result.status === "completed", result.message);
       check("background removal invoked once, zero generations", media.removeBackgroundCalls === 1 && media.generateCalls === 0);
+    }
+    {
+      // QUEUE VERDICT: a verbatim image on an AOP full-coverage product must
+      // NOT strand the other panels blank — the image becomes the worn-view
+      // painter's hero and the sleeves/back are painted out to match.
+      const { deps, media } = makeDeps(
+        intentFor({
+          product_query: "all over print men's crew neck t-shirt",
+          coverage: "full",
+          all_over: true,
+          image_plan: [
+            {
+              index: 0,
+              role: "verbatim_remove_background",
+              instruction: "remove background, cover the front, paint out sleeves and back to match"
+            }
+          ]
+        })
+      );
+      const result = await runExpress(
+        {
+          input_as_text:
+            "Remove just the background and place it on a men's crew neck all-over print shirt and make sure it covers the entire front. Paint out both sleeve panels and the back to match",
+          input_image_urls: [customerImage]
+        },
+        deps
+      );
+      check("verbatim AOP paint-out completed", result.status === "completed", result.message);
+      const painted = result.panels.filter((p) => p.status === "success");
+      check(
+        "ALL panels painted (nothing left blank)",
+        painted.length === 4,
+        painted.map((p) => p.placement).join(",")
+      );
+      check("background removal honored", media.removeBackgroundCalls >= 1, `${media.removeBackgroundCalls}`);
+      check(
+        "customer image rode as the painter's hero",
+        (result.trace ?? []).some((t) => t.stage === "verbatim_hero") && media.generateCalls >= 2,
+        `gens=${media.generateCalls}`
+      );
     }
     {
       const { deps, media } = makeDeps(
@@ -1268,6 +1310,47 @@ const main = async () => {
         "directive panels carry provenance strategy=panel_directive",
         (result.design_genome?.panels ?? []).some((p) => p.strategy === "panel_directive"),
         lsPanel?.notes ?? ""
+      );
+    }
+
+    console.log("\n== 13g. QUEUE VERDICTS: color-true variants + no specialized-product drift ==");
+    {
+      check(
+        '"bright green" lands on Irish Green (perceptual, not token order)',
+        nearestVariantColor("bright green", ["Forest Green", "Irish Green", "Berry", "Black"]) ===
+          "Irish Green",
+        String(nearestVariantColor("bright green", ["Forest Green", "Irish Green", "Berry", "Black"]))
+      );
+      check(
+        '"dark blue" lands on Navy',
+        nearestVariantColor("dark blue", ["Light Blue", "Navy", "Royal"]) === "Navy",
+        String(nearestVariantColor("dark blue", ["Light Blue", "Navy", "Royal"]))
+      );
+      check(
+        "unparseable phrases fall back to token matching",
+        nearestVariantColor("shimmering cosmos", ["Black", "White"]) === null
+      );
+      check(
+        "long sleeve penalized when not requested",
+        unrequestedModifierPenalty("Unisex Long Sleeve Shirt | Gildan 2400", "bright green shirt") > 0
+      );
+      check(
+        "no penalty when the customer asked for the specialization",
+        unrequestedModifierPenalty("Unisex Long Sleeve Shirt | Gildan 2400", "a long sleeve shirt") === 0
+      );
+      const picked = matchExpressProduct(
+        'Bright green shirt that has a clean professional logo on it for a company called "StudioSentry"'
+      );
+      check(
+        "plain 'shirt' matches a basic tee (no pocket/long-sleeve/garment-dyed drift)",
+        !/long sleeve|pocket|v-neck|garment-dyed/i.test(picked.name),
+        picked.name
+      );
+      const stillLong = matchExpressProduct("a long sleeve shirt with a wolf on it");
+      check(
+        "asking for long sleeve still gets long sleeve",
+        /long sleeve/i.test(stillLong.name),
+        stillLong.name
       );
     }
 
