@@ -1394,6 +1394,28 @@ const main = async () => {
         /long sleeve/i.test(stillLong.name),
         stillLong.name
       );
+      // QUEUE VERDICT: "Custom hotpants, black color, with pink print" landed
+      // on Black Foot Sublimated SOCKS — color words hit the product NAME.
+      const hotpants = matchExpressProduct(
+        "Custom hotpants, black color, with pink print that says I'm a Snack"
+      );
+      check(
+        "hotpants match shorts, never color-named products",
+        /shorts/i.test(hotpants.name) && !/sock/i.test(hotpants.name),
+        hotpants.name
+      );
+      const socks = matchExpressProduct("black socks with skulls all over them");
+      check(
+        "socks still reachable after color-token filtering",
+        /sock/i.test(socks.name),
+        socks.name
+      );
+      const blackOnly = matchExpressProduct("black");
+      check(
+        "a color-only query still matches SOMETHING (colors survive when alone)",
+        Boolean(blackOnly?.name),
+        blackOnly?.name
+      );
     }
 
     console.log("\n== 13d. SLEEVE DROP: underarm points align across the body->sleeve seam ==");

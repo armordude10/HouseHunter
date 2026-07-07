@@ -17,6 +17,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { isColorWord } from "./colorMatch.js";
 
 export interface CatalogPlacement {
   placement: string;
@@ -271,6 +272,11 @@ const SYNONYMS: Record<string, string[]> = {
   crewneck: ["crew", "neck", "sweatshirt"],
   joggers: ["sweatpants", "joggers"],
   "sweat pants": ["sweatpants"],
+  hotpants: ["yoga", "shorts"],
+  "hot pants": ["yoga", "shorts"],
+  "booty shorts": ["yoga", "shorts"],
+  "spandex shorts": ["yoga", "shorts"],
+  "short shorts": ["yoga", "shorts"],
   cap: ["cap", "hat"],
   hat: ["hat", "cap"],
   snapback: ["snapback"],
@@ -574,7 +580,13 @@ export const matchExpressProduct = (
   options?: { preferAop?: boolean }
 ): ExpressProduct => {
   const preferAop = options?.preferAop === true;
-  const { tokens: queryTokens, derived } = expandQueryDetailed(text);
+  const expanded = expandQueryDetailed(text);
+  // Colors select VARIANTS, never products: "black hotpants" must not land
+  // on a product NAMED black (live queue verdict: Black Foot Sublimated
+  // Socks). Color words only survive when they are all the customer gave us.
+  const colorless = expanded.tokens.filter((token) => !isColorWord(token));
+  const queryTokens = colorless.length ? colorless : expanded.tokens;
+  const derived = expanded.derived;
   const haystack = ` ${text.toLowerCase()} `;
   let best: { record: CatalogRecord; score: number } | null = null;
   let bestAop: { record: CatalogRecord; score: number } | null = null;

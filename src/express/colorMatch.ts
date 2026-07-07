@@ -121,6 +121,20 @@ const GARMENT_COLORS: Record<string, string> = {
   heliconia: "#df4995"
 };
 
+/** Single-word color vocabulary — tokens that name a COLOR, not a product. */
+const COLOR_WORDS = new Set(
+  Object.keys(GARMENT_COLORS).filter((key) => !key.includes(" "))
+);
+["colored", "colour", "coloured", "bright", "neon", "pastel"].forEach((w) => COLOR_WORDS.add(w));
+
+/**
+ * True when a token is a color word. Product matching filters these out:
+ * colors select VARIANTS, never products — "black hotpants" must not land
+ * on "Black Foot Sublimated Socks" because of the word black (live queue
+ * verdict).
+ */
+export const isColorWord = (token: string): boolean => COLOR_WORDS.has(token.toLowerCase());
+
 const clamp255 = (value: number) => Math.min(255, Math.max(0, Math.round(value)));
 
 const hexToRgb = (hex: string): [number, number, number] => {
