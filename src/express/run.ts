@@ -325,11 +325,34 @@ export const runExpress = async (
   const plan = intent.image_plan.filter(
     (entry) => Number.isInteger(entry.index) && entry.index >= 0 && entry.index < imageUrls.length
   );
-  const verbatimEntry = plan.find(
+  let verbatimEntry = plan.find(
     (entry) => entry.role === "use_verbatim" || entry.role === "verbatim_remove_background"
   );
+  // Deterministic backstop: "place it / this photo ... (remove the
+  // background / cover the front / exactly as uploaded)" IS a verbatim
+  // directive even when the model re-described the image as a scene to
+  // generate (live queue verdict: the customer's photo was regenerated).
+  if (
+    !verbatimEntry &&
+    imageUrls.length === 1 &&
+    /\b(place|put|stick|slap)\s+(it|this|that)\b|\b(this|my)\s+(image|photo|picture|pic)\b/i.test(text) &&
+    /remove\s+(just\s+)?the\s+background|cover(s)?\s+the\s+(entire\s+)?front|exactly\s+as\s+(uploaded|is)|\bas[- ]is\b/i.test(
+      text
+    )
+  ) {
+    verbatimEntry = {
+      index: 0,
+      role: /remove\s+(just\s+)?the\s+background/i.test(text)
+        ? "verbatim_remove_background"
+        : "use_verbatim",
+      instruction: "customer image applied verbatim (deterministic backstop)"
+    };
+    note("verbatim_backstop", verbatimEntry.role);
+  }
+  const verbatimIndex = verbatimEntry?.index ?? -1;
   const referenceUrls = imageUrls.filter(
     (_, i) =>
+      i !== verbatimIndex &&
       !plan.some(
         (entry) =>
           entry.index === i &&
@@ -688,13 +711,28 @@ export const runExpress = async (
         // exact vector fills + per-panel art instead of one master scene.
         panel_directives: intent.panel_directives?.slice(0, 16) ?? []
       };
+      // Directives are for INDEPENDENT per-panel treatments. A hero image
+      // owns the whole canvas, and art-only directives on a "match/continue"
+      // request are a continuous scene the model mislabeled (live queue
+      // verdict: paint-out-to-match got stamped per-panel art instead) —
+      // both fall back to the scene engines.
       if (design.panel_directives?.length) {
-        note(
-          "panel_directives",
-          design.panel_directives
-            .map((d) => `${d.panel}=${d.fill}${d.art_prompt ? "+art" : ""}`)
-            .join(", ")
-        );
+        const allNoFill = design.panel_directives.every((d) => d.fill === "none");
+        const continuous = /\bmatch(ing)?\b|continu|extend|flow|seamless|paint(ed)?\s+out|wrap/i.test(text);
+        if (heroImageUrl || (allNoFill && continuous)) {
+          note(
+            "panel_directives_dropped",
+            heroImageUrl ? "hero image owns the canvas" : "continuous-scene request"
+          );
+          design.panel_directives = [];
+        } else {
+          note(
+            "panel_directives",
+            design.panel_directives
+              .map((d) => `${d.panel}=${d.fill}${d.art_prompt ? "+art" : ""}`)
+              .join(", ")
+          );
+        }
       }
       const compiler = new PanelCompiler(metered);
       const compiled = await compiler.compile(

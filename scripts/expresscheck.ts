@@ -604,6 +604,48 @@ const main = async () => {
       );
     }
     {
+      // The LIVE failure shape: the intent model re-described the photo
+      // (edit_subject, no verbatim) AND emitted art-only panel_directives
+      // for a matching scene. Both deterministic backstops must fire.
+      const { deps } = makeDeps(
+        intentFor({
+          product_query: "all over print men's crew neck t-shirt",
+          coverage: "full",
+          all_over: true,
+          image_plan: [{ index: 0, role: "edit_subject", instruction: "feature this scene" }],
+          panel_directives: [
+            { panel: "front", fill: "none", color_a: "", color_b: "", angle_deg: 0, art_prompt: "full panel ocean sunset", art_width_frac: 0.9 },
+            { panel: "back", fill: "none", color_a: "", color_b: "", angle_deg: 0, art_prompt: "matching sunset", art_width_frac: 0.9 },
+            { panel: "left_sleeve", fill: "none", color_a: "", color_b: "", angle_deg: 0, art_prompt: "continuing sunset", art_width_frac: 0.9 },
+            { panel: "right_sleeve", fill: "none", color_a: "", color_b: "", angle_deg: 0, art_prompt: "continuing sunset", art_width_frac: 0.9 }
+          ]
+        })
+      );
+      const result = await runExpress(
+        {
+          input_as_text:
+            "Remove just the background and place it on a men's crew neck all-over print shirt and make sure it covers the entire front. Paint out both sleeve panels and the back to match",
+          input_image_urls: [customerImage]
+        },
+        deps
+      );
+      check("backstop run completed", result.status === "completed", result.message);
+      check(
+        "verbatim BACKSTOP fired (model failed to mark the image verbatim)",
+        (result.trace ?? []).some((t) => t.stage === "verbatim_backstop")
+      );
+      check(
+        "mislabeled art-only directives DROPPED (continuous scene)",
+        (result.trace ?? []).some((t) => t.stage === "panel_directives_dropped")
+      );
+      check(
+        "photo became the painter's hero; all 4 panels painted",
+        (result.trace ?? []).some((t) => t.stage === "verbatim_hero") &&
+          result.panels.filter((p) => p.status === "success").length === 4,
+        result.panels.map((p) => `${p.placement}:${p.status}`).join(",")
+      );
+    }
+    {
       const { deps, media } = makeDeps(
         intentFor({
           product_query: "hoodie",

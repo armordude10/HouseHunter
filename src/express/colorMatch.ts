@@ -57,7 +57,22 @@ const GARMENT_COLORS: Record<string, string> = {
   lime: "#a4d65e",
   "safety green": "#c9ff00",
   "kiwi": "#9bc400",
-  green: "#2e8b57",
+  green: "#2f9e44",
+  leaf: "#61a63c",
+  emerald: "#00996b",
+  "grass green": "#3aaa35",
+  "ocean blue": "#3d6e91",
+  "columbia blue": "#9ac1e0",
+  "dusty blue": "#7d9bb5",
+  "ice blue": "#c9e4ee",
+  raspberry: "#b3446c",
+  clay: "#b66a50",
+  autumn: "#b5551d",
+  toast: "#a56a3a",
+  pebble: "#d8d0c5",
+  oxblood: "#4a1e1b",
+  dust: "#cfc4b0",
+  "team purple": "#4e2a84",
   "forest green": "#1b4d2b",
   "forest": "#1b4d2b",
   "irish green": "#00a651",
@@ -125,13 +140,48 @@ const mix = (rgb: [number, number, number], toward: number, amount: number): [nu
     clamp255(rgb[2] + (toward - rgb[2]) * amount)
   ];
 
-const saturate = (rgb: [number, number, number]): [number, number, number] => {
-  // Push toward the pure hue at full brightness ("bright green" = vivid green,
-  // not the darkest green in the rack).
-  const max = Math.max(...rgb, 1);
-  const scaled = rgb.map((c) => clamp255((c / max) * 255)) as [number, number, number];
-  const min = Math.min(...scaled);
-  return scaled.map((c) => clamp255(min + (c - min) * 1.6)) as [number, number, number];
+const rgbToHsl = (rgb: [number, number, number]): [number, number, number] => {
+  const r = rgb[0] / 255;
+  const g = rgb[1] / 255;
+  const b = rgb[2] / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h, s, l];
+};
+
+const hslToRgb = (hsl: [number, number, number]): [number, number, number] => {
+  const [h, s, l] = hsl;
+  if (s === 0) return [clamp255(l * 255), clamp255(l * 255), clamp255(l * 255)];
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channel = (t0: number) => {
+    let t = t0;
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  return [clamp255(channel(h + 1 / 3) * 255), clamp255(channel(h) * 255), clamp255(channel(h - 1 / 3) * 255)];
+};
+
+/**
+ * "Bright/neon X" = the pure vivid hue of X (full saturation, mid
+ * lightness), keeping the HUE — never a lightened pastel (live defect: an
+ * additive brighten pushed "bright green" into mint/turquoise territory).
+ */
+const vivid = (rgb: [number, number, number]): [number, number, number] => {
+  const [h] = rgbToHsl(rgb);
+  return hslToRgb([h, 1, 0.5]);
 };
 
 /** Resolve a garment color NAME (variant side) to RGB; null when unknown. */
@@ -162,7 +212,7 @@ export const statedColorRgb = (phrase: string): [number, number, number] | null 
   if (hex) return hexToRgb(hex[0]);
   let rgb = garmentColorRgb(phrase);
   if (!rgb) return null;
-  if (/ bright | neon | vivid | electric | vibrant | hot /.test(low)) rgb = saturate(rgb);
+  if (/ bright | neon | vivid | electric | vibrant | hot /.test(low)) rgb = vivid(rgb);
   if (/ light | pale | pastel | soft | baby /.test(low)) rgb = mix(rgb, 255, 0.45);
   if (/ dark | deep | midnight /.test(low)) rgb = mix(rgb, 0, 0.4);
   return rgb;
