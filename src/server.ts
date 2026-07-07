@@ -19,6 +19,7 @@ import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 import { runWorkflow, MAX_CUSTOMER_IMAGES } from "./workflow.js";
 import { runExpress } from "./express/run.js";
 import { catalogSize, getCatalogRecord, searchCatalog } from "./express/catalog.js";
@@ -635,10 +636,22 @@ const server = createServer(async (req, res) => {
         if (/^https?:\/\//.test(candidate)) {
           imageUrls.push(candidate);
         } else if (candidate.startsWith("data:image/")) {
-          const bytes = Buffer.from(candidate.replace(/^data:[^,]*,/, ""), "base64");
+          let bytes = Buffer.from(candidate.replace(/^data:[^,]*,/, ""), "base64");
           if (bytes.length && bytes.length <= UPLOAD_MAX_ONE_BYTES) {
-            const match = candidate.match(/^data:(image\/[a-z+.-]+)/i);
-            const id = putHostedImage(bytes, match?.[1] ?? "image/png");
+            let contentType = candidate.match(/^data:(image\/[a-z+.-]+)/i)?.[1] ?? "image/png";
+            // EXIF normalization AT INGESTION: phone photos store their
+            // pixels sideways and flag the rotation in metadata. Downstream
+            // services (background removal, generators) strip EXIF and bake
+            // the raw orientation in — so upright pixels must be the only
+            // thing they ever see (live queue verdict: sideways prints).
+            try {
+              const oriented = await sharp(bytes).rotate().png().toBuffer();
+              bytes = oriented;
+              contentType = "image/png";
+            } catch {
+              // not a decodable raster — host as-is
+            }
+            const id = putHostedImage(bytes, contentType);
             imageUrls.push(`${publicBaseUrl(req)}/uploads/${id}`);
           }
         }

@@ -1080,10 +1080,11 @@ export class PanelCompiler {
         model: IMAGE.FLUX_2_FLEX,
         positivePrompt:
           `This is a garment painted AS WORN, seen from the front: torso center, sleeves at the ` +
-          `sides, hood at the top. Extend the existing scene outward to fill the entire canvas as ` +
-          `one continuous painting across the whole garment. Keep the existing detailed scene ` +
-          `EXACTLY as it is. Fill all flat areas with seamlessly matching environment continuing ` +
-          `the scene's world — no new focal subjects, no text. ${designCore(design).slice(0, 500)}`,
+          `sides${hood ? ", hood at the top" : ""}. Extend the existing scene outward to fill the ` +
+          `entire canvas as one continuous painting across the whole garment. Keep the existing ` +
+          `detailed scene EXACTLY as it is. Fill all flat areas with seamlessly matching ` +
+          `environment continuing the scene's world — no fabric folds, no garment outlines, ` +
+          `no panels or borders, no new focal subjects, no text. ${designCore(design).slice(0, 500)}`,
         width: W,
         height: H,
         seed,
