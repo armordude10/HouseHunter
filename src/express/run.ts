@@ -19,7 +19,13 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { PanelCompiler, CompiledPanel, DesignSpec, MediaLike } from "../engine/panelCompiler.js";
+import {
+  PanelCompiler,
+  CompiledPanel,
+  DesignSpec,
+  MediaLike,
+  resolveCssColor
+} from "../engine/panelCompiler.js";
 import { getCalibrationProfile } from "../engine/calibrationProfiles.js";
 import { DesignGenome } from "../engine/provenance.js";
 import {
@@ -792,6 +798,37 @@ export const runExpress = async (
               .map((d) => `${d.panel}=${d.fill}${d.art_prompt ? "+art" : ""}`)
               .join(", ")
           );
+        }
+      }
+      // PRINTED-SURFACE BASE LAW, deterministic: a stated base color on a
+      // printed surface with a layers-only design renders as an EXACT
+      // vector fill — never trusted to the generator's mood (live: "black
+      // spandex shorts, pink print" came back white; earlier: red bra,
+      // dark blue sleeve). Text moved to the generation by the Gunner rule
+      // becomes the directive's art; placed layers overlay afterwards.
+      if (
+        printedSurface &&
+        statedBaseColor &&
+        intent.layers_only &&
+        !heroImageUrl &&
+        !design.panel_directives?.length
+      ) {
+        const exactBase = resolveCssColor(statedBaseColor);
+        if (exactBase) {
+          const artText = requiredText.slice(0, 2).join(" · ");
+          design.panel_directives = [
+            {
+              panel: "all",
+              fill: "solid",
+              color_a: exactBase,
+              color_b: "",
+              angle_deg: 0,
+              art_prompt: artText ? typographyPrompt(artText, "") : "",
+              art_width_frac: artText ? 0.65 : 0
+            }
+          ];
+          if (artText) requiredText = [];
+          note("base_directive", `exact ${exactBase} vector base synthesized${artText ? " + typography art" : ""}`);
         }
       }
       const compiler = new PanelCompiler(metered);

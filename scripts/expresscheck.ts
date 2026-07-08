@@ -1165,15 +1165,30 @@ const main = async () => {
         deps
       );
       check("dark blue sleeve run completed", result.status === "completed", result.message);
+      // SUPERSEDED mechanism: the colored base used to be GENERATED with a
+      // color directive (generator's mood could still miss). It is now an
+      // EXACT vector fill via a synthesized panel directive — pixel-true.
       check(
-        "stated color vetoes layers-only: a base IS generated with the color directive",
-        media.generateCalls >= 2 && media.prompts[0]?.includes("base color is dark blue") === true,
-        `${media.generateCalls} gens — ${media.prompts[0]?.slice(0, 80)}`
+        "stated color becomes an EXACT vector base (synthesized directive)",
+        (result.trace ?? []).some((t) => t.stage === "base_directive"),
+        (result.trace ?? []).filter((t) => t.stage === "base_directive").map((t) => String(t.info)).join()
       );
+      const sleevePanel = result.panels.find((p) => p.status === "success" && p.file_url);
+      let sleeveCorner = null as null | { r: number; g: number; b: number };
+      if (sleevePanel?.file_url) {
+        const buf = Buffer.from((sleevePanel.file_url as string).split(",")[1], "base64");
+        const px = await sharp(buf)
+          .extract({ left: 0, top: 0, width: 24, height: 24 })
+          .resize(1, 1, { fit: "fill" })
+          .removeAlpha()
+          .raw()
+          .toBuffer();
+        sleeveCorner = { r: px[0], g: px[1], b: px[2] };
+      }
       check(
-        "sublimation master generated OPAQUE (transparent flag would erase the blue)",
-        media.transparents[0] === false,
-        JSON.stringify(media.transparents)
+        "the base IS dark blue in pixels",
+        !!sleeveCorner && sleeveCorner.b > sleeveCorner.r + 20 && sleeveCorner.b > 60 && sleeveCorner.r < 90,
+        JSON.stringify(sleeveCorner)
       );
       check(
         "lion layer composited ON TOP of the colored base",
@@ -1495,6 +1510,50 @@ const main = async () => {
         "named brand is SACRED (stray all_over cannot move a Gildan 5000)",
         result.product.id === 438,
         `${result.product.id} ${result.product.name}`
+      );
+    }
+    {
+      // LIVE QUEUE VERDICT: "black spandex shorts, pink print I'm a Snack"
+      // came back WHITE — the generator ignored the trailing base-color
+      // directive. Stated base colors on printed surfaces now render as
+      // EXACT vector fills (synthesized directive), text as directive art.
+      const { deps } = makeDeps(
+        intentFor({
+          product_id: 19, // sublimation mug in stub truth (printed surface, single "default" panel)
+          product_query: "mug",
+          coverage: "single",
+          layers_only: true,
+          garment_color: "black",
+          required_text: ["I'm a Snack"],
+          artwork_brief: "playful pink statement on a black base"
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "black mug with pink print that says I'm a Snack" },
+        deps
+      );
+      check("base-law run completed", result.status === "completed", result.message);
+      check(
+        "stated base synthesized as exact vector fill",
+        (result.trace ?? []).some((t) => t.stage === "base_directive"),
+        (result.trace ?? []).map((t) => t.stage).join(",")
+      );
+      const panel = result.panels.find((p) => p.status === "success" && p.file_url);
+      let corner = null as null | { r: number; g: number; b: number };
+      if (panel?.file_url) {
+        const buf = Buffer.from((panel.file_url as string).split(",")[1], "base64");
+        const px = await sharp(buf)
+          .extract({ left: 0, top: 0, width: 24, height: 24 })
+          .resize(1, 1, { fit: "fill" })
+          .removeAlpha()
+          .raw()
+          .toBuffer();
+        corner = { r: px[0], g: px[1], b: px[2] };
+      }
+      check(
+        "the base IS black (corner pixel, not generator's mood)",
+        !!corner && corner.r < 40 && corner.g < 40 && corner.b < 40,
+        JSON.stringify(corner)
       );
     }
 
