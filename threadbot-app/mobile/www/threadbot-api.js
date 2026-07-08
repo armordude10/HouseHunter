@@ -29,6 +29,16 @@
   window.ThreadbotAPI = {
     statusSteps: STATUS,
 
+    /* Cancel seam: the loading screen's Cancel button aborts the in-flight
+       request. The rejection carries name 'UserCancel' so the app returns
+       to the composer silently instead of showing an error dialog. */
+    _ctrl: null,
+    _userCancel: false,
+    abort() {
+      this._userCancel = true;
+      try { if (this._ctrl) this._ctrl.abort(); } catch (e) {}
+    },
+
     async generate({ prompt, refImage, remix, baseImage, onProgress } = {}) {
       // ---- REAL BACKEND --------------------------------------------------
       // If a backend URL is configured (desktop build injects it via
@@ -42,6 +52,8 @@
         // ramp (2% -> 95%, ease-out) and cycle the status labels while the request is in flight,
         // then snap to 100% when it lands. Without this the bar sits frozen at 2% the whole time.
         const ctrl = new AbortController();
+        this._ctrl = ctrl;
+        this._userCancel = false;
         // Hard ceiling: multi-panel products legitimately take minutes, but a
         // spinner may NEVER run forever — kill and explain at 10 minutes.
         const kill = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 600000);
@@ -96,9 +108,16 @@
         } catch (e) {
           finished = true; clearInterval(timer); clearTimeout(kill);
           if (e && e.name === 'AbortError') {
+            if (this._userCancel) {
+              const cancel = new Error('Run canceled.');
+              cancel.name = 'UserCancel';
+              throw cancel;
+            }
             throw new Error('This design is taking longer than expected. It may still finish — check back, or try again.');
           }
           throw e;
+        } finally {
+          if (this._ctrl === ctrl) this._ctrl = null;
         }
       }
 

@@ -278,6 +278,7 @@
             </div>
           </sc-for>
         </div>
+        <button onClick="{{ cancelRun }}" style="margin-top:34px; height:44px; padding:0 28px; border-radius:13px; border:1px solid rgba(255,123,123,0.45); background:rgba(255,123,123,0.08); color:#ffb4b4; font-family:'Chakra Petch'; font-weight:700; font-size:13px; letter-spacing:1.5px; cursor:pointer;">CANCEL RUN</button>
       </div>
       </sc-if>
 
@@ -600,6 +601,8 @@ class Component extends DCLogic {
       this._runId = (res && res.run_id) || null;
       this.setState({ phase:'results', results: variations, variation:0, saved:false, fbSent:null });
     }).catch((err) => {
+      // User-initiated cancel: the composer is already back — no dialog.
+      if (err && err.name === 'UserCancel') return;
       console.error('Threadbot synthesis failed', err);
       // Never fail silently — tell the user what happened and that retry is free.
       this.setState({ phase:'input', dialog: {
@@ -608,6 +611,12 @@ class Component extends DCLogic {
         primaryLabel: 'OK',
       }});
     });
+  };
+  // CANCEL — abort the in-flight run and return to the composer instantly.
+  cancelSynthesis = () => {
+    this.buzz(10);
+    try { if (window.ThreadbotAPI && window.ThreadbotAPI.abort) window.ThreadbotAPI.abort(); } catch (e) {}
+    this.setState({ phase:'input' });
   };
   initiate = () => {
     const p = this.state.prompt.trim();
@@ -1103,6 +1112,7 @@ class Component extends DCLogic {
       dialogPrimaryStyle: `flex:1;height:48px;border-radius:13px;border:0;font-family:'Chakra Petch';font-weight:700;font-size:13px;letter-spacing:.5px;cursor:pointer;color:${s.dialog && s.dialog.danger ? '#2a0d0d' : '#04181c'};background:${s.dialog && s.dialog.danger ? '#ff7b7b' : 'linear-gradient(100deg,#00E5FF,#19f0c4)'};`,
 
       genPct: s.genPct, genStatus: this.GEN[s.genStep], genSteps,
+      cancelRun: this.cancelSynthesis,
 
       resultPrompt: this._genPrompt || '',
       hasResultImage: !!(cur && cur.image),

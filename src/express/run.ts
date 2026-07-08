@@ -125,18 +125,38 @@ const COST_PER_GENERATION = 0.03;
 const COST_PER_UPSCALE = 0.002;
 const COST_PER_LLM_CALL = 0.003;
 
+/**
+ * One retry after a short pause for paid media calls: a single transient
+ * provider error must never kill a whole multi-panel run (live report:
+ * "couldn't render all the panels" on a yoga-shorts run that works when
+ * repeated). Deliberate failures (content refusals) still surface — the
+ * retry only absorbs the flaky class.
+ */
+const withOneRetry = async <T>(call: () => Promise<T>): Promise<T> => {
+  try {
+    return await call();
+  } catch (first) {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    try {
+      return await call();
+    } catch {
+      throw first;
+    }
+  }
+};
+
 /** Wrap media so every paid call is counted into the run's economics. */
 const meteredMedia = (media: MediaLike, meter: { generations: number; upscales: number }): MediaLike => ({
   generateImage: (params) => {
     meter.generations += 1;
-    return media.generateImage(params);
+    return withOneRetry(() => media.generateImage(params));
   },
-  removeBackground: (url) => media.removeBackground(url),
+  removeBackground: (url) => withOneRetry(() => media.removeBackground(url)),
   upscale: (image, factor) => {
     meter.upscales += 1;
-    return media.upscale(image, factor);
+    return withOneRetry(() => media.upscale(image, factor));
   },
-  uploadImage: (image) => media.uploadImage(image),
+  uploadImage: (image) => withOneRetry(() => media.uploadImage(image)),
   // CRITICAL passthrough: dropping hostImage silently disabled the <=2048px
   // mockup copies — every multi-panel mockup task got print-res files
   // (6x ~2.8MB) and blew Printful's render window. THE AOP-hoodie timeout.
