@@ -108,6 +108,12 @@ export type PanelDirective = z.infer<typeof PanelDirectiveSchema>;
 export const ExpressIntentSchema = z.object({
   allowed: z.boolean(),
   refusal_reason: z.string().nullable(),
+  /**
+   * THE catalog product id, chosen from the catalog menu by MEANING —
+   * product selection is the model's semantic judgment, never a keyword
+   * lottery on the customer's words. 0 only when nothing fits.
+   */
+  product_id: z.number(),
   product_query: z.string(),
   coverage: z.enum(["full", "single"]),
   artwork_brief: z.string(),
@@ -191,10 +197,12 @@ export const screenRequest = (text: string): { blocked: boolean; reason: string 
 
 const INTENT_INSTRUCTIONS = `You are Threadbot Express Intent, the single planning step of a print-on-demand design service. You turn ONE messy customer request (plus captions of up to 10 attached reference images) into a production-ready design brief. Customers rarely know garment-production vocabulary and often typo — translate what they MEAN, not what they say, and silently fix obvious typos ("hoddie" -> hoodie, "leggins" -> leggings).
 The input may end with a bracketed "[Platform taste hints ...]" block summarizing this customer's past style leanings. Treat it as SOFT guidance for details the customer left unspecified — it must NEVER override anything they actually asked for, and it is not part of the customer's request text.
+The input may also carry a "[Recent generations ...]" block listing this customer's latest designs (brief -> product). Use it ONLY when the customer explicitly references a past design ("like the last one", "same as before but..."); otherwise ignore it completely.
 Return JSON with:
 - allowed: false ONLY for requests seeking protected trademarks/characters/logos, hate content, sexual content involving minors, or other unprintable material; otherwise true.
 - refusal_reason: short customer-safe sentence when allowed=false, else null.
-- product_query: the product type they want in plain lowercase supplier-neutral words, typos fixed. The catalog spans far beyond shirts — apparel (tees, long sleeves, oversized tees/hoodies, sweatshirts, zip hoodies, polos, tanks, crop tops, dresses, skirts, leggings, shorts, sweatpants/joggers, swimwear/bikinis/trunks/rash guards, jerseys, socks, shoes/slides/flip-flops, jackets/windbreakers/vests, hats/caps/beanies/visors), kids/toddler/baby everything, bags (tote, backpack, fanny pack, duffle, crossbody, drawstring, laptop sleeve, gym), phone/AirPods cases (iPhone, Samsung), home (posters, framed posters, canvas, blankets, pillows, towels, shower curtains, rugs, mats, tapestries, candles, ornaments, mugs, glasses, bottles, tumblers, aprons, coasters), stationery (stickers, cards, notebooks, journals, calendars, magnets, puzzles, playing cards, mouse pads), pet gear (collars, leashes, bowls, bandanas). Name the type they MEAN ("wall art of..." -> "poster" or "canvas"; "onesie" -> "baby bodysuit"; "hotpants"/"booty shorts"/"spandex shorts" -> "yoga shorts"). Empty if truly unstated.
+- product_id: THE product to print on, chosen from the CATALOG MENU appended below. This is YOUR semantic judgment — understand what the customer MEANS and pick the id of the single best product. Customers know NOTHING about the catalog, print techniques, or industry terms, and their wording will be messy, indirect, slang, or typo-ridden: "something to keep my coffee warm" = a mug; "the tight shorts girls wear to spin class" = yoga/biker shorts; "hotpants" = yoga shorts; "a cozy thing for the couch" = a blanket; "wall art" = a poster or canvas. NEVER require their words to resemble a product name. When the design demands continuous full-surface coverage (all_over=true), you MUST pick an [all-over] product. When they reference a past design ("like the last one but with tulips"), resolve the product and style from the [Recent generations] block in the input. Set 0 ONLY when truly nothing in the catalog fits.
+- product_query: the product type they mean in plain lowercase supplier-neutral words, typos fixed (backup routing if product_id is unavailable). Empty if truly unstated.
 - variant_hint: wording that selects WHICH version of the product: device model ("iphone 15 pro max", "samsung galaxy s24"), capacity ("15 oz"), print dimensions ("18x24"), pack counts. Empty if none.
 - coverage: "single" ONLY if they explicitly want art on just one area ("just the front"); otherwise "full".
 - all_over: true whenever they describe art covering the whole garment IN ANY WORDING ("covered in...", "everywhere", "the entire shirt", "wrapping around", "head to toe"), use the industry terms "AOP"/"all-over print"/"sublimation" (including typo'd forms), OR the concept itself inherently demands continuous full-surface coverage even if they never say so: repeating patterns, tie-dye, camo, galaxy/space wash, gradients, "make it look like it's made of flames/water/fur", full-scene artwork. Translating what the DESIGN needs into this flag is your job.
@@ -224,6 +232,7 @@ Return only JSON.`;
 export const heuristicIntent = (text: string): ExpressIntent => ({
   allowed: true,
   refusal_reason: null,
+  product_id: 0,
   product_query: "",
   coverage: /\bjust the front\b|\bfront only\b|\bone side\b|\bsingle placement\b/i.test(text)
     ? "single"
@@ -252,17 +261,23 @@ export const heuristicIntent = (text: string): ExpressIntent => ({
 export const deriveIntent = async (
   provider: LlmProvider,
   text: string,
-  imageCaptions: string[]
+  imageCaptions: string[],
+  catalogMenu?: string
 ): Promise<{ intent: ExpressIntent; degraded: boolean }> => {
   const captionBlock = imageCaptions.length
     ? `\n\nAttached reference image captions:\n${imageCaptions
         .map((caption, i) => `${i + 1}. ${caption}`)
         .join("\n")}`
     : "";
+  // The menu rides the SYSTEM prompt: static per process, so providers can
+  // prompt-cache the whole catalog across runs.
+  const systemPrompt = catalogMenu
+    ? `${INTENT_INSTRUCTIONS}\n\nCATALOG MENU (id name; [all-over] = full-surface print product):\n${catalogMenu}`
+    : INTENT_INSTRUCTIONS;
   try {
     const raw = await provider.structured({
       model: LLM.DEEPSEEK_V4_FLASH,
-      systemPrompt: INTENT_INSTRUCTIONS,
+      systemPrompt,
       userText: `Customer request:\n${text.slice(0, 6000)}${captionBlock}`,
       jsonSchema: {
         name: "express_intent",

@@ -1418,6 +1418,62 @@ const main = async () => {
       );
     }
 
+    console.log("\n== 13h. LLM-FIRST PRODUCT SELECTION: the model's semantic choice rules ==");
+    {
+      // The intent model picks product_id from the full catalog menu — a
+      // messy prompt with ZERO product keywords routes to the model's pick.
+      const { deps } = makeDeps(
+        intentFor({
+          product_id: 19,
+          product_query: "",
+          coverage: "full",
+          artwork_brief: "cozy morning artwork"
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "something to keep my coffee warm in the mornings lol" },
+        deps
+      );
+      check(
+        "model's product_id wins with zero keyword help",
+        result.product.id === 19,
+        `${result.product.id} ${result.product.name}`
+      );
+    }
+    {
+      // The one physical law: an all-over design must land on an all-over
+      // product even if the model picked a DTG one.
+      const { deps } = makeDeps(
+        intentFor({
+          product_id: 71, // Bella DTG tee
+          product_query: "shirt",
+          coverage: "full",
+          all_over: true,
+          artwork_brief: "one continuous galaxy wrapping the whole shirt"
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "a shirt covered edge to edge in a galaxy" },
+        deps
+      );
+      check(
+        "all-over law upgrades a non-AOP model pick",
+        getCatalogRecord(result.product.id)?.aop === true,
+        result.product.name
+      );
+    }
+    {
+      // Degraded mode (LLM outage -> heuristic intent, product_id 0): the
+      // keyword fallback still routes. No query is ever unroutable.
+      const { deps } = makeDeps(null, { failLLM: true });
+      const result = await runExpress({ input_as_text: "a hoodie with mountains" }, deps);
+      check(
+        "keyword fallback still routes when the LLM is down",
+        /hoodie/i.test(result.product.name),
+        result.product.name
+      );
+    }
+
     console.log("\n== 13d. SLEEVE DROP: underarm points align across the body->sleeve seam ==");
     {
       const plane = buildGarmentPlane([

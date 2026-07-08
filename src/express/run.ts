@@ -31,6 +31,7 @@ import { getLlmProvider, LlmProvider } from "../llm/provider.js";
 import { normalizeCustomerImages } from "../workflow.js";
 import { hostedImageUrl, putHostedImage, waitForDurablePersists } from "../hosting.js";
 import {
+  catalogMenu,
   DEFAULT_PRODUCT_ID,
   ExpressProduct,
   getCatalogRecord,
@@ -278,7 +279,7 @@ export const runExpress = async (
   // 3. The one planning judgment: intent + policy in a single light call.
   const stageMs: { intent?: number; panels?: number; mockups?: number } = {};
   const tIntent = Date.now();
-  const { intent, degraded } = await deriveIntent(resolved.provider, text, captions);
+  const { intent, degraded } = await deriveIntent(resolved.provider, text, captions, catalogMenu());
   stageMs.intent = Date.now() - tIntent;
   if (!degraded) llmCalls += 1;
   note("intent" + (degraded ? " (DEGRADED heuristic)" : ""), JSON.stringify(intent));
@@ -316,6 +317,24 @@ export const runExpress = async (
       .some((w) => low.includes(` ${w}`) || low.includes(`${w.slice(0, -1)}s `));
   };
   const chooseProduct = () => {
+    // LLM-FIRST: the intent model chose the product from the full catalog
+    // menu by understanding what the customer MEANS — keyword matching is
+    // only the degraded-mode fallback (heuristic intent / invalid id).
+    // There must never exist a query the pipeline cannot route.
+    const picked = intent.product_id ? getExpressProduct(intent.product_id) : undefined;
+    if (picked) {
+      if (preferAop && !picked.aop) {
+        // The one physical law the choice must satisfy: an all-over design
+        // needs an all-over product.
+        const alt = matchExpressProduct(`${intent.product_query} ${text}`, { preferAop: true });
+        if (alt.aop) {
+          note("product_guard", `all-over upgrade: ${picked.name} -> ${alt.name}`);
+          return alt;
+        }
+      }
+      note("product_llm", `model chose #${picked.productId} ${picked.name}`);
+      return picked;
+    }
     if (!intent.product_query && !text) return getExpressProduct(DEFAULT_PRODUCT_ID)!;
     const combined = matchExpressProduct(`${intent.product_query} ${text}`, { preferAop });
     if (!intent.product_query) return combined;

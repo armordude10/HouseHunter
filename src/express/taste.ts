@@ -88,6 +88,23 @@ export const tasteHintLine = (taste: { profile: TasteProfile; runs: number } | n
   return parts.length ? parts.join("; ") : null;
 };
 
+/**
+ * The customer's latest designs (brief -> product), newest first — the
+ * intent model uses this ONLY to resolve explicit past references ("like
+ * the last one but with tulips"). No run-count minimum: a reference to the
+ * very first design is still a reference.
+ */
+export const recentGenerationsLine = (
+  taste: { profile: TasteProfile; runs: number } | null
+): string | null => {
+  const recent = taste?.profile.recent ?? [];
+  if (!recent.length) return null;
+  return recent
+    .slice(0, 4)
+    .map((entry, i) => `${i + 1}. ${entry.slice(0, 120)}`)
+    .join(" | ");
+};
+
 const bump = (counts: Record<string, number>, key: string) => {
   const k = key.toLowerCase().trim().slice(0, 40);
   if (!k) return;
@@ -122,7 +139,12 @@ export const updateTaste = async (
     profile.palettes = cap(profile.palettes!);
     profile.products = cap(profile.products!, 10);
     profile.colors = cap(profile.colors!, 8);
-    profile.recent = [intent.artwork_brief.slice(0, 80), ...profile.recent!].slice(0, 5);
+    // brief -> product pairs so "make it like the last one" can be resolved
+    // by the intent model from the [Recent generations] block.
+    profile.recent = [
+      `${intent.artwork_brief.slice(0, 80)} -> ${productName.split("|")[0].trim()}`,
+      ...profile.recent!
+    ].slice(0, 5);
 
     await fetch(`${SUPABASE_URL()}/rest/v1/user_taste`, {
       method: "POST",

@@ -627,6 +627,22 @@ export const matchExpressProduct = (
   return getExpressProduct(DEFAULT_PRODUCT_ID) ?? productFromRecord(Object.values(FULL_CATALOG)[0]);
 };
 
+/**
+ * The full catalog as a compact menu for the INTENT MODEL: product selection
+ * is the model's decision, made by understanding what the customer MEANS —
+ * keyword matching survives only as the degraded-mode fallback. Static per
+ * process so the provider can prompt-cache it.
+ */
+let CATALOG_MENU: string | null = null;
+export const catalogMenu = (): string => {
+  if (CATALOG_MENU) return CATALOG_MENU;
+  CATALOG_MENU = Object.values(FULL_CATALOG)
+    .sort((a, b) => a.id - b.id)
+    .map((r) => `${r.id} ${r.name}${r.aop ? " [all-over]" : ""}`)
+    .join("\n");
+  return CATALOG_MENU;
+};
+
 export interface CatalogSearchRow {
   id: number;
   name: string;

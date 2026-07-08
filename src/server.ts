@@ -30,6 +30,7 @@ import {
   decodeUserId,
   fetchTaste,
   looksLikeUserToken,
+  recentGenerationsLine,
   tasteHintLine,
   updateTaste
 } from "./express/taste.js";
@@ -691,12 +692,16 @@ const server = createServer(async (req, res) => {
       // RLS through their own bearer token. Fails soft in every direction.
       const taste = looksLikeUserToken(bearer) ? await fetchTaste(bearer) : null;
       const hint = tasteHintLine(taste);
+      const recent = recentGenerationsLine(taste);
       const before = { ...usageTally };
       const result = await runExpress({
         input_as_text:
           (prompt || "Design a product from the attached reference images.") +
           (hint
             ? `\n\n[Platform taste hints — soft preferences from this customer's history; use ONLY for unspecified details, never override the request: ${hint}]`
+            : "") +
+          (recent
+            ? `\n\n[Recent generations — this customer's latest designs (brief -> product), newest first; use ONLY when the request references a past design: ${recent}]`
             : ""),
         input_image_urls: imageUrls,
         // Certification console pins the exact catalog product under test.
