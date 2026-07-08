@@ -323,10 +323,31 @@ export const runExpress = async (
     // There must never exist a query the pipeline cannot route.
     const picked = intent.product_id ? getExpressProduct(intent.product_id) : undefined;
     if (picked) {
-      if (preferAop && !picked.aop) {
-        // The one physical law the choice must satisfy: an all-over design
-        // needs an all-over product.
-        const alt = matchExpressProduct(`${intent.product_query} ${text}`, { preferAop: true });
+      // The all-over law fires ONLY on the model's own full-coverage
+      // judgment (all_over AND coverage full), NEVER on a product whose
+      // BRAND/MODEL the customer named ("Red Gildan 5000" is sacred; a
+      // generic "shirt" may still upgrade within the shirt family), and
+      // NEVER against the model's own single-placement plan. Live incident:
+      // a stray all_over flag turned two correct picks into a women's AOP tee.
+      const brand = (picked.name.split("|")[1] ?? "").toLowerCase();
+      const lowText = ` ${text.toLowerCase()} `;
+      const explicitlyNamed = brand
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length >= 3)
+        .some((w) => lowText.includes(` ${w}`));
+      if (
+        !picked.aop &&
+        intent.all_over &&
+        intent.coverage === "full" &&
+        !explicitlyNamed
+      ) {
+        // Upgrade WITHIN the picked family: seed the search with the pick's
+        // own name so a unisex tee upgrades to the unisex AOP crew, not
+        // whatever AOP product scores highest on the raw text.
+        const alt = matchExpressProduct(
+          `${picked.name.split("|")[0]} ${intent.product_query} ${text}`,
+          { preferAop: true }
+        );
         if (alt.aop) {
           note("product_guard", `all-over upgrade: ${picked.name} -> ${alt.name}`);
           return alt;

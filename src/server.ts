@@ -231,6 +231,18 @@ const loadFrontend = (): string | null => {
 };
 let frontendHtml: string | null = null;
 
+// Async generation jobs: the app submits with {async:true}, gets a job id,
+// and polls /generate/status — long AOP runs no longer live or die with one
+// held-open HTTP request on a phone that locks its screen.
+interface AsyncJob { at: number; done: boolean; code: number; payload: unknown }
+const asyncJobs = new Map<string, AsyncJob>();
+const pruneAsyncJobs = () => {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  for (const [id, job] of asyncJobs) {
+    if (job.at < cutoff || asyncJobs.size > 300) asyncJobs.delete(id);
+  }
+};
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   try {
@@ -688,6 +700,13 @@ const server = createServer(async (req, res) => {
           }
         }
       }
+      // Everything from here is the long-running work. It executes inside
+      // executeRun so the ASYNC mode can detach it from the HTTP request:
+      // phones lock/background during multi-minute AOP runs and Android
+      // kills the in-flight fetch — every app AOP run died this way while
+      // the server finished perfectly into the void. Async mode returns a
+      // job id immediately; the app polls short status requests instead.
+      const executeRun = async (): Promise<{ code: number; payload: unknown }> => {
       // Per-user taste: soft hints from this customer's history, scoped by
       // RLS through their own bearer token. Fails soft in every direction.
       const taste = looksLikeUserToken(bearer) ? await fetchTaste(bearer) : null;
@@ -722,7 +741,7 @@ const server = createServer(async (req, res) => {
         .slice(0, 4)
         .map((mockupUrl, i) => ({ id: `${result.run_id}-${i}`, image: mockupUrl }));
       if (result.status !== "completed" || !variations.length) {
-        return json(res, result.status === "refused" ? 422 : 502, {
+        return { code: result.status === "refused" ? 422 : 502, payload: {
           error: result.message || "generation failed",
           run_id: result.run_id,
           status: result.status,
@@ -731,7 +750,7 @@ const server = createServer(async (req, res) => {
           product: result.product,
           panels: result.panels.map((p) => ({ placement: p.placement, status: p.status, file_url: p.file_url })),
           failure_details: result.missing_required_placements
-        });
+        } };
       }
       // Order truth: what the Buy button purchases is EXACTLY what the
       // mockups rendered — same print files, same variant, same options.
@@ -758,7 +777,7 @@ const server = createServer(async (req, res) => {
       } catch (error) {
         console.error(`[generate] variant matrix unavailable: ${(error as Error).message}`);
       }
-      return json(res, 200, {
+      return { code: 200, payload: {
         variations,
         run_id: result.run_id,
         product: result.product,
@@ -778,7 +797,36 @@ const server = createServer(async (req, res) => {
           input_tokens: usageTally.input_tokens - before.input_tokens,
           output_tokens: usageTally.output_tokens - before.output_tokens
         }
-      });
+      } };
+      };
+
+      // ASYNC MODE (the app's path): detach the run from the HTTP request.
+      if ((body as { async?: unknown }).async === true) {
+        const jobId = randomUUID();
+        asyncJobs.set(jobId, { at: Date.now(), done: false, code: 0, payload: null });
+        void executeRun()
+          .then(({ code, payload }) => {
+            const job = asyncJobs.get(jobId);
+            if (job) { job.done = true; job.code = code; job.payload = payload; }
+          })
+          .catch((error) => {
+            const job = asyncJobs.get(jobId);
+            if (job) { job.done = true; job.code = 500; job.payload = { error: (error as Error).message }; }
+          });
+        pruneAsyncJobs();
+        return json(res, 202, { job_id: jobId });
+      }
+      const { code, payload } = await executeRun();
+      return json(res, code, payload);
+    }
+    // Async job polling: short requests that survive phone lock/backgrounding.
+    if (req.method === "GET" && url.pathname === "/generate/status") {
+      const job = asyncJobs.get(url.searchParams.get("job") ?? "");
+      if (!job) {
+        return json(res, 404, { error: "This run is no longer tracked (service restarted). Please try again." });
+      }
+      if (!job.done) return json(res, 200, { status: "running" });
+      return json(res, job.code, job.payload);
     }
     // Mirror proxy: lets the mobile app read Printful mockup images (no CORS
     // on their S3) so it can persist them into the user's Supabase Storage.

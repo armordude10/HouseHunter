@@ -1473,6 +1473,30 @@ const main = async () => {
         result.product.name
       );
     }
+    {
+      // LIVE QUEUE VERDICT: a stray all_over flag turned "Red Gildan 5000"
+      // into a women's AOP tee. A named brand/model is sacred, and the
+      // model's own coverage="single" judgment blocks the upgrade too.
+      const { deps } = makeDeps(
+        intentFor({
+          product_id: 438,
+          product_query: "red gildan 5000 t-shirt",
+          coverage: "single",
+          all_over: true, // the stray flag from the live run
+          garment_color: "red",
+          artwork_brief: "bold rapper chest graphic"
+        })
+      );
+      const result = await runExpress(
+        { input_as_text: "Red Gildan 5000 with rapper vibe for a 31 year old white rapper named 2Fresh" },
+        deps
+      );
+      check(
+        "named brand is SACRED (stray all_over cannot move a Gildan 5000)",
+        result.product.id === 438,
+        `${result.product.id} ${result.product.name}`
+      );
+    }
 
     console.log("\n== 13d. SLEEVE DROP: underarm points align across the body->sleeve seam ==");
     {

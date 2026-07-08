@@ -261,8 +261,8 @@
       <!-- ============ GENERATION OVERLAY ============ -->
       <sc-if value="{{ isGenerating }}" hint-placeholder-val="{{ false }}">
       <div style="position:absolute; inset:0; z-index:30; background:radial-gradient(90% 70% at 50% 40%, #0a1822, #060a0e 80%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; overflow:hidden;">
-        <div style="position:absolute; inset:0; background-image:linear-gradient(rgba(0,229,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.07) 1px, transparent 1px); background-size:40px 40px; animation:tbGrid 1.6s linear infinite; mask-image:radial-gradient(70% 60% at 50% 45%, #000, transparent 80%);"></div>
-        <div style="position:absolute; left:0; right:0; height:160px; top:-10%; background:linear-gradient(180deg, transparent, rgba(0,229,255,0.10), transparent); animation:tbScan 2.4s linear infinite;"></div>
+        <div style="position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(rgba(0,229,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.07) 1px, transparent 1px); background-size:40px 40px; animation:tbGrid 1.6s linear infinite; mask-image:radial-gradient(70% 60% at 50% 45%, #000, transparent 80%);"></div>
+        <div style="position:absolute; left:0; right:0; height:160px; top:-10%; pointer-events:none; background:linear-gradient(180deg, transparent, rgba(0,229,255,0.10), transparent); animation:tbScan 2.4s linear infinite;"></div>
         <div style="position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center; margin-bottom:38px;">
           <div style="position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(0,229,255,0.4); border-top-color:#00E5FF; box-shadow:0 0 30px rgba(0,229,255,0.4); animation:tbRing 1.4s linear infinite;"></div>
           <div style="position:absolute; inset:22px; border-radius:50%; border:1px solid rgba(255,212,0,0.3); border-bottom-color:#FFD400; animation:tbRing 2.2s linear infinite reverse;"></div>
@@ -278,7 +278,7 @@
             </div>
           </sc-for>
         </div>
-        <button onClick="{{ cancelRun }}" style="margin-top:34px; height:44px; padding:0 28px; border-radius:13px; border:1px solid rgba(255,123,123,0.45); background:rgba(255,123,123,0.08); color:#ffb4b4; font-family:'Chakra Petch'; font-weight:700; font-size:13px; letter-spacing:1.5px; cursor:pointer;">CANCEL RUN</button>
+        <button onClick="{{ cancelRun }}" style="position:relative; z-index:5; margin-top:34px; height:44px; padding:0 28px; border-radius:13px; border:1px solid rgba(255,123,123,0.45); background:rgba(255,123,123,0.08); color:#ffb4b4; font-family:'Chakra Petch'; font-weight:700; font-size:13px; letter-spacing:1.5px; cursor:pointer;">CANCEL RUN</button>
       </div>
       </sc-if>
 

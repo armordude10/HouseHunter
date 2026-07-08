@@ -70,18 +70,21 @@
           if (onProgress) onProgress(pct, label);
         }, 250);
         try {
-          // One automatic retry on pure network failures ("Failed to fetch"):
-          // a backend deploy/restart mid-request should cost the user a few
-          // seconds, not the whole run.
+          const authHeaders = Object.assign(
+            { 'Content-Type': 'application/json' },
+            cfg.apiKey ? { 'Authorization': 'Bearer ' + cfg.apiKey } : {}
+          );
+          // ASYNC JOB MODE: submit the run, get a job id, poll short status
+          // requests. One held-open multi-minute fetch dies the moment
+          // Android locks the screen or the user switches apps — every AOP
+          // run failed exactly this way while the server finished fine.
+          // Short polls survive backgrounding; a missed poll just repeats.
           const doFetch = async () => fetch(backendUrl, {
             method: 'POST',
-            headers: Object.assign(
-              { 'Content-Type': 'application/json' },
-              cfg.apiKey ? { 'Authorization': 'Bearer ' + cfg.apiKey } : {}
-            ),
+            headers: authHeaders,
             // remix=true  -> mutate `baseImage` into adjacent directions (img2img)
             // remix=false -> fresh generations from the prompt (txt2img)
-            body: JSON.stringify({ prompt, refImage, remix, baseImage }),
+            body: JSON.stringify({ prompt, refImage, remix, baseImage, async: true }),
             signal: ctrl.signal,
           });
           let res;
@@ -91,14 +94,45 @@
             await new Promise(function (r) { setTimeout(r, 3000); });
             res = await doFetch();
           }
-          if (!res.ok) {
-            // Surface the backend's actual reason (refusals, product issues)
-            // instead of a bare status code.
-            var detail = '';
-            try { detail = ((await res.json()) || {}).error || ''; } catch (e2) {}
-            throw new Error(detail || ('Synthesis failed: ' + res.status + ' ' + res.statusText));
+          let data;
+          if (res.status === 202) {
+            const sub = await res.json();
+            const statusUrl = backendUrl.replace(/\/generate\/?$/, '') +
+              '/generate/status?job=' + encodeURIComponent(sub.job_id);
+            for (;;) {
+              if (this._userCancel) {
+                const cancel = new Error('Run canceled.');
+                cancel.name = 'UserCancel';
+                throw cancel;
+              }
+              await new Promise(function (r) { setTimeout(r, 4000); });
+              let poll;
+              try {
+                poll = await fetch(statusUrl, { headers: authHeaders, signal: ctrl.signal });
+              } catch (e) {
+                if (this._userCancel || (e && e.name === 'AbortError')) throw e;
+                continue; // network blip / app resumed from background — poll again
+              }
+              const bodyJson = await poll.json().catch(function () { return null; });
+              if (poll.status === 404) {
+                throw new Error((bodyJson && bodyJson.error) || 'The service restarted mid-run. Please try again.');
+              }
+              if (bodyJson && bodyJson.status === 'running') continue;
+              if (!poll.ok) {
+                throw new Error((bodyJson && bodyJson.error) || ('Synthesis failed: ' + poll.status));
+              }
+              data = bodyJson;
+              break;
+            }
+          } else {
+            // Older backend without async mode: the response IS the result.
+            if (!res.ok) {
+              var detail = '';
+              try { detail = ((await res.json()) || {}).error || ''; } catch (e2) {}
+              throw new Error(detail || ('Synthesis failed: ' + res.status + ' ' + res.statusText));
+            }
+            data = await res.json();
           }
-          const data = await res.json();   // expected: { variations: [{id,image},...] }
           if (!data || !Array.isArray(data.variations)) {
             throw new Error('Backend returned an unexpected shape; expected { variations: [...] }');
           }
