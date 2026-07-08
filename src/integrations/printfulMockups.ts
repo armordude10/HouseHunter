@@ -91,15 +91,29 @@ const runV1 = async (params: Parameters<typeof createAndWaitForMockups>[0]): Pro
       };
     })
   };
-  const created = await fetch(
-    `${PRINTFUL_API_BASE}/mockup-generator/create-task/${params.productId}`,
-    { method: "POST", headers: headers(), body: JSON.stringify(body) }
-  );
-  const createdBody = (await created.json().catch(() => null)) as {
-    result?: { task_key?: string };
-    error?: { message?: string };
-  } | null;
-  const taskKey = createdBody?.result?.task_key;
+  // Create-task retries: Printful rate-limits bursts with a 429 that names
+  // its own cool-down ("try again after N seconds") — honor it instead of
+  // failing the whole run (live incident: 5 perfect panels thrown away).
+  type CreateBody = { result?: { task_key?: string }; error?: { message?: string } } | null;
+  let created!: Response;
+  let createdBody: CreateBody = null;
+  let taskKey: string | undefined;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    created = await fetch(
+      `${PRINTFUL_API_BASE}/mockup-generator/create-task/${params.productId}`,
+      { method: "POST", headers: headers(), body: JSON.stringify(body) }
+    );
+    createdBody = (await created.json().catch(() => null)) as CreateBody;
+    taskKey = createdBody?.result?.task_key;
+    if ((created.status === 429 || created.status >= 500) && attempt < 4) {
+      const hinted = JSON.stringify(createdBody)?.match(/after (\d+) seconds/);
+      const waitSec = Math.min(90, hinted ? Number(hinted[1]) + 2 : 15 * attempt);
+      params.onEvent?.(`v1 create-task HTTP ${created.status} — retrying in ${waitSec}s`);
+      await new Promise((resolve) => setTimeout(resolve, waitSec * 1000));
+      continue;
+    }
+    break;
+  }
   if (!created.ok || !taskKey) {
     throw new Error(
       `v1 create-task HTTP ${created.status}: ${JSON.stringify(createdBody)?.slice(0, 300)}`
