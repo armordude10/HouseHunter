@@ -37,6 +37,8 @@ export interface ProductTruth {
   productOptionNames(productId: number): Promise<string[]>;
   /** Real purchasable size/color axes for the product (checkout UI truth). */
   variantMatrix?(productId: number): Promise<{ sizes: string[]; colors: string[] }>;
+  /** Mockup style id -> label, for plain-vs-lifestyle style preference. */
+  styleLabels?(productId: number): Promise<Record<number, string>>;
 }
 
 const authHeaders = () => {
@@ -117,6 +119,33 @@ export class PrintfulTruth implements ProductTruth {
       }
       // mockup-styles repeats a placement once per style group.
       return dedupePlacements(specs);
+    });
+  }
+
+  /**
+   * Style id -> human label ("Front", "Flat", "Lifestyle", "Men's"...),
+   * fetched once per product. Used to PREFER plain/product mockup styles
+   * over decorated lifestyle scenes (owner directive), with graceful
+   * fallback when labels are unavailable.
+   */
+  private styleLabelCache = new Cached<Record<number, string>>();
+  async styleLabels(productId: number): Promise<Record<number, string>> {
+    return this.styleLabelCache.get(productId, async () => {
+      const body = (await getJson(
+        `${PRINTFUL_API_BASE}/v2/catalog-products/${productId}/mockup-styles?limit=100`,
+        authHeaders()
+      )) as {
+        data?: Array<{ mockup_styles?: Array<{ id?: number; category_name?: string; view_name?: string }> }>;
+      };
+      const labels: Record<number, string> = {};
+      for (const entry of body.data ?? []) {
+        for (const style of entry.mockup_styles ?? []) {
+          if (typeof style.id === "number") {
+            labels[style.id] = `${style.category_name ?? ""} ${style.view_name ?? ""}`.trim();
+          }
+        }
+      }
+      return labels;
     });
   }
 

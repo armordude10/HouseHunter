@@ -990,11 +990,27 @@ export const runExpress = async (
     // multi-panel products (AOP hoodies: 6 placements) get ONE style so the
     // task finishes inside the run's patience window.
     const styleBudget = result.submitted_placements.length >= 4 ? 1 : 2;
-    const styleIds = (
-      pickPrimaryPlacement(activeSpecs).styleIds.length
-        ? pickPrimaryPlacement(activeSpecs).styleIds
-        : [...new Set(activeSpecs.flatMap((spec) => spec.styleIds))]
-    ).slice(0, styleBudget);
+    let rankedStyles = pickPrimaryPlacement(activeSpecs).styleIds.length
+      ? pickPrimaryPlacement(activeSpecs).styleIds
+      : [...new Set(activeSpecs.flatMap((spec) => spec.styleIds))];
+    // PLAIN-BACKGROUND PREFERENCE (owner directive): product/flat mockup
+    // styles beat decorated lifestyle scenes whenever both exist; original
+    // order stands when labels are unavailable.
+    try {
+      const labels = (await resolved.truth.styleLabels?.(product.productId)) ?? {};
+      const score = (id: number) => {
+        const label = (labels[id] ?? "").toLowerCase();
+        if (/flat|product|front only|plain/.test(label)) return 0;
+        if (!label) return 1;
+        if (/lifestyle|model|men|women|person|scene/.test(label)) return 2;
+        return 1;
+      };
+      rankedStyles = [...rankedStyles].sort((a, b) => score(a) - score(b));
+      note("style_pick", rankedStyles.slice(0, 3).map((id) => `${id}:${labels[id] ?? "?"}`).join(", "));
+    } catch {
+      // labels are an enhancement, never a blocker
+    }
+    const styleIds = rankedStyles.slice(0, styleBudget);
     const productOptions = optionNames.includes("stitch_color")
       ? { stitch_color: pickStitchColor(intent) }
       : undefined;

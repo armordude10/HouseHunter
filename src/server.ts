@@ -514,6 +514,24 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { received: true });
     }
     // Subscription upgrade: runtime checkout session, plan in metadata.
+    // Public tier menu (the app's Plans screen renders this — one source of
+    // truth with quota enforcement).
+    if (req.method === "GET" && url.pathname === "/plans") {
+      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const current = looksLikeUserToken(bearer) ? (await resolvePlan(bearer)).id : null;
+      return json(res, 200, {
+        current,
+        plans: Object.values(PLANS)
+          .filter((plan) => plan.id !== "unlimited")
+          .map((plan) => ({
+            id: plan.id,
+            label: plan.label,
+            price_usd_monthly: plan.priceUsdMonthly,
+            generations_per_month: plan.generationsPerMonth,
+            closet_slots: plan.closetSlots
+          }))
+      });
+    }
     if (req.method === "POST" && url.pathname === "/subscribe") {
       if (!stripeConfigured()) return json(res, 503, { error: "Subscriptions aren't live yet." });
       const raw = await readBody(req, 10_000);

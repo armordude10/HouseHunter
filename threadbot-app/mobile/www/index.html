@@ -157,6 +157,7 @@
           </div>
           </sc-if>
 
+          <input type="search" value="{{ closetSearch }}" onInput="{{ onClosetSearch }}" placeholder="Search your closet…" style="width:100%; box-sizing:border-box; margin:0 0 13px; height:42px; padding:0 14px; border-radius:12px; border:1px solid rgba(0,229,255,0.18); background:rgba(12,17,23,0.6); color:#dff6fa; font-family:inherit; font-size:13px; outline:none;">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:13px;">
             <sc-for list="{{ closetItems }}" as="it" hint-placeholder-count="4">
               <div style="{{ it.card }}">
@@ -175,6 +176,9 @@
                   <div style="{{ it.checkStyle }}">
                     <sc-if value="{{ it.selected }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#04181c" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></sc-if>
                   </div>
+                  </sc-if>
+                  <sc-if value="{{ it.generating }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:34px; height:34px; border-radius:50%; border:2px solid rgba(0,229,255,0.25); border-top-color:#00E5FF; animation:tbRing 1.1s linear infinite;"></div>
                   </sc-if>
                   <sc-if value="{{ it.noImage }}" hint-placeholder-val="{{ true }}"><span style="font-size:9px; color:#7d8c94;">render pending</span></sc-if>
                 </div>
@@ -258,6 +262,40 @@
 
       </main>
 
+      <!-- ============ TOAST ============ -->
+      <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; left:50%; transform:translateX(-50%); bottom:98px; z-index:60; background:rgba(10,20,26,0.95); border:1px solid rgba(0,229,255,0.35); color:#dff6fa; padding:11px 16px; border-radius:12px; font-size:12px; max-width:82%; text-align:center; box-shadow:0 8px 26px -10px rgba(0,229,255,0.55); animation:tbRise .3s ease both;">{{ toast }}</div>
+      </sc-if>
+
+      <!-- ============ PLANS OVERLAY ============ -->
+      <sc-if value="{{ plansOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:40; background:#07080a; display:flex; flex-direction:column; animation:tbSlideUp .4s cubic-bezier(.2,.9,.2,1) both;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 20px 8px;">
+          <div>
+            <p style="margin:0; font-size:11px; letter-spacing:2.5px; color:#00E5FF;">// MEMBERSHIP</p>
+            <h1 style="margin:2px 0 0; font-family:'Chakra Petch'; font-weight:600; font-size:24px; color:#eafcff;">Threadbot Plans</h1>
+          </div>
+          <button onClick="{{ closePlans }}" style="width:36px; height:36px; border-radius:11px; border:1px solid rgba(0,229,255,0.18); background:rgba(13,20,26,0.7); color:#9fd9e3; font-size:15px; cursor:pointer; padding:0;">✕</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:10px 20px 30px; display:flex; flex-direction:column; gap:14px;">
+          <sc-if value="{{ plansLoading }}" hint-placeholder-val="{{ false }}"><p style="text-align:center; color:#5b6b73; font-size:12px;">Loading plans…</p></sc-if>
+          <sc-for list="{{ planCards }}" as="p" hint-placeholder-count="4">
+            <div style="{{ p.cardStyle }}">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <p style="margin:0; font-family:'Chakra Petch'; font-weight:700; font-size:16px; letter-spacing:1px; color:{{ p.accent }};">{{ p.name }}</p>
+                <p style="margin:0; font-size:15px; color:#eafcff; font-weight:700;">{{ p.price }}</p>
+              </div>
+              <p style="margin:10px 0 3px; font-size:12px; color:#dff6fa;">• {{ p.line1 }}</p>
+              <p style="margin:0 0 3px; font-size:12px; color:#dff6fa;">• {{ p.line2 }}</p>
+              <p style="margin:0 0 14px; font-size:12px; color:#dff6fa;">• {{ p.line3 }}</p>
+              <button onClick="{{ p.choose }}" style="{{ p.btnStyle }}">{{ p.btn }}</button>
+            </div>
+          </sc-for>
+          <p style="text-align:center; font-size:10px; color:#3f4d54;">Cancel anytime · Billing secured by Stripe</p>
+        </div>
+      </div>
+      </sc-if>
+
       <!-- ============ GENERATION OVERLAY ============ -->
       <sc-if value="{{ isGenerating }}" hint-placeholder-val="{{ false }}">
       <div style="position:absolute; inset:0; z-index:30; background:radial-gradient(90% 70% at 50% 40%, #0a1822, #060a0e 80%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; overflow:hidden;">
@@ -293,9 +331,14 @@
             <p style="margin:0; font-size:10px; letter-spacing:2px; color:#00E5FF;">SYNTHESIS COMPLETE</p>
             <p style="margin:3px 0 0; font-size:12px; color:#7d8c94; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ resultPrompt }}</p>
           </div>
-          <button onClick="{{ saveDesign }}" style="{{ saveBtnStyle }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ saveIconFill }}" stroke="#FFD400" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-          </button>
+          <div style="display:flex; gap:8px;">
+            <button onClick="{{ shareDesign }}" style="width:36px; height:36px; border-radius:11px; border:1px solid rgba(0,229,255,0.25); background:rgba(0,229,255,0.06); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9fd9e3" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>
+            </button>
+            <button onClick="{{ saveDesign }}" style="{{ saveBtnStyle }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ saveIconFill }}" stroke="#FFD400" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+            </button>
+          </div>
         </div>
 
         <div style="flex:1; overflow-y:auto; padding:6px 20px 20px;">
@@ -474,7 +517,12 @@ class Component extends DCLogic {
     profileOpen: false,
     draftName: '',
     draftHandle: '',
-    prefs: { motion: true, haptics: true },
+    prefs: { motion: true, haptics: true, autoOpen: true },
+    toast: null,
+    plans: null,
+    planId: 'free',
+    plansOpen: false,
+    closetSearch: '',
     saved: false,
     selectMode: false,
     selected: {},
@@ -503,6 +551,9 @@ class Component extends DCLogic {
       prefs: this.load(this.K.prefs, this.state.prefs),
       orders: this.load(this.K.orders, []),
     });
+    // Plan-aware closet limit + tier menu data (retries when auth lands).
+    this.loadPlans();
+    setTimeout(() => { if (!this.state.plans) this.loadPlans(); }, 6000);
     this._ex = setInterval(() => {
       if (this.state.phase === 'input' && !this.state.prompt) {
         this._exIdx = ((this._exIdx||0) + 1) % this.EXAMPLES.length;
@@ -574,38 +625,55 @@ class Component extends DCLogic {
   };
   clearImage = () => this.setState({ refImage: null });
 
-  // ---- synthesis (routes through window.ThreadbotAPI) ----
+  // ---- synthesis: NON-BLOCKING (Meshy-style). Every prompt instantly
+  // becomes a closet entry with a loading tile; the user keeps generating
+  // while mockups spin up. Nothing is ever lost. ----
+  toastMsg = (t, ms = 3000) => { this.setState({ toast: t }); clearTimeout(this._toastT); this._toastT = setTimeout(() => this.setState({ toast: null }), ms); };
+  closetFullDialog = () => {
+    this.buzz(20);
+    this.setState({ dialog: {
+      title: "YOUR CLOSET'S FULL 🧺",
+      body: 'All ' + this.CLOSET_MAX + ' hangers are taken, so this design has nowhere to hang. Clear a few out — or level up for a bigger closet. Your prompt is saved exactly as you wrote it.',
+      primaryLabel: 'Clean out closet',
+      primaryAction: () => this.goCleanOut(),
+      secondaryLabel: 'See plans ✨',
+      secondaryAction: () => this.openPlans(),
+    }});
+  };
   runSynthesis = (prompt, opts = {}) => {
     const api = window.ThreadbotAPI;
+    if (!api || typeof api.generate !== 'function') { console.error('ThreadbotAPI.generate missing'); return; }
+    if (this.state.designs.length >= this.CLOSET_MAX) { this.closetFullDialog(); return; }
     this._genPrompt = prompt;
-    this.setState({ phase:'generating', genPct:0, genStep:0, genStatus:this.GEN[0], variation:0, saved:false });
-    if (!api || typeof api.generate !== 'function') {
-      console.error('ThreadbotAPI.generate not found — check threadbot-api.js');
-      this.setState({ phase:'input' });
-      return;
-    }
-    api.generate({
-      prompt,
-      refImage: this.state.refImage,
-      remix: !!opts.remix,
-      baseImage: opts.baseImage || null,
-      onProgress: (pct, label) => {
-        const idx = Math.max(0, this.GEN.indexOf(label));
-        this.setState({ genPct: pct, genStatus: label, genStep: idx });
-      },
-    }).then((res) => {
+    const entry = { id:'d'+Date.now()+Math.floor(Math.random()*900), designId:null, prompt, image:null, generating:true, ts:Date.now(), favorite:false, commerce:null };
+    const designs = [entry, ...this.state.designs];
+    this.store(this.K.designs, designs);
+    this.setState({ designs, prompt:'', saved:false });
+    this.toastMsg('Generating — it’s already hanging in your Closet ✨', 3400);
+    api.generate({ prompt, refImage: this.state.refImage, remix: !!opts.remix, baseImage: opts.baseImage || null, onProgress: () => {} })
+    .then((res) => {
       const variations = (res && res.variations) || [];
-      // Product-specific commerce truth from the backend (name/price/sizes),
-      // used by the checkout sheet instead of static placeholders.
-      this._commerce = (res && res.commerce) || null;
-      this._runId = (res && res.run_id) || null;
-      this.setState({ phase:'results', results: variations, variation:0, saved:false, fbSent:null });
+      const image = variations[0] ? variations[0].image : null;
+      const commerce = (res && res.commerce) || null;
+      const designs2 = this.state.designs.map((d) => d.id === entry.id
+        ? { ...d, image, designId: variations[0] ? variations[0].id : null, generating:false, commerce } : d);
+      this.store(this.K.designs, designs2);
+      const idle = this.state.tab === 'create' && this.state.phase === 'input' && !this.state.prompt.trim() && !this.state.dialog;
+      if (idle && (this.state.prefs.autoOpen !== false)) {
+        this._commerce = commerce; this._runId = (res && res.run_id) || null; this._genPrompt = prompt;
+        this.setState({ designs: designs2, phase:'results', results: variations, variation:0, saved:true, fbSent:null });
+      } else {
+        this.setState({ designs: designs2 });
+        this.toastMsg('A design is ready in your Closet ✅');
+      }
+      if (image) this.persistDesignImage(entry.id, image);
     }).catch((err) => {
-      // User-initiated cancel: the composer is already back — no dialog.
+      const designs2 = this.state.designs.filter((d) => d.id !== entry.id);
+      this.store(this.K.designs, designs2);
+      this.setState({ designs: designs2 });
       if (err && err.name === 'UserCancel') return;
       console.error('Threadbot synthesis failed', err);
-      // Never fail silently — tell the user what happened and that retry is free.
-      this.setState({ phase:'input', dialog: {
+      this.setState({ dialog: {
         title: 'Synthesis hiccup',
         body: ((err && err.message) || 'The design service did not respond.') + ' Nothing was charged — try again.',
         primaryLabel: 'OK',
@@ -639,39 +707,56 @@ class Component extends DCLogic {
     return r[Math.min(this.state.variation, r.length - 1)];
   };
 
-  // ---- feedback: user verdicts + comments flow to design_feedback ----
-  sendFeedback = async (verdict, note) => {
-    this.setState({ fbSent: verdict, fbCompose: false });
+  // ---- feedback: USER feedback (user_feedback table — separate from the
+  // owner's development queue). Simple thumbs; a thank-you; details are an
+  // OPTIONAL follow-up the user can skip. ----
+  sendFeedback = async (verdict) => {
     try {
       const sb = window.__tbSupabase;
-      if (!sb) return;
+      if (!sb) return null;
       const u = await sb.auth.getUser();
       const uid = u && u.data && u.data.user && u.data.user.id;
-      if (!uid) return;
+      if (!uid) return null;
       const v = this.currentVariation() || {};
       const c = this._commerce || {};
-      const r = await sb.from('design_feedback').insert({
+      const r = await sb.from('user_feedback').insert({
         user_id: uid,
         run_id: this._runId || null,
         verdict,
-        note: (note || '').slice(0, 1000) || null,
         prompt: this._genPrompt || '',
-        product_id: c.product_id || null,
         product_name: c.product_name || null,
-        variant_id: c.variant_id || null,
         mockup_url: (v.image && /^https?:/.test(v.image)) ? v.image : null,
-      });
+      }).select('id');
       if (r.error) throw r.error;
-    } catch (e) {
-      console.warn('feedback failed', e);
-      this.setState({ fbSent: null, dialog: { title:'Feedback not sent', body:(e && e.message) || 'Could not reach the feedback service.', primaryLabel:'OK' } });
-    }
+      return r.data && r.data[0] && r.data[0].id;
+    } catch (e) { console.warn('feedback failed', e); return null; }
   };
-  thumbsUp = () => { if (this.state.fbSent) return; this.buzz(12); this.sendFeedback('good', ''); };
-  openFbCompose = () => { if (this.state.fbSent) return; this.buzz(12); this.setState({ fbCompose: true, fbNote: '' }); };
+  rate = (verdict) => async () => {
+    if (this.state.fbSent) return;
+    this.buzz(12);
+    this.setState({ fbSent: verdict, dialog: {
+      title: 'THANKS FOR THE FEEDBACK 🙏',
+      body: 'You just helped Threadbot get sharper. Want to tell us a bit more? Totally optional.',
+      primaryLabel: 'Done',
+      secondaryLabel: 'Add details',
+      secondaryAction: () => this.setState({ fbCompose: true, fbNote: '' }),
+    }});
+    this._fbId = await this.sendFeedback(verdict);
+  };
+  thumbsUp = () => this.rate('up')();
+  openFbCompose = () => this.rate('down')();
   closeFbCompose = () => this.setState({ fbCompose: false });
   onFbNote = (e) => this.setState({ fbNote: e.target.value });
-  submitFbCompose = () => { this.buzz(14); this.sendFeedback('bad', this.state.fbNote); };
+  submitFbCompose = async () => {
+    this.buzz(14);
+    const note = (this.state.fbNote || '').slice(0, 1000);
+    this.setState({ fbCompose: false });
+    try {
+      const sb = window.__tbSupabase;
+      if (sb && this._fbId && note) await sb.from('user_feedback').update({ note }).eq('id', this._fbId);
+      this.toastMsg('Details received — thank you! 💙');
+    } catch (e) { console.warn('feedback note failed', e); }
+  };
 
   // ---- save / favorite ----
   saveDesign = () => {
@@ -841,6 +926,76 @@ class Component extends DCLogic {
     return s.closetTab === 'fav' ? s.designs.filter(d => d.favorite) : s.designs;
   };
   closeDialog = () => this.setState({ dialog: null });
+  dialogSecondary = () => {
+    const d = this.state.dialog;
+    this.setState({ dialog: null });
+    if (d && typeof d.secondaryAction === 'function') d.secondaryAction();
+  };
+
+  // ---- plans: tier menu + upgrade (framed like the big AI apps) ----
+  backendBase = () => ((window.THREADBOT_CONFIG && window.THREADBOT_CONFIG.backendUrl) || '').replace(/\/generate\/?$/, '');
+  authHeaders = (extra) => {
+    const cfg = window.THREADBOT_CONFIG || {};
+    return Object.assign({}, extra || {}, cfg.apiKey ? { 'Authorization': 'Bearer ' + cfg.apiKey } : {});
+  };
+  loadPlans = async () => {
+    try {
+      const r = await fetch(this.backendBase() + '/plans', { headers: this.authHeaders() });
+      const b = await r.json();
+      if (Array.isArray(b.plans)) {
+        const current = b.current || 'free';
+        const mine = b.plans.find((p) => p.id === current);
+        if (mine && mine.closet_slots) this.CLOSET_MAX = mine.closet_slots;
+        if (b.current === 'unlimited') this.CLOSET_MAX = 100000;
+        this.setState({ plans: b.plans, planId: current });
+      }
+    } catch (e) { console.warn('plans unavailable', e); }
+  };
+  openPlans = () => { this.buzz(10); this.setState({ plansOpen: true, profileOpen: false }); if (!this.state.plans) this.loadPlans(); };
+  closePlans = () => this.setState({ plansOpen: false });
+  choosePlan = (id) => async () => {
+    if (id === this.state.planId || id === 'free') return;
+    this.buzz(14);
+    try {
+      const r = await fetch(this.backendBase() + '/subscribe', {
+        method: 'POST',
+        headers: this.authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ plan: id }),
+      });
+      const b = await r.json();
+      if (!r.ok || !b.url) throw new Error(b.error || 'Checkout unavailable right now.');
+      window.open(b.url, '_blank');
+    } catch (e) {
+      this.setState({ dialog: { title: 'Upgrade unavailable', body: (e && e.message) || 'Please try again shortly.', primaryLabel: 'OK' } });
+    }
+  };
+
+  // ---- share (standard-issue in every modern AI app) ----
+  shareDesign = async () => {
+    const v = this.currentVariation();
+    if (!v || !v.image) return;
+    this.buzz(10);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'My Threadbot design', text: (this._genPrompt || 'Custom design') + ' — made with Threadbot', url: /^https?:/.test(v.image) ? v.image : undefined });
+      } else if (navigator.clipboard && /^https?:/.test(v.image)) {
+        await navigator.clipboard.writeText(v.image);
+        this.toastMsg('Design link copied 🔗');
+      }
+    } catch (e) { /* user dismissed the sheet */ }
+  };
+
+  // ---- help & support ----
+  helpFaq = () => {
+    this.buzz(8);
+    this.setState({ dialog: {
+      title: 'HELP & FAQ',
+      body: 'How it works: describe anything, attach reference photos if you like, and Threadbot designs a real product with official previews. Designs save to your Closet automatically the moment you hit generate. Generations per month and closet space depend on your plan (Settings → Threadbot Plans). Orders are manufactured on demand and tracked in Orders. Misprinted or damaged items are replaced free — contact support with your order number.',
+      primaryLabel: 'Got it',
+      secondaryLabel: 'Email support',
+      secondaryAction: () => { try { window.open('mailto:support@threadbot.app', '_blank'); } catch (e) {} },
+    }});
+  };
   dialogPrimary = () => {
     const d = this.state.dialog;
     this.setState({ dialog: null });
@@ -1000,19 +1155,24 @@ class Component extends DCLogic {
     });
     let visible = s.designs;
     if (s.closetTab === 'fav') visible = visible.filter(d => d.favorite);
+    if (s.closetSearch.trim()) {
+      const q = s.closetSearch.trim().toLowerCase();
+      visible = visible.filter(d => (d.prompt || '').toLowerCase().includes(q));
+    }
     const selMode = s.selectMode;
     const closetItems = visible.map(d => {
       const isSel = !!s.selected[d.id];
       return {
-        tap: selMode ? this.toggleSelect(d.id) : this.openDesign(d),
+        tap: selMode ? this.toggleSelect(d.id) : (d.generating ? (()=>{}) : this.openDesign(d)),
         toggleFav: this.toggleFav(d.id),
         requestDelete: this.requestDelete(d.id),
-        showActions: !selMode,
+        showActions: !selMode && !d.generating,
         selectMode: selMode,
         selected: isSel,
         name: d.prompt || 'Untitled design',
-        meta: this.relTime(d.ts),
-        noImage: !d.image,
+        meta: d.generating ? 'Synthesizing…' : this.relTime(d.ts),
+        generating: !!d.generating,
+        noImage: !d.image && !d.generating,
         favFill: d.favorite ? '#FFD400' : 'none',
         favStroke: d.favorite ? '#FFD400' : '#9fd9e3',
         favBorder: d.favorite ? 'rgba(255,212,0,0.4)' : 'rgba(0,229,255,0.2)',
@@ -1021,6 +1181,23 @@ class Component extends DCLogic {
         thumb: `position:relative;height:128px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-bottom:1px solid rgba(0,229,255,0.1);` + (d.image
           ? `background-image:url(${d.image});background-size:cover;background-position:center;`
           : `background:repeating-linear-gradient(135deg,#0e151c,#0e151c 9px,#0b1117 9px,#0b1117 18px);`),
+      };
+    });
+    // Membership tier cards (framed like the big AI apps' plan menus).
+    const planCards = (s.plans || []).map(p => {
+      const current = p.id === s.planId;
+      const accent = { free:'#7d8c94', pro:'#00E5FF', max:'#FFD400', team:'#19f0c4' }[p.id] || '#00E5FF';
+      return {
+        name: (p.label || p.id).toUpperCase(),
+        price: p.price_usd_monthly ? ('$' + p.price_usd_monthly.toFixed(2) + '/mo') : 'Free',
+        line1: p.generations_per_month >= 100000 ? 'Unlimited designs' : p.generations_per_month + ' designs / month',
+        line2: (p.closet_slots >= 100000 ? 'Unlimited' : p.closet_slots) + ' closet slots',
+        line3: p.id === 'free' ? 'Official product previews' : (p.id === 'team' ? 'Priority rendering · built for teams' : 'Priority rendering'),
+        btn: current ? 'CURRENT PLAN' : (p.id === 'free' ? 'INCLUDED' : 'UPGRADE'),
+        choose: this.choosePlan(p.id),
+        accent,
+        btnStyle: `width:100%;height:44px;border-radius:12px;border:0;font-family:'Chakra Petch';font-weight:700;font-size:12px;letter-spacing:1px;cursor:pointer;color:${current ? '#7d8c94' : '#04181c'};background:${current ? 'rgba(255,255,255,0.08)' : 'linear-gradient(100deg,' + accent + ',#19f0c4)'};`,
+        cardStyle: `border-radius:18px;padding:18px;border:1px solid ${current ? accent : 'rgba(0,229,255,0.15)'};background:rgba(12,17,23,0.7);box-shadow:${current ? '0 0 26px -10px ' + accent : 'none'};`,
       };
     });
     const closetEmpty = visible.length === 0 && !selMode;
@@ -1047,11 +1224,18 @@ class Component extends DCLogic {
     const settingGroups = [
       { label:'ACCOUNT', rows:[
         { ...actionRow('Edit Profile','', this.openProfile), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+        { ...actionRow('Threadbot Plans','' + (s.planId || 'free').toUpperCase(), this.openPlans), nameColor:'#FFD400' },
         { ...actionRow('Sign Out','', this.signOut), nameColor:'#ff7b7b' },
       ]},
       { label:'PREFERENCES', rows:[
         { ...toggleRow('Ambient Motion','motion'), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
         toggleRow('Haptics','haptics'),
+        toggleRow('Auto-open finished designs','autoOpen'),
+      ]},
+      { label:'SUPPORT', rows:[
+        { ...actionRow('Help & FAQ','', this.helpFaq), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+        actionRow('Contact Support','support@threadbot.app', () => { try { window.open('mailto:support@threadbot.app', '_blank'); } catch (e) {} }),
+        actionRow('App Version','v1.1', () => {}),
       ]},
       { label:'LEGAL & DATA', rows:[
         { ...actionRow('Privacy Policy','', this.openLegal('privacy')), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
@@ -1148,11 +1332,18 @@ class Component extends DCLogic {
       dialogPrimaryLabel: s.dialog ? s.dialog.primaryLabel : 'OK',
       dialogSecondaryLabel: s.dialog ? (s.dialog.secondaryLabel || 'Cancel') : 'Cancel',
       dialogPrimary: this.dialogPrimary,
-      dialogSecondary: this.closeDialog,
+      dialogSecondary: this.dialogSecondary,
       dialogPrimaryStyle: `flex:1;height:48px;border-radius:13px;border:0;font-family:'Chakra Petch';font-weight:700;font-size:13px;letter-spacing:.5px;cursor:pointer;color:${s.dialog && s.dialog.danger ? '#2a0d0d' : '#04181c'};background:${s.dialog && s.dialog.danger ? '#ff7b7b' : 'linear-gradient(100deg,#00E5FF,#19f0c4)'};`,
 
       genPct: s.genPct, genStatus: this.GEN[s.genStep], genSteps,
       cancelRun: this.cancelSynthesis,
+
+      toastOn: !!s.toast, toast: s.toast || '',
+      plansOpen: s.plansOpen, closePlans: this.closePlans,
+      planCards, plansLoading: !s.plans,
+      closetSearch: s.closetSearch,
+      onClosetSearch: (e) => this.setState({ closetSearch: e.target.value.slice(0, 80) }),
+      shareDesign: this.shareDesign,
 
       resultPrompt: this._genPrompt || '',
       hasResultImage: !!(cur && cur.image),
