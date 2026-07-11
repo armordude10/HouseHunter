@@ -942,7 +942,11 @@ export const runExpress = async (
           const verdict = await critiqueSimulation({
             sheetJpeg: sim.sheet,
             requestText: text,
-            planSummary: `product: ${product.name}; strategy: ${result.strategy}; panels: ${sim.simulated.join(", ")}`
+            planSummary:
+              `product: ${product.name}; strategy: ${result.strategy}; panels: ${sim.simulated.join(", ")}. ` +
+              `NOTE: the simulation shows the artwork on Printful's STOCK template photo — the ordered ` +
+              `fabric/variant color is "${intent.garment_color || "default"}" and is chosen separately; ` +
+              `do NOT judge the garment's fabric color from the simulation.`
           });
           if (verdict) {
             note(
@@ -950,7 +954,12 @@ export const runExpress = async (
               `${verdict.approved ? "APPROVED" : "REJECTED"}${verdict.problems.length ? " — " + verdict.problems.join(" | ") : ""}`
             );
             const pass = (input as { critic_pass?: number }).critic_pass ?? 0;
-            if (!verdict.approved && verdict.corrections.regenerate && pass < 1) {
+            // ANY rejection earns the one corrective re-run: the correction
+            // re-plans the whole run with the named defects, which is what
+            // missing text/misplacement needs just as much as bad artwork
+            // (live: a correctly-REJECTED shirt shipped because the retry
+            // was gated on the regenerate flag alone).
+            if (!verdict.approved && pass < 1) {
               note("critic_retry", verdict.corrections.regen_hint);
               return await runExpress(
                 {
