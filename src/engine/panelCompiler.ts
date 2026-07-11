@@ -54,6 +54,7 @@ import {
   toBase64Png
 } from "./raster.js";
 import { DesignGenome, PanelProvenance, stableSeed } from "./provenance.js";
+import { seamGraphFor, SeamGraph, SeamSlice, WuRect } from "./seamGraph.js";
 // printful file-library mirroring retired: see notes at former call sites.
 
 // -----------------------------------------------------------------------------
@@ -462,7 +463,8 @@ export class PanelCompiler {
     runId: string,
     jobs: CompileJob[],
     design: DesignSpec,
-    profile?: CalibrationProfile
+    profile?: CalibrationProfile,
+    productId?: number
   ): Promise<CompileResult> {
     const strategy = classifyStrategy(jobs);
     const provenance: PanelProvenance[] = [];
@@ -537,7 +539,7 @@ export class PanelCompiler {
       const sleeved =
         roles.has("front") && (roles.has("left_sleeve") || roles.has("right_sleeve"));
       masterUrl = sleeved
-        ? await this.compileWornViews(runId, primaryJobs, design, record, profile)
+        ? await this.compileWornViews(runId, primaryJobs, design, record, profile, productId)
         : await this.compileMasterSlice(runId, primaryJobs, design, record, profile);
     } else {
       for (const job of primaryJobs) {
@@ -950,8 +952,22 @@ export class PanelCompiler {
     jobs: CompileJob[],
     design: DesignSpec,
     record: (panel: CompiledPanel, prov: PanelProvenance) => void,
-    profile?: CalibrationProfile
+    profile?: CalibrationProfile,
+    productId?: number
   ): Promise<string | null> {
+    // Products with a MEASURED seam graph (real calibration mockups) use the
+    // measured painter — exact template windows, correct back-slice mirroring,
+    // per-panel physical scale. Everything else keeps the heuristic layout.
+    const graph = seamGraphFor(productId);
+    if (graph) {
+      try {
+        return await this.compileWornViewsMeasured(runId, jobs, design, record, graph);
+      } catch (error) {
+        console.warn(
+          `[compiler] measured worn-view path failed, using heuristic layout: ${(error as Error).message}`
+        );
+      }
+    }
     const plane = buildGarmentPlane(
       jobs.map((job) => ({
         placement: job.placement,
@@ -1313,6 +1329,355 @@ export class PanelCompiler {
         }
       } catch (error) {
         this.recordFailure(job, `Worn-view unfold failed: ${(error as Error).message}`, record);
+      }
+    }
+    return masterUrl;
+  }
+
+  /**
+   * MEASURED worn-view painter. Geometry comes from data/seam-graph.json —
+   * printed calibration grids photographed by Printful's real mockup
+   * pipeline — instead of heuristics. What the measurement fixed:
+   *
+   *   - The front/back templates are sliced at their TRUE windows (the
+   *     visible chest is only x 0.27–0.72 of the template; the rest wraps
+   *     to the sides), so art prints at the physical size it was painted.
+   *   - The back slice is FLOPPED: painted back views are x-ray views, and
+   *     slicing them unmirrored printed the back reversed — side seams could
+   *     never line up.
+   *   - Sleeve templates: x=0.5 is the outer-arm fold; the right sleeve's
+   *     FRONT half is template x [0.5,1], the left's is [0,0.5] (proved by
+   *     the calibration labels cut in half exactly at the silhouette). The
+   *     halves are assembled unflopped/flopped accordingly at measured
+   *     vertical registration (sleeve frac = front frac − 0.081 at equal
+   *     worn scale).
+   *   - Pocket and hood slice at measured offsets (pocket frac 0.5 sits at
+   *     front frac 0.648).
+   *
+   * Invariant: this method may THROW only during the painting phase (before
+   * any record() call) — the caller then falls back to the heuristic layout.
+   * Per-job slicing errors are recorded as failures, never thrown.
+   */
+  private async compileWornViewsMeasured(
+    runId: string,
+    jobs: CompileJob[],
+    design: DesignSpec,
+    record: (panel: CompiledPanel, prov: PanelProvenance) => void,
+    graph: SeamGraph
+  ): Promise<string | null> {
+    if (!this.media.hostImage) throw new Error("hostImage unavailable for worn-view painting");
+    const frameW = graph.frame.x1 - graph.frame.x0;
+    const frameH = graph.frame.y1 - graph.frame.y0;
+    const fit = Math.min(1, 2048 / frameW, 2048 / frameH);
+    const W = clampFluxDimension(frameW * fit);
+    const H = clampFluxDimension(frameH * fit);
+    const sx = W / frameW;
+    const sy = H / frameH;
+    const px = (r: WuRect) => ({
+      left: Math.round((r.left - graph.frame.x0) * sx),
+      top: Math.round((r.top - graph.frame.y0) * sy),
+      width: Math.max(8, Math.round((r.right - r.left) * sx)),
+      height: Math.max(8, Math.round((r.bottom - r.top) * sy))
+    });
+    const sliceRect = (s: SeamSlice) =>
+      px({ left: s.x.b, top: s.y.b, right: s.x.a + s.x.b, bottom: s.y.a + s.y.b });
+    const bodyRect = px(graph.body);
+    const hood = jobs.some((job) => classifyPlacement(job.placement) === "hood");
+
+    const seed = stableSeed(runId, "master");
+    const references = design.customer_image_urls?.length
+      ? design.customer_image_urls.map((image) => ({ image }))
+      : undefined;
+    const fetchBuf = async (url: string): Promise<Buffer> => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`fetch HTTP ${response.status}`);
+      return Buffer.from(await response.arrayBuffer());
+    };
+
+    // ---- 1) Hero scene fills the VISIBLE front piece (measured window). ----
+    let heroBufRaw: Buffer;
+    if (design.hero_image_url) {
+      heroBufRaw = await fetchBuf(design.hero_image_url);
+    } else {
+      const k = Math.min(1536 / bodyRect.width, 1536 / bodyRect.height, 1);
+      const heroGen = await this.media.generateImage({
+        model: IMAGE.FLUX_2_FLEX,
+        positivePrompt:
+          `A complete self-contained scene: every subject entirely visible with comfortable ` +
+          `margin on all sides, nothing cropped at any edge. ${designCore(design)}. ` +
+          `Flat print-ready textile artwork, rich detail, cohesive color and lighting. ` +
+          `No borders, no frames, no split composition.`,
+        negativePrompt: negativeFor(design),
+        width: clampFluxDimension(bodyRect.width * k),
+        height: clampFluxDimension(bodyRect.height * k),
+        seed,
+        referenceImages: references
+      });
+      heroBufRaw = await fetchBuf(heroGen.imageURL);
+    }
+    const hero = await sharp(heroBufRaw)
+      .rotate()
+      .resize(bodyRect.width, bodyRect.height, {
+        fit: design.hero_image_url ? "contain" : "fill",
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      })
+      .png()
+      .toBuffer();
+    const mean = await sharp(heroBufRaw)
+      .rotate()
+      .flatten({ background: "#a8a8a8" })
+      .resize(1, 1)
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+    const bg = { r: mean[0], g: mean[1], b: mean[2] };
+
+    // ---- 2) Front worn view: outpaint the frame around the hero. ----
+    const wfSeed = await sharp({ create: { width: W, height: H, channels: 3, background: bg } })
+      .composite([{ input: hero, left: bodyRect.left, top: bodyRect.top }])
+      .jpeg({ quality: 92 })
+      .toBuffer();
+    const wfSeedUrl = await this.media.hostImage(wfSeed.toString("base64"), "image/jpeg");
+    const wfGen = await this.media.generateImage({
+      model: IMAGE.FLUX_2_FLEX,
+      positivePrompt:
+        `This is a garment painted AS WORN, seen from the front: torso center, sleeves at the ` +
+        `sides${hood ? ", hood at the top" : ""}. Extend the existing scene outward to fill the ` +
+        `entire canvas as one continuous painting across the whole garment and beyond its edges ` +
+        `(the margins wrap around the sides). Keep the existing detailed scene EXACTLY as it is. ` +
+        `Fill all flat areas with seamlessly matching environment continuing the scene's world — ` +
+        `no fabric folds, no garment outlines, no panels or borders, no new focal subjects, ` +
+        `no text. ${designCore(design).slice(0, 500)}`,
+      width: W,
+      height: H,
+      seed,
+      referenceImages: [{ image: wfSeedUrl }]
+    });
+    const wfBuf = await sharp(await fetchBuf(wfGen.imageURL))
+      .resize(W, H, { fit: "fill" })
+      .composite([{ input: hero, left: bodyRect.left, top: bodyRect.top }])
+      .png()
+      .toBuffer();
+
+    // ---- 3) Back worn view (x-ray convention), seeded with shared seams. ----
+    let wbBuf: Buffer | null = null;
+    const needsBack = jobs.some((job) =>
+      ["back", "left_sleeve", "right_sleeve"].includes(classifyPlacement(job.placement))
+    );
+    if (needsBack) {
+      const ridge: Array<{ input: Buffer; left: number; top: number }> = [];
+      // Sleeve folds: the outer-arm line is shared between views verbatim.
+      for (const key of ["sleeve_left", "sleeve_right"] as const) {
+        const zone = graph.paint[key];
+        if (!zone) continue;
+        const z = px(zone);
+        const stripW = Math.max(8, Math.round(z.width * 0.3));
+        const foldAtRight = zone.left > graph.body.left; // wearer-left arm sits canvas-right
+        const stripLeft = foldAtRight ? z.left + z.width - stripW : z.left;
+        const strip = await sharp(wfBuf)
+          .extract({ left: stripLeft, top: z.top, width: stripW, height: z.height })
+          .flop()
+          .png()
+          .toBuffer();
+        ridge.push({ input: strip, left: stripLeft, top: z.top });
+      }
+      // Side seams: front piece edge columns wrap to the back piece.
+      const seamW = Math.max(8, Math.round(bodyRect.width * 0.06));
+      for (const side of ["left", "right"] as const) {
+        const stripLeft = side === "left" ? bodyRect.left : bodyRect.left + bodyRect.width - seamW;
+        const strip = await sharp(wfBuf)
+          .extract({ left: stripLeft, top: bodyRect.top, width: seamW, height: bodyRect.height })
+          .flop()
+          .png()
+          .toBuffer();
+        ridge.push({ input: strip, left: stripLeft, top: bodyRect.top });
+      }
+      // Hood: the crown wrap mirrors top-to-bottom onto the back of the hood.
+      if (hood && graph.paint.hood) {
+        const z = px(graph.paint.hood);
+        const strip = await sharp(wfBuf)
+          .extract({ left: z.left, top: z.top, width: z.width, height: z.height })
+          .flip()
+          .png()
+          .toBuffer();
+        ridge.push({ input: strip, left: z.left, top: z.top });
+      }
+      const wbBg = await sharp(wfBuf).flop().blur(30).png().toBuffer();
+      const wbSeed = await sharp(wbBg).composite(ridge).jpeg({ quality: 92 }).toBuffer();
+      const wbSeedUrl = await this.media.hostImage(wbSeed.toString("base64"), "image/jpeg");
+      const wbGen = await this.media.generateImage({
+        model: IMAGE.FLUX_2_FLEX,
+        positivePrompt:
+          `The BACK view of the same worn garment, one continuous painting. A soft underpainting ` +
+          `already sets the palette across the whole canvas; the crisp edge strips are the arm ` +
+          `ridges and side seams shared with the front view — keep their colors EXACTLY and ` +
+          `develop the underpainting into the same scene's world with full detail EVERYWHERE, ` +
+          `edge to edge: same palette, same lighting, environment only, no pale or unfinished ` +
+          `areas, no new focal subjects, no text. ${designCore(design).slice(0, 400)}`,
+        width: W,
+        height: H,
+        seed: stableSeed(runId, "master", "back"),
+        referenceImages: [{ image: wbSeedUrl }]
+      });
+      wbBuf = await sharp(await fetchBuf(wbGen.imageURL)).resize(W, H, { fit: "fill" }).png().toBuffer();
+    }
+    const masterUrl = await this.media.hostImage(wfBuf.toString("base64"), "image/png");
+    const wbUrl = wbBuf ? await this.media.hostImage(wbBuf.toString("base64"), "image/png") : null;
+
+    // ---- 4) Slice every print file at its MEASURED template window. ----
+    const cropExtended = async (
+      buf: Buffer,
+      rect: { left: number; top: number; width: number; height: number },
+      outW: number,
+      outH: number,
+      flop: boolean
+    ): Promise<Buffer> => {
+      const ix0 = Math.max(0, Math.min(W - 8, rect.left));
+      const iy0 = Math.max(0, Math.min(H - 8, rect.top));
+      const iw = Math.max(8, Math.min(W, rect.left + rect.width) - ix0);
+      const ih = Math.max(8, Math.min(H, rect.top + rect.height) - iy0);
+      const inner = await sharp(buf).extract({ left: ix0, top: iy0, width: iw, height: ih }).png().toBuffer();
+      let full: Buffer;
+      if (ix0 === rect.left && iy0 === rect.top && iw === rect.width && ih === rect.height) {
+        full = inner;
+      } else {
+        // Off-canvas bleed (hood crown wrap): ambient continuation — blurred
+        // cover of the visible part with the visible part at its true offset.
+        const base = await sharp(inner)
+          .resize(rect.width, rect.height, { fit: "fill" })
+          .blur(30)
+          .png()
+          .toBuffer();
+        full = await sharp(base)
+          .composite([{ input: inner, left: ix0 - rect.left, top: iy0 - rect.top }])
+          .png()
+          .toBuffer();
+      }
+      let out = sharp(full).resize(outW, outH, { fit: "fill" });
+      if (flop) out = out.flop();
+      return out.png().toBuffer();
+    };
+
+    const sleeveFileMeasured = async (
+      key: "sleeve_left" | "sleeve_right",
+      outW: number,
+      outH: number
+    ): Promise<Buffer> => {
+      const spec = graph.sleeves[key];
+      const zone = graph.paint[spec.zone];
+      if (!spec || !zone) throw new Error(`seam graph lacks sleeve spec for ${key}`);
+      const vert = px({ left: zone.left, top: spec.y.b, right: zone.right, bottom: spec.y.a + spec.y.b });
+      const halfW = Math.round(outW / 2);
+      const blend = Math.max(8, Math.round(outW * 0.1));
+      const frontFacesRight = spec.frontHalf[0] >= 0.5; // wearer-right sleeve
+      const frontW = halfW + blend;
+      const frontRaw = await cropExtended(wfBuf, vert, frontW, outH, false);
+      // Back half from the x-ray back view -> flopped into garment space.
+      const backRaw = await cropExtended(wbBuf ?? wfBuf, vert, outW - halfW, outH, true);
+      // Feather the front half across the outer-arm fold (template x=0.5).
+      const ramp = Buffer.alloc(frontW * outH * 4);
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < frontW; x++) {
+          const i = (y * frontW + x) * 4;
+          const a = frontFacesRight
+            ? x < blend
+              ? Math.round((255 * x) / blend)
+              : 255
+            : x >= frontW - blend
+              ? Math.round(255 * (1 - (x - (frontW - blend)) / blend))
+              : 255;
+          ramp[i] = 255;
+          ramp[i + 1] = 255;
+          ramp[i + 2] = 255;
+          ramp[i + 3] = a;
+        }
+      }
+      const rampPng = await sharp(ramp, { raw: { width: frontW, height: outH, channels: 4 } })
+        .png()
+        .toBuffer();
+      const frontFaded = await sharp(frontRaw)
+        .ensureAlpha()
+        .composite([{ input: rampPng, blend: "dest-in" }])
+        .png()
+        .toBuffer();
+      const composites = frontFacesRight
+        ? [
+            { input: backRaw, left: 0, top: 0 },
+            { input: frontFaded, left: outW - frontW, top: 0 }
+          ]
+        : [
+            { input: backRaw, left: halfW, top: 0 },
+            { input: frontFaded, left: 0, top: 0 }
+          ];
+      return sharp({
+        create: { width: outW, height: outH, channels: 3, background: { r: 255, g: 255, b: 255 } }
+      })
+        .composite(composites)
+        .png()
+        .toBuffer();
+    };
+
+    for (const job of jobs) {
+      const role = classifyPlacement(job.placement);
+      const target = jobTarget(job);
+      const sizing = workingSize(target.width, target.height);
+      try {
+        let buffer: Buffer;
+        let note: string;
+        if (role === "left_sleeve" || role === "right_sleeve") {
+          const key = role === "left_sleeve" ? "sleeve_left" : "sleeve_right";
+          buffer = await sleeveFileMeasured(key, sizing.width, sizing.height);
+          note =
+            "Measured sleeve: front half continues the front view, back half the back view, " +
+            "assembled at the calibrated outer-arm fold (template x=0.5) and measured vertical registration.";
+        } else {
+          const sliceKey =
+            role === "front" || role === "back" || role === "hood" || role === "pocket"
+              ? role
+              : "front";
+          const s = graph.slices[sliceKey] ?? graph.slices.front;
+          const view = s.view === "back" && wbBuf ? wbBuf : wfBuf;
+          buffer = await cropExtended(view, sliceRect(s), sizing.width, sizing.height, s.flop);
+          note = `Sliced at the MEASURED template window for ${sliceKey}${s.flop ? " (x-ray view un-mirrored)" : ""} — seam-graph calibrated.`;
+        }
+        const { fileUrl, mockupUrl } = await this.hostWorkingBuffer(buffer, sizing.factor, false);
+        record(
+          {
+            job_id: job.job_id,
+            placement: job.placement,
+            status: "success",
+            generation_mode: "sliced",
+            file_url: fileUrl,
+            mockup_file_url: mockupUrl,
+            file_type: "png",
+            public_url: true,
+            transparent_background: false,
+            must_render_in_mockup: job.must_render_in_mockup !== false,
+            source_job_id: job.source_job_id ?? null,
+            source_parent_url: masterUrl,
+            geometry_applied: true,
+            notes: note
+          },
+          {
+            job_id: job.job_id,
+            placement: job.placement,
+            strategy: "master_slice",
+            model: IMAGE.FLUX_2_FLEX,
+            seed,
+            prompt: "measured worn-view painting (seam-graph calibrated windows)",
+            plane_rect_in: null,
+            crop_px: null,
+            tile_phase_px: null,
+            upscale_factor: sizing.factor,
+            target_px: { width: target.width, height: target.height },
+            dpi: target.dpi,
+            transparent: false,
+            source_urls: [masterUrl, ...(wbUrl ? [wbUrl] : [])],
+            printful_file_id: null
+          }
+        );
+      } catch (error) {
+        this.recordFailure(job, `Measured worn-view slice failed: ${(error as Error).message}`, record);
       }
     }
     return masterUrl;

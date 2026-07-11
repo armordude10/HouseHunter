@@ -1,0 +1,55 @@
+{
+  "version": "threadbot-seamgraph/1",
+  "provenance": {
+    "method": "Numbered color-band calibration grids (10 bands per placement, labeled) rendered through REAL Printful mockups, then scanline-measured to the pixel. Not estimated — printed and photographed by the manufacturer's own pipeline.",
+    "printful_task": "gt-942968460",
+    "variant_id": 18730,
+    "measured_at": "2026-07-11",
+    "units": "wu = worn units: the calibration front-photo pixel frame (1000x1000, garment-scaled). All maps are affine: wu = a * template_fraction + b, stored as [a, b].",
+    "cross_checks": [
+      "front vs back physical scale after camera normalization: 1137 vs 1133 wu per template height (0.4% agreement)",
+      "sleeve label columns cut in half exactly at the outer-arm silhouette proves template x=0.5 lies on the fold",
+      "sleeve pressed-flat span 122 wu matches cosine-wrap prediction 2R for template half-width"
+    ]
+  },
+  "products": {
+    "388": {
+      "notes": {
+        "front": "Template maps to wu via x=[1083,-41], y=[1137,-11.9]; only x-frac 0.273-0.721, y-frac 0.135-0.833 is visible on the worn garment (neck 150, hem 935, chest 255-745). Everything outside wraps to sides or is cut.",
+        "back": "Back template physical scale equals front (after camera normalization). Painted back views are x-ray (wearer-left at canvas right), so the back slice MUST be flopped or the print is mirrored on the garment — the root cause of side seams never matching.",
+        "sleeves": "Template x=0.5 is the outer-arm fold. Right sleeve: template x [0.5,1] faces FRONT (fold->underarm). Left sleeve: template x [0,0.5] faces FRONT (underarm->fold). No mirroring in Printful's render. Sleeve art must be drawn 13.8% larger in template px than front art to print at equal physical size (0.379 vs 0.431 wu per template px).",
+        "pocket": "Pocket piece is roughly the middle third of its 3000px template: visible x-frac 0.31-0.69, y-frac 0.39-0.64. Pocket template frac 0.5 sits at front template frac 0.648.",
+        "hood": "Coarse (wrinkled in calibration photos): front face opening shows the bottom ~15% of the hood template; middle fracs wrap over the crown to the back."
+      },
+      "frame": { "x0": -64, "y0": -64, "x1": 1064, "y1": 1300 },
+      "body": { "left": 255, "top": 150, "right": 745, "bottom": 935 },
+      "paint": {
+        "sleeve_right": { "left": 149, "top": 205, "right": 271, "bottom": 925 },
+        "sleeve_left": { "left": 728, "top": 205, "right": 838, "bottom": 925 },
+        "hood": { "left": 326, "top": 25, "right": 668, "bottom": 160 }
+      },
+      "slices": {
+        "front": { "view": "front", "x": [1083, -41], "y": [1137, -11.9], "flop": false, "confidence": "high" },
+        "back": { "view": "back", "x": [1103.5, -56.5], "y": [1133, 2.5], "flop": true, "confidence": "high" },
+        "pocket": { "view": "front", "x": [1119, -59.5], "y": [1120, 165], "flop": false, "confidence": "high" },
+        "hood": { "view": "front", "x": [1119, -62.5], "y": [1294, -1019], "flop": false, "confidence": "low" }
+      },
+      "sleeves": {
+        "sleeve_right": { "y": [1136, 80.7], "front_half": [0.5, 1], "zone": "sleeve_right" },
+        "sleeve_left": { "y": [1136, 80.7], "front_half": [0, 0.5], "zone": "sleeve_left" }
+      },
+      "visible": {
+        "front": { "x": [0.273, 0.721], "y": [0.135, 0.833] },
+        "back": { "x": [0.271, 0.717], "y": [0.173, 0.823] },
+        "pocket": { "x": [0.31, 0.69], "y": [0.39, 0.64] }
+      },
+      "physical_scale_wu_per_template_px": {
+        "front": 0.431,
+        "back": 0.43,
+        "sleeve_left": 0.379,
+        "sleeve_right": 0.379,
+        "pocket": 0.373
+      }
+    }
+  }
+}

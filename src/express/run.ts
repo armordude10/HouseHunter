@@ -840,7 +840,8 @@ export const runExpress = async (
         runId,
         built.jobs,
         design,
-        getCalibrationProfile(product.productId)
+        getCalibrationProfile(product.productId),
+        product.productId
       );
       result.strategy = compiled.strategy;
       result.panels = compiled.panels;
