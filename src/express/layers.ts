@@ -26,6 +26,7 @@ import { PanelProvenance, stableSeed } from "../engine/provenance.js";
 import { PlacementCalibration } from "../engine/garmentSpace.js";
 import { DesignLayer } from "./intent.js";
 import { PlacementSpec } from "./truth.js";
+import { maximizeCoverage } from "../engine/printAreaOptimizer.js";
 
 export const MAX_LAYERS = 6;
 
@@ -123,13 +124,12 @@ export const renderLayerOverlay = async (params: {
           // cutout is best-effort; the raw image still places
         }
       }
+      // Coverage optimizer: frame the SUBJECT (salient rect), not the file —
+      // maximal use of the layer's box regardless of dead margin.
       const floored = Math.max(widthPx, Math.round(pieceW * 0.25));
-      asset = await sharp(bytes)
-        .trim()
-        .resize({ width: floored, height: maxHPx, fit: "inside" })
-        .png()
-        .toBuffer();
-      promptParts.push(`customer_image(${index}, cutout+trim)`);
+      const framed = await maximizeCoverage(bytes, floored, Math.min(maxHPx, floored), 0.02);
+      asset = framed.buffer;
+      promptParts.push(`customer_image(${index}, subject-framed ${(framed.coverage * 100) | 0}%)`);
     } else {
       // Generated element with native alpha; verified, repaired if opaque.
       // Stray "text" layers are impossible to render plainly: they become

@@ -11,6 +11,7 @@ import sharp from "sharp";
 import { CompiledPanel, MediaLike } from "../engine/panelCompiler.js";
 import { PanelProvenance } from "../engine/provenance.js";
 import { PlacementSpec } from "./truth.js";
+import { maximizeCoverage } from "../engine/printAreaOptimizer.js";
 
 const clampPx = (value: number) => Math.min(16000, Math.max(16, Math.round(value)));
 
@@ -36,14 +37,13 @@ export const buildVerbatimPanel = async (
   // .rotate() applies EXIF orientation: phone photos store their pixels
   // sideways and flag the rotation in metadata — without this the print
   // comes out rotated 90° (live queue verdict).
-  const working = await sharp(source)
-    .rotate()
-    .resize(Math.ceil(targetW / 2), Math.ceil(targetH / 2), {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 }
-    })
-    .png()
-    .toBuffer();
+  // Coverage optimizer: the customer's SUBJECT fills the print area
+  // maximally (salient-rect framing) instead of letterboxing whatever
+  // margins the upload happened to carry.
+  const oriented = await sharp(source).rotate().png().toBuffer();
+  const working = (
+    await maximizeCoverage(oriented, Math.ceil(targetW / 2), Math.ceil(targetH / 2), 0.03)
+  ).buffer;
   const uploaded = await media.uploadImage(`data:image/png;base64,${working.toString("base64")}`);
   const hosted = await media.upscale(uploaded, 2);
   // The pre-upscale working copy is already mockup-sized (<=2048px).
