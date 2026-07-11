@@ -2,3 +2,4 @@ node_modules/
 dist/
 .env
 out/
+threadbot-app/mobile/android/keystore.properties
