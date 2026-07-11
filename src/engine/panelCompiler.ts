@@ -1453,9 +1453,46 @@ export class PanelCompiler {
       seed,
       referenceImages: [{ image: wfSeedUrl }]
     });
+    // Recomposite the hero with FEATHERED edges: the outpaint re-renders the
+    // hero zone approximately, and a hard-edged paste printed a visible
+    // rectangle at the window border (live proof-run defect). The feather
+    // blends the crisp hero into the repainted surroundings.
+    const featherPx = Math.max(6, Math.round(Math.min(bodyRect.width, bodyRect.height) * 0.035));
+    const heroMask = await sharp({
+      create: {
+        width: bodyRect.width,
+        height: bodyRect.height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: {
+              width: Math.max(8, bodyRect.width - 2 * featherPx),
+              height: Math.max(8, bodyRect.height - 2 * featherPx),
+              channels: 4,
+              background: { r: 255, g: 255, b: 255, alpha: 1 }
+            }
+          })
+            .png()
+            .toBuffer(),
+          left: featherPx,
+          top: featherPx
+        }
+      ])
+      .blur(featherPx / 2)
+      .png()
+      .toBuffer();
+    const heroSoft = await sharp(hero)
+      .ensureAlpha()
+      .composite([{ input: heroMask, blend: "dest-in" }])
+      .png()
+      .toBuffer();
     const wfBuf = await sharp(await fetchBuf(wfGen.imageURL))
       .resize(W, H, { fit: "fill" })
-      .composite([{ input: hero, left: bodyRect.left, top: bodyRect.top }])
+      .composite([{ input: heroSoft, left: bodyRect.left, top: bodyRect.top }])
       .png()
       .toBuffer();
 
