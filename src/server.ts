@@ -895,6 +895,19 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 404, { error: "not found" });
     }
+    // Debug-token-guarded raw image hosting (seam-calibration instrument:
+    // grids must be publicly fetchable by Printful's mockup generator).
+    if (req.method === "POST" && url.pathname === "/debug/host") {
+      if (!process.env.THREADBOT_DEBUG_TOKEN || url.searchParams.get("key") !== process.env.THREADBOT_DEBUG_TOKEN) {
+        return json(res, 401, { error: "unauthorized" });
+      }
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk as Buffer);
+      const bytes = Buffer.concat(chunks);
+      if (!bytes.length || bytes.length > 30_000_000) return json(res, 400, { error: "bad size" });
+      const id = putHostedImage(bytes, req.headers["content-type"] ?? "image/png");
+      return json(res, 200, { url: `${publicBaseUrl(req)}/uploads/${id}` });
+    }
     // Async job polling: short requests that survive phone lock/backgrounding.
     if (req.method === "GET" && url.pathname === "/generate/status") {
       const job = asyncJobs.get(url.searchParams.get("job") ?? "");
