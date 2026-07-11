@@ -45,6 +45,8 @@ import {
   matchExpressProduct
 } from "./catalog.js";
 import { deriveIntent, DesignLayer, ExpressIntent, screenRequest } from "./intent.js";
+import { criticEnabled, critiqueSimulation } from "./critic.js";
+import { simulateRun } from "../engine/templateSim.js";
 import sharp from "sharp";
 import { compileLayeredPanel, MAX_LAYERS, renderLayerOverlay } from "./layers.js";
 import { buildExpressMedia } from "./media.js";
@@ -58,6 +60,8 @@ export interface ExpressInput {
   /** Explicit product/variant from the app's picker — skips keyword matching. */
   product_id?: number;
   variant_id?: number;
+  /** Internal: bounded art-director correction round (0 = first attempt). */
+  critic_pass?: number;
 }
 
 export interface ExpressEconomics {
@@ -919,6 +923,53 @@ export const runExpress = async (
         fileUrl: (panel.mockup_file_url ?? panel.file_url) as string,
         file_url: panel.file_url as string
       }));
+
+    // 6z. THE EYES: simulate the product locally on Printful's own template
+    // geometry and put an art director in front of it BEFORE any money is
+    // spent on the real mockup. One vision call; one bounded corrective
+    // re-run when the artwork content itself failed; fails open on any
+    // critic/simulation error. The simulation sheet is hosted into the
+    // trace so a human can always see what the critic saw.
+    if (criticEnabled() && result.submitted_placements.length) {
+      try {
+        const sim = await simulateRun(
+          product.productId,
+          result.panels.map((p) => ({ placement: p.placement, file_url: p.mockup_file_url ?? p.file_url }))
+        );
+        if (sim) {
+          const simUrl = await hostImage(sim.sheet, "image/jpeg");
+          note("critic_sim", simUrl);
+          const verdict = await critiqueSimulation({
+            sheetJpeg: sim.sheet,
+            requestText: text,
+            planSummary: `product: ${product.name}; strategy: ${result.strategy}; panels: ${sim.simulated.join(", ")}`
+          });
+          if (verdict) {
+            note(
+              "critic_verdict",
+              `${verdict.approved ? "APPROVED" : "REJECTED"}${verdict.problems.length ? " — " + verdict.problems.join(" | ") : ""}`
+            );
+            const pass = (input as { critic_pass?: number }).critic_pass ?? 0;
+            if (!verdict.approved && verdict.corrections.regenerate && pass < 1) {
+              note("critic_retry", verdict.corrections.regen_hint);
+              return await runExpress(
+                {
+                  ...input,
+                  input_as_text:
+                    `${text}\n\n[ART DIRECTOR CORRECTION — a previous attempt failed final review for: ` +
+                    `${verdict.problems.join("; ").slice(0, 400)}. You MUST fix exactly this: ` +
+                    `${verdict.corrections.regen_hint}]`,
+                  critic_pass: pass + 1
+                } as typeof input,
+                deps
+              );
+            }
+          }
+        }
+      } catch (error) {
+        note("critic_skipped", (error as Error).message.slice(0, 120));
+      }
+    }
 
     // 7. Official Printful mockups — the hard-coded final-output rule.
     // Style ids: primary placement's first, then any placement's (a few

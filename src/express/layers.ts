@@ -109,11 +109,27 @@ export const renderLayerOverlay = async (params: {
       const url = imageUrls[index];
       if (!url) throw new Error(`layer references attached image ${index + 1}, which was not provided`);
       sourceUrls.push(url);
-      asset = await sharp(await fetchBuffer(url))
-        .resize({ width: widthPx, height: maxHPx, fit: "inside" })
+      // LOGO HYGIENE (live incident: mascot printed as a stamp inside a
+      // black box). A customer image placed as a design element gets the
+      // same treatment a generated element gets: real-alpha check, cutout
+      // when opaque, dead-border trim — and a prominence floor so a logo
+      // is never smaller than a quarter of the piece.
+      let bytes = await fetchBuffer(url);
+      if (!(await hasRealAlpha(bytes))) {
+        try {
+          const cutout = await media.removeBackground(url);
+          bytes = await fetchBuffer(cutout.imageURL);
+        } catch {
+          // cutout is best-effort; the raw image still places
+        }
+      }
+      const floored = Math.max(widthPx, Math.round(pieceW * 0.25));
+      asset = await sharp(bytes)
+        .trim()
+        .resize({ width: floored, height: maxHPx, fit: "inside" })
         .png()
         .toBuffer();
-      promptParts.push(`customer_image(${index})`);
+      promptParts.push(`customer_image(${index}, cutout+trim)`);
     } else {
       // Generated element with native alpha; verified, repaired if opaque.
       // Stray "text" layers are impossible to render plainly: they become

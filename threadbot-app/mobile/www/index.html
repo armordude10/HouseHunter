@@ -847,6 +847,41 @@ class Component extends DCLogic {
     if (d && d.primaryAction) d.primaryAction();
   };
 
+  // ---- account: legal + deletion (store-compliance requirements) ----
+  openLegal = (page) => () => {
+    const base = ((window.THREADBOT_CONFIG && window.THREADBOT_CONFIG.backendUrl) || '').replace(/\/generate\/?$/, '');
+    try { window.open(base + '/' + page, '_blank'); } catch (e) {}
+  };
+  deleteAccount = () => {
+    this.buzz(20);
+    this.setState({ dialog: {
+      title: 'DELETE ACCOUNT',
+      body: 'This permanently deletes your account, your saved designs, and your usage history. Orders already placed are unaffected. This cannot be undone.',
+      primaryLabel: 'Delete forever',
+      danger: true,
+      primaryAction: async () => {
+        try {
+          const base = ((window.THREADBOT_CONFIG && window.THREADBOT_CONFIG.backendUrl) || '').replace(/\/generate\/?$/, '');
+          const cfg = window.THREADBOT_CONFIG || {};
+          const r = await fetch(base + '/account/delete', {
+            method: 'POST',
+            headers: cfg.apiKey ? { 'Authorization': 'Bearer ' + cfg.apiKey } : {},
+          });
+          if (!r.ok) {
+            const b = await r.json().catch(function(){ return {}; });
+            throw new Error(b.error || ('Deletion failed: ' + r.status));
+          }
+          try { const sb = window.__tbSupabase; if (sb) await sb.auth.signOut(); } catch (e) {}
+          try { if (window.__tbClearSession) window.__tbClearSession(); } catch (e) {}
+          location.reload();
+        } catch (e) {
+          this.setState({ dialog: { title:'Deletion failed', body:(e && e.message) || 'Could not reach the account service. Please try again.', primaryLabel:'OK' } });
+        }
+      },
+      secondaryLabel: 'Keep my account',
+    }});
+  };
+
   // ---- account: sign out ----
   signOut = () => {
     this.buzz(12);
@@ -1017,6 +1052,11 @@ class Component extends DCLogic {
       { label:'PREFERENCES', rows:[
         { ...toggleRow('Ambient Motion','motion'), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
         toggleRow('Haptics','haptics'),
+      ]},
+      { label:'LEGAL & DATA', rows:[
+        { ...actionRow('Privacy Policy','', this.openLegal('privacy')), style:`width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;border:0;cursor:pointer;font-family:inherit;` },
+        actionRow('Terms of Service','', this.openLegal('terms')),
+        { ...actionRow('Delete Account','', this.deleteAccount), nameColor:'#ff7b7b' },
       ]},
     ];
 

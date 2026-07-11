@@ -819,6 +819,64 @@ const server = createServer(async (req, res) => {
       const { code, payload } = await executeRun();
       return json(res, code, payload);
     }
+    // Account deletion (store-compliance requirement: apps with sign-in must
+    // offer in-app deletion). Verifies the caller's own token, then removes
+    // the auth user and their rows. Deletion of the AUTH USER requires the
+    // service-role key; everything is best-effort so a partial outage never
+    // strands the user in a half-deleted state silently.
+    if (req.method === "POST" && url.pathname === "/account/delete") {
+      const bearer = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      if (!looksLikeUserToken(bearer)) return json(res, 401, { error: "Sign in required." });
+      const userId = decodeUserId(bearer);
+      if (!userId) return json(res, 401, { error: "Invalid session." });
+      const supaUrl = process.env.THREADBOT_SUPABASE_URL ?? "https://dwexqosfijipthndmtvf.supabase.co";
+      const serviceKey = process.env.THREADBOT_SUPABASE_KEY ?? "";
+      if (!serviceKey) return json(res, 503, { error: "Account service unavailable." });
+      const admin = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
+      // User data rows first (while the id still resolves), then the auth user.
+      for (const table of ["user_taste", "design_feedback", "usage_events", "app_state"]) {
+        try {
+          await fetch(`${supaUrl}/rest/v1/${table}?user_id=eq.${encodeURIComponent(userId)}`, {
+            method: "DELETE",
+            headers: admin
+          });
+        } catch {
+          // best-effort per table
+        }
+      }
+      try {
+        const del = await fetch(`${supaUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+          method: "DELETE",
+          headers: admin
+        });
+        if (!del.ok) {
+          const body = await del.text();
+          console.error(`[account] auth delete failed for ${userId}: HTTP ${del.status} ${body.slice(0, 200)}`);
+          return json(res, 502, {
+            error: "Your data was removed but the sign-in record could not be deleted. Contact support."
+          });
+        }
+      } catch (error) {
+        return json(res, 502, { error: `Deletion failed: ${(error as Error).message.slice(0, 120)}` });
+      }
+      return json(res, 200, { deleted: true });
+    }
+    // Legal pages (store-compliance: privacy policy + terms URLs).
+    if (req.method === "GET" && (url.pathname === "/privacy" || url.pathname === "/terms")) {
+      for (const file of [
+        path.resolve(process.cwd(), `frontend${url.pathname}.html`),
+        new URL(`../frontend${url.pathname}.html`, import.meta.url).pathname
+      ]) {
+        try {
+          const html = readFileSync(file, "utf8");
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          return res.end(html);
+        } catch {
+          // try next location
+        }
+      }
+      return json(res, 404, { error: "not found" });
+    }
     // Async job polling: short requests that survive phone lock/backgrounding.
     if (req.method === "GET" && url.pathname === "/generate/status") {
       const job = asyncJobs.get(url.searchParams.get("job") ?? "");
