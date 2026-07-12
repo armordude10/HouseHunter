@@ -159,7 +159,7 @@
      (live iPhone incident). The backend serves /auth-landing. */
   function landingUrl() {
     try { return new URL(cfg.backendUrl).origin + "/auth-landing"; }
-    catch (e) { return "https://threadbot-agentic-pipeline-2uts5km5aq-uc.a.run.app/auth-landing"; }
+    catch (e) { return "https://api.threadbot.app/auth-landing"; }
   }
   function caps() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
   var oauthBound = false;
