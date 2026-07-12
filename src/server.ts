@@ -879,8 +879,13 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 200, { deleted: true });
     }
-    // Legal pages (store-compliance: privacy policy + terms URLs).
-    if (req.method === "GET" && (url.pathname === "/privacy" || url.pathname === "/terms")) {
+    // Legal pages (store-compliance) + the auth email landing page (email
+    // links must resolve on ANY device — the app scheme dead-ends browsers
+    // without the app installed; live iPhone incident).
+    if (
+      req.method === "GET" &&
+      (url.pathname === "/privacy" || url.pathname === "/terms" || url.pathname === "/auth-landing")
+    ) {
       for (const file of [
         path.resolve(process.cwd(), `frontend${url.pathname}.html`),
         new URL(`../frontend${url.pathname}.html`, import.meta.url).pathname

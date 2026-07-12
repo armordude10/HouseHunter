@@ -154,6 +154,13 @@
   // ---- Social OAuth (Google / Microsoft via Supabase) -------------------
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   var OAUTH_CB = "threadbot://auth-callback";
+  /* Email links (confirm/reset) must land on a WEB page that works on any
+     device — the app scheme dead-ends browsers without the app installed
+     (live iPhone incident). The backend serves /auth-landing. */
+  function landingUrl() {
+    try { return new URL(cfg.backendUrl).origin + "/auth-landing"; }
+    catch (e) { return "https://threadbot-agentic-pipeline-2uts5km5aq-uc.a.run.app/auth-landing"; }
+  }
   function caps() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
   var oauthBound = false;
   function ensureOAuthListener() {
@@ -296,7 +303,7 @@
         busy(true); setMsg(msg, state.mode === "signup" ? "Creating account…" : "Signing in…", true);
         try {
           if (state.mode === "signup") {
-            var up = await sb.auth.signUp({ email: state.email, password: state.pass });
+            var up = await sb.auth.signUp({ email: state.email, password: state.pass, options: { emailRedirectTo: landingUrl() } });
             if (up.error) throw up.error;
             if (!up.data.session) { state.mode = "sent"; render(); return; }
             return onAuthed(up.data.session, wrap);
@@ -320,7 +327,7 @@
       var resend = wrap.querySelector("#a-resend");
       if (resend) resend.onclick = async function () {
         busy(true); setMsg(msg, "Resending…", true);
-        try { var r = await sb.auth.resend({ type: "signup", email: state.email }); if (r.error) throw r.error; setMsg(msg, "Sent. Check your inbox.", true); }
+        try { var r = await sb.auth.resend({ type: "signup", email: state.email, options: { emailRedirectTo: landingUrl() } }); if (r.error) throw r.error; setMsg(msg, "Sent. Check your inbox.", true); }
         catch (e) { setMsg(msg, (e && e.message) || "Could not resend."); }
         busy(false);
       };
@@ -329,7 +336,7 @@
         readFields();
         if (!state.email) return setMsg(msg, "Enter your email.");
         busy(true); setMsg(msg, "Sending…", true);
-        try { var r = await sb.auth.resetPasswordForEmail(state.email); if (r.error) throw r.error; setMsg(msg, "Reset link sent — check your inbox.", true); }
+        try { var r = await sb.auth.resetPasswordForEmail(state.email, { redirectTo: landingUrl() }); if (r.error) throw r.error; setMsg(msg, "Reset link sent — check your inbox.", true); }
         catch (e) { setMsg(msg, (e && e.message) || "Could not send reset."); }
         busy(false);
       };
