@@ -46,6 +46,29 @@ const hasRealAlpha = async (buffer: Buffer): Promise<boolean> => {
   return transparent / (total / step) > 0.02;
 };
 
+/**
+ * Card detector: an isolated ELEMENT must be surrounded by transparency; an
+ * asset whose border ring is mostly OPAQUE is a pasted card (live defect:
+ * white typography card composited over the artwork — the alpha check passed
+ * on partial transparency while the rectangle survived).
+ */
+const isOpaqueCard = async (buffer: Buffer): Promise<boolean> => {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  let opaque = 0;
+  let total = 0;
+  const ring = Math.max(1, Math.round(Math.min(width, height) * 0.02));
+  for (let y = 0; y < height; y++) {
+    const edgeRow = y < ring || y >= height - ring;
+    for (let x = 0; x < width; x++) {
+      if (!edgeRow && x >= ring && x < width - ring) { x = width - ring - 1; continue; }
+      total++;
+      if (data[(y * width + x) * channels + 3] > 200) opaque++;
+    }
+  }
+  return total > 0 && opaque / total > 0.9;
+};
+
 const fetchBuffer = async (url: string): Promise<Buffer> => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`layer asset fetch failed (HTTP ${response.status})`);
@@ -142,7 +165,8 @@ export const renderLayerOverlay = async (params: {
       const generated = await media.generateImage({
         positivePrompt:
           `${elementPrompt}. Single isolated subject on a fully transparent background, ` +
-          `no backdrop, no shadow box, no frame. Crisp print-ready edges.`,
+          `no backdrop, no shadow box, no frame, no card, no poster panel, ` +
+          `no rectangular backdrop of any color. Crisp print-ready edges.`,
         width: 1024,
         height: 1024,
         seed: stableSeed(runId, spec.placement, layer.order, layer.content),
@@ -150,9 +174,16 @@ export const renderLayerOverlay = async (params: {
       });
       sourceUrls.push(generated.imageURL);
       let bytes = await fetchBuffer(generated.imageURL);
-      if (!(await hasRealAlpha(bytes))) {
-        const cutout = await media.removeBackground(generated.imageURL);
-        bytes = await fetchBuffer(cutout.imageURL);
+      // Cut out when transparency is missing OR when the element still reads
+      // as an opaque rectangle (card) — partial alpha can pass the first
+      // check while a white card survives to print as a pasted box.
+      if (!(await hasRealAlpha(bytes)) || (await isOpaqueCard(bytes))) {
+        try {
+          const cutout = await media.removeBackground(generated.imageURL);
+          bytes = await fetchBuffer(cutout.imageURL);
+        } catch {
+          // best-effort; the trim below still removes uniform borders
+        }
       }
       asset = await sharp(bytes)
         .trim()
