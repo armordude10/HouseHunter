@@ -1,4 +1,5 @@
-import { getRunware } from "./runware-client.js";
+import { randomUUID } from "node:crypto";
+import { getRunwareConfig } from "./runware-client.js";
 import type { AgentTool } from "./tools.js";
 
 /**
@@ -147,57 +148,128 @@ function normalizeDimension(value: number | null | undefined, fallback: number):
 }
 
 async function renderPanel(panel: PanelInput): Promise<PanelResult> {
-  const runware = getRunware();
+  const { apiKey, base } = getRunwareConfig();
   const model = pickModel(panel);
   const transparent = panel.transparent_background !== false; // default transparent for apparel art
-  const width = normalizeDimension(panel.width_px, 1024);
-  const height = normalizeDimension(panel.height_px, 1024);
 
   const positivePrompt = transparent
     ? `${panel.prompt}. Isolated artwork on a fully transparent background, no garment, no mockup, clean cut-out, print-ready.`
     : panel.prompt;
 
-  const negativePrompt =
-    panel.negative_prompt ??
-    "garment seams, stitch lines, fabric texture, mockup background, watermark, logo marks, brand marks";
+  // Build the base task. Image models on Runware differ in which optional
+  // parameters they accept (Recraft rejects negativePrompt, some reject
+  // transparentBackground, dimensions are model-specific), so we start lean and
+  // self-heal from the API's own error feedback.
+  const task: Record<string, any> = {
+    taskType: "imageInference",
+    taskUUID: randomUUID(),
+    model,
+    positivePrompt,
+    width: normalizeDimension(panel.width_px, 1024),
+    height: normalizeDimension(panel.height_px, 1024),
+    numberResults: 1,
+    outputType: "URL",
+    outputFormat: "PNG",
+    includeCost: true,
+  };
+  if (transparent) task.transparentBackground = true;
 
-  try {
-    const request: Record<string, any> = {
-      positivePrompt,
-      negativePrompt,
-      model,
-      width,
-      height,
-      numberResults: 1,
-      outputType: "URL",
-      outputFormat: "PNG",
-      includeCost: true,
-    };
-    if (transparent) request.transparentBackground = true;
+  let lastError = "no image URL returned";
 
-    const out = await (runware as any).imageInference(request);
-    const url = extractImageUrl(out);
+  // Up to 5 attempts: each API error tells us exactly what to fix (drop an
+  // unsupported parameter, or switch to an allowed dimension) and we retry.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(base, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify([task]),
+    }).catch((e) => e as Error);
 
-    if (!url) {
-      return failPanel(panel, model, transparent, width, height, "no image URL returned");
+    if (res instanceof Error) {
+      lastError = res.message;
+      break;
     }
 
-    return {
-      job_id: panel.job_id ?? null,
-      placement: panel.placement,
-      file_url: url,
-      file_type: "png",
-      public_url: true,
-      transparent_background: transparent,
-      model_used: model,
-      width,
-      height,
-      status: "success",
-      notes: `rendered with ${model}`,
-    };
-  } catch (err) {
-    return failPanel(panel, model, transparent, width, height, (err as Error).message);
+    const json: any = await res.json().catch(() => ({}));
+    const err = Array.isArray(json?.errors) ? json.errors[0] : json?.error;
+
+    if (!err) {
+      const url = extractImageUrl(json);
+      if (url) {
+        return {
+          job_id: panel.job_id ?? null,
+          placement: panel.placement,
+          file_url: url,
+          file_type: "png",
+          public_url: true,
+          transparent_background: transparent,
+          model_used: model,
+          width: task.width,
+          height: task.height,
+          status: "success",
+          notes: `rendered with ${model} at ${task.width}x${task.height}`,
+        };
+      }
+      lastError = "no image URL returned";
+      break;
+    }
+
+    lastError = err.message ?? `HTTP ${res.status}`;
+
+    if (err.code === "unsupportedDimensions") {
+      const chosen = pickAllowedDimension(err.allowedValues, task.width, task.height);
+      if (chosen) {
+        task.width = chosen.width;
+        task.height = chosen.height;
+        continue;
+      }
+    }
+
+    // Drop whatever parameter the API rejected and retry.
+    const bad = normalizeBadParams(err.parameter);
+    let stripped = false;
+    for (const p of bad) {
+      if (p in task && !PROTECTED_PARAMS.has(p)) {
+        delete task[p];
+        stripped = true;
+      }
+    }
+    if (stripped) continue;
+
+    break; // unrecoverable error
   }
+
+  return failPanel(panel, model, transparent, task.width, task.height, lastError);
+}
+
+const PROTECTED_PARAMS = new Set(["taskType", "taskUUID", "model", "positivePrompt", "numberResults"]);
+
+function normalizeBadParams(parameter: unknown): string[] {
+  if (Array.isArray(parameter)) return parameter.filter((p): p is string => typeof p === "string");
+  if (typeof parameter === "string") return [parameter];
+  return [];
+}
+
+/** Choose the allowed dimension whose aspect ratio is closest to the request. */
+function pickAllowedDimension(
+  allowed: Record<string, string> | undefined,
+  width: number,
+  height: number
+): { width: number; height: number } | null {
+  if (!allowed) return null;
+  const target = width / height;
+  let best: { width: number; height: number } | null = null;
+  let bestDelta = Infinity;
+  for (const value of Object.values(allowed)) {
+    const [w, h] = value.split("x").map((n) => parseInt(n, 10));
+    if (!w || !h) continue;
+    const delta = Math.abs(w / h - target);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = { width: w, height: h };
+    }
+  }
+  return best;
 }
 
 function failPanel(

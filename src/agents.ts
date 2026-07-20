@@ -50,7 +50,7 @@ export interface ThreadbotAgent<T extends z.ZodTypeAny> extends Omit<AgentDef<T>
 
 export const threadbotIntakeOrchestrator: ThreadbotAgent<typeof ThreadbotIntakeOrchestratorSchema> = {
   name: "Threadbot Intake Orchestrator",
-  model: "google:gemini@3-1-flash-lite",
+  model: "google-gemini-3-1-flash-lite",
   schema: ThreadbotIntakeOrchestratorSchema,
   schemaName: "ThreadbotIntakeOrchestrator",
   instructions: `You are the intake node for Threadbot. You may read the full user request. You must output compact JSON only. Return exactly this JSON shape: { "run_id": "", "raw_user_request": "", "pipeline_stage": "intake_initialized", "next_node": "Save Intake State", "errors": [] } Rules: raw_user_request must contain only the customer's actual request. Do not include wrapper labels such as MESSY CUSTOMER PROMPT. Do not include product_context, product_twin, surface_graph, template_geometry, or mockup_payload_rules. Do not include request_summary or raw_user_request_ref. Those fields are not in the schema.`,
@@ -58,7 +58,7 @@ export const threadbotIntakeOrchestrator: ThreadbotAgent<typeof ThreadbotIntakeO
 
 export const customerIntentAgent: ThreadbotAgent<typeof CustomerIntentAgentSchema> = {
   name: "Customer Intent Agent",
-  model: "openai:gpt@5-4-mini",
+  model: "openai-gpt-5-4-mini",
   reasoningEffort: "medium",
   schema: CustomerIntentAgentSchema,
   schemaName: "CustomerIntentAgent",
@@ -67,7 +67,7 @@ export const customerIntentAgent: ThreadbotAgent<typeof CustomerIntentAgentSchem
 
 export const policyIpGate: ThreadbotAgent<typeof PolicyIpGateSchema> = {
   name: "Policy + IP Gate",
-  model: "anthropic:claude@opus-4.8",
+  model: "anthropic-claude-opus-4-8",
   reasoningEffort: "medium",
   schema: PolicyIpGateSchema,
   schemaName: "PolicyIpGate",
@@ -87,7 +87,7 @@ export const policyIpGate: ThreadbotAgent<typeof PolicyIpGateSchema> = {
 
 export const productDiscoveryAgent: ThreadbotAgent<typeof ProductDiscoveryAgentSchema> = {
   name: "Product Discovery Agent",
-  model: "openai:gpt@5-4",
+  model: "openai-gpt-5-4",
   reasoningEffort: "medium",
   schema: ProductDiscoveryAgentSchema,
   schemaName: "ProductDiscoveryAgent",
@@ -111,7 +111,7 @@ export const productDiscoveryAgent: ThreadbotAgent<typeof ProductDiscoveryAgentS
 
 export const productSelector: ThreadbotAgent<typeof ProductSelectorSchema> = {
   name: "Product Selector",
-  model: "anthropic:claude@opus-4.8",
+  model: "anthropic-claude-opus-4-8",
   reasoningEffort: "medium",
   schema: ProductSelectorSchema,
   schemaName: "ProductSelector",
@@ -132,7 +132,7 @@ export const productSelector: ThreadbotAgent<typeof ProductSelectorSchema> = {
 
 export const pricingBasisAgent: ThreadbotAgent<typeof PricingBasisAgentSchema> = {
   name: "Pricing Basis Agent",
-  model: "openai:gpt@5-4",
+  model: "openai-gpt-5-4",
   reasoningEffort: "medium",
   schema: PricingBasisAgentSchema,
   schemaName: "PricingBasisAgent",
@@ -152,7 +152,7 @@ export const pricingBasisAgent: ThreadbotAgent<typeof PricingBasisAgentSchema> =
 
 export const designProgramCompiler: ThreadbotAgent<typeof DesignProgramCompilerSchema> = {
   name: "Design Program Compiler",
-  model: "anthropic:claude@opus-4.8",
+  model: "anthropic-claude-opus-4-8",
   reasoningEffort: "medium",
   schema: DesignProgramCompilerSchema,
   schemaName: "DesignProgramCompiler",
@@ -161,7 +161,7 @@ export const designProgramCompiler: ThreadbotAgent<typeof DesignProgramCompilerS
 
 export const productSurfacePlanner: ThreadbotAgent<typeof ProductSurfacePlannerSchema> = {
   name: "Product-Surface Planner",
-  model: "openai:gpt@5-5",
+  model: "openai-gpt-5-5",
   reasoningEffort: "medium",
   schema: ProductSurfacePlannerSchema,
   schemaName: "ProductSurfacePlanner",
@@ -181,7 +181,7 @@ export const productSurfacePlanner: ThreadbotAgent<typeof ProductSurfacePlannerS
 
 export const productOptionsResolver: ThreadbotAgent<typeof ProductOptionsResolverSchema> = {
   name: "Product Options Resolver",
-  model: "openai:gpt@5-4-mini",
+  model: "openai-gpt-5-4-mini",
   reasoningEffort: "medium",
   schema: ProductOptionsResolverSchema,
   schemaName: "ProductOptionsResolver",
@@ -196,7 +196,7 @@ export const productOptionsResolver: ThreadbotAgent<typeof ProductOptionsResolve
 
 export const technicalQaAgent: ThreadbotAgent<typeof TechnicalQaAgentSchema> = {
   name: "Technical QA Agent",
-  model: "anthropic:claude@opus-4.8",
+  model: "anthropic-claude-opus-4-8",
   reasoningEffort: "medium",
   schema: TechnicalQaAgentSchema,
   schemaName: "TechnicalQaAgent",
@@ -215,7 +215,7 @@ export const technicalQaAgent: ThreadbotAgent<typeof TechnicalQaAgentSchema> = {
 
 export const placementBundleCompiler: ThreadbotAgent<typeof PlacementBundleCompilerSchema> = {
   name: "Placement Bundle Compiler",
-  model: "openai:gpt@5-5",
+  model: "openai-gpt-5-5",
   reasoningEffort: "medium",
   schema: PlacementBundleCompilerSchema,
   schemaName: "PlacementBundleCompiler",
@@ -225,7 +225,7 @@ export const placementBundleCompiler: ThreadbotAgent<typeof PlacementBundleCompi
 
 export const mockupRenderAgent: ThreadbotAgent<typeof MockupRenderAgentSchema> = {
   name: "Mockup Render Agent",
-  model: "openai:gpt@5-5",
+  model: "openai-gpt-5-5",
   reasoningEffort: "medium",
   schema: MockupRenderAgentSchema,
   schemaName: "MockupRenderAgent",
@@ -245,7 +245,7 @@ export const mockupRenderAgent: ThreadbotAgent<typeof MockupRenderAgentSchema> =
 
 export const finalResponseComposer: ThreadbotAgent<typeof FinalResponseComposerSchema> = {
   name: "Final Response Composer",
-  model: "anthropic:claude@opus-4.8",
+  model: "anthropic-claude-opus-4-8",
   reasoningEffort: "medium",
   reasoningSummary: "auto",
   schema: FinalResponseComposerSchema,

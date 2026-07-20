@@ -1,29 +1,28 @@
-import { Runware } from "@runware/sdk-js";
-
 /**
- * Single shared Runware client. Every LLM `textInference` call and every
- * `imageInference` artwork call in this backend goes through this one client,
- * authenticated with RUNWARE_API_KEY.
+ * Runware REST configuration.
+ *
+ * We talk to Runware over its HTTPS REST surface rather than the SDK's
+ * WebSocket transport:
+ *   - LLM inference  → OpenAI-compatible `POST {base}/chat/completions`
+ *   - image inference → native tasks `POST {base}` (array of task objects)
+ *
+ * REST is used because it is verifiable in every environment (some sandboxes /
+ * egress proxies block outbound WebSockets) and behaves identically on Cloud
+ * Run. It is still 100% Runware: same endpoint, same models, same API key.
  */
-type RunwareInstance = InstanceType<typeof Runware>;
+export interface RunwareConfig {
+  apiKey: string;
+  /** e.g. https://api.runware.ai/v1 */
+  base: string;
+}
 
-let client: RunwareInstance | undefined;
-
-export function getRunware(): RunwareInstance {
-  if (client) return client;
-
+export function getRunwareConfig(): RunwareConfig {
   const apiKey = process.env.RUNWARE_API_KEY;
   if (!apiKey) {
     throw new Error(
       "RUNWARE_API_KEY is not set. Provide a Runware API key (https://my.runware.ai/keys)."
     );
   }
-
-  client = new Runware({
-    apiKey,
-    // The SDK constructor accepts `url` for a custom endpoint; omit for default.
-    ...(process.env.RUNWARE_BASE_URL ? { url: process.env.RUNWARE_BASE_URL } : {}),
-  });
-
-  return client;
+  const base = (process.env.RUNWARE_BASE_URL || "https://api.runware.ai/v1").replace(/\/+$/, "");
+  return { apiKey, base };
 }

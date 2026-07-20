@@ -14,8 +14,8 @@ generator were migrated to Runware.
 | Concern | Before (OpenAI Agents) | After (Runware) |
 | --- | --- | --- |
 | Orchestration | `@openai/agents` `Agent` + `Runner` + `withTrace` | Hand-rolled runner (`runware-engine.ts` + `workflow.ts`) |
-| LLM inference | OpenAI Responses API, `gpt-5.5` everywhere | Runware native `textInference`, best-fit model per node |
-| Structured output | `outputType` (Zod) | JSON-Schema output + Zod re-validation |
+| LLM inference | OpenAI Responses API, `gpt-5.5` everywhere | Runware REST — OpenAI-compatible `POST /v1/chat/completions`, best-fit model per node |
+| Structured output | `outputType` (Zod) | Schema supplied as a system contract + Zod re-validation + repair retry |
 | Threadbot MCP tools | `hostedMcpTool(...)` (hosted by OpenAI) | Client-side MCP (`@modelcontextprotocol/sdk`, Streamable HTTP) |
 | Artwork generation | `threadbot_artwork_mcp.generate_panel_artwork_bundle` | Runware `imageInference` (same tool name, new backend) |
 | Printful mockups | `threadbot_printful_mockups_mcp` | unchanged (real POD provider) |
@@ -40,19 +40,19 @@ artifact is `placement_bundle_json`; no node may treat a single
 
 | Node | Model | Why |
 | --- | --- | --- |
-| Intake Orchestrator | `google:gemini@3-1-flash-lite` | trivial JSON passthrough — cheapest/fastest |
-| Customer Intent | `openai:gpt@5-4-mini` | fast structured NLU parsing |
-| Policy + IP Gate | `anthropic:claude@opus-4.8` | safety / IP screening judgment + tools |
-| Product Discovery | `openai:gpt@5-4` | retrieval + multi-tool calls |
-| Product Selector | `anthropic:claude@opus-4.8` | careful validation + truth gates + tools |
-| Pricing Basis | `openai:gpt@5-4` | classification + tools |
-| Design Program Compiler | `anthropic:claude@opus-4.8` | creative + instruction-faithful structured reasoning |
-| Surface Planner | `openai:gpt@5-5` | heaviest planning + tool orchestration |
-| Product Options Resolver | `openai:gpt@5-4-mini` | small single-tool decision |
-| Technical QA | `anthropic:claude@opus-4.8` | strict validation reasoning + tools |
-| Placement Bundle Compiler | `openai:gpt@5-5` | orchestrates artwork generation across placements |
-| Mockup Render | `openai:gpt@5-5` | tool orchestration + provider error handling |
-| Final Response Composer | `anthropic:claude@opus-4.8` | customer-facing writing |
+| Intake Orchestrator | `google-gemini-3-1-flash-lite` | trivial JSON passthrough — cheapest/fastest |
+| Customer Intent | `openai-gpt-5-4-mini` | fast structured NLU parsing |
+| Policy + IP Gate | `anthropic-claude-opus-4-8` | safety / IP screening judgment + tools |
+| Product Discovery | `openai-gpt-5-4` | retrieval + multi-tool calls |
+| Product Selector | `anthropic-claude-opus-4-8` | careful validation + truth gates + tools |
+| Pricing Basis | `openai-gpt-5-4` | classification + tools |
+| Design Program Compiler | `anthropic-claude-opus-4-8` | creative + instruction-faithful structured reasoning |
+| Surface Planner | `openai-gpt-5-5` | heaviest planning + tool orchestration |
+| Product Options Resolver | `openai-gpt-5-4-mini` | small single-tool decision |
+| Technical QA | `anthropic-claude-opus-4-8` | strict validation reasoning + tools |
+| Placement Bundle Compiler | `openai-gpt-5-5` | orchestrates artwork generation across placements |
+| Mockup Render | `openai-gpt-5-5` | tool orchestration + provider error handling |
+| Final Response Composer | `anthropic-claude-opus-4-8` | customer-facing writing |
 
 All reasoning-capable nodes run at `reasoningEffort: "medium"` (matching the
 original); the Final Response Composer also requests a reasoning summary.
@@ -109,22 +109,43 @@ src/
   workflow.ts         13-node pipeline runner + state passing (verbatim node prompts)
   agents.ts           agent definitions: instructions (verbatim) + model + tool refs
   schemas.ts          Zod output schemas (verbatim)
-  runware-engine.ts   runAgent(): textInference call, tool-call loop, schema validation
-  runware-client.ts   shared Runware SDK client
+  runware-engine.ts   runAgent(): chat/completions call, tool-call loop, schema validation + repair
+  runware-client.ts   Runware REST config (api key + base URL)
   tools.ts            client-side MCP bridge (Threadbot servers)
   artwork.ts          Runware-backed generate_panel_artwork_bundle tool
 ```
 
-### Integration notes
+### Integration notes (verified against the live Runware API)
 
-- The Runware native `textInference` request is built flat (`model`,
-  `systemPrompt`, `messages`, `maxTokens`, `outputFormat`, `schema`, `tools`),
-  matching `@runware/sdk-js`'s `IRequestTextInference`. Tool-calling fields ride
-  the request's index signature and tool calls are read back defensively, so the
-  engine tolerates both the native `{ text, toolCalls }` response and an
-  OpenAI-style `{ choices: [...] }` response.
-- The model's JSON answer is always re-validated against the node's Zod schema
-  before being passed downstream; a validation failure throws with the offending
-  paths.
-- All Threadbot MCP servers are connected client-side and torn down at the end
-  of each run.
+- **Transport is HTTPS REST, not the SDK's WebSocket.** LLM calls go to the
+  OpenAI-compatible `POST {base}/chat/completions`; artwork goes to the native
+  tasks endpoint `POST {base}` (array of `imageInference` tasks). REST is used
+  because it is verifiable in every environment (some egress proxies block
+  outbound WebSockets) and behaves identically on Cloud Run. Base defaults to
+  `https://api.runware.ai/v1`.
+- **Model IDs use the REST (hyphenated) form** — e.g. `openai-gpt-5-5`,
+  `anthropic-claude-opus-4-8`, `google-gemini-3-1-flash-lite`. Image models use
+  the native AIR form (`recraft:v4.1-pro@0`, `ideogram:4@0`, `bfl:5@1`). GPT-5.x
+  requires `max_completion_tokens` (handled centrally).
+- **Structured output is provider-uniform.** Rather than `response_format`
+  (which OpenAI, Anthropic, and Google each handle differently on Runware), the
+  target JSON Schema is given to the model as a system contract and the answer
+  is re-validated against the node's Zod schema. On a validation miss the engine
+  runs up to 3 repair passes, feeding the exact failing paths back to the model.
+- **Artwork calls self-heal.** Image models differ in which optional params they
+  accept (Recraft rejects `negativePrompt`; dimensions are model-specific), so
+  the artwork tool drops whatever parameter the API rejects and switches to an
+  allowed dimension, then retries.
+- All Threadbot MCP servers are connected client-side (with cold-start retry)
+  and torn down at the end of each run.
+
+### Runtime dependency: the Threadbot MCP servers must be live
+
+8 of the 13 nodes (Policy, Product Discovery, Product Selector, Pricing, Surface
+Planner, Product Options, Technical QA, Mockup Render) call the Threadbot MCP
+Cloud Run services. A full end-to-end run requires those four services
+(`threadbot-{policy,product-intelligence,pricing-agentbuilder,printful-mockups}-mcp`)
+to be reachable. If they are scaled to zero / paused / on a broken revision they
+return 5xx and the dependent nodes cannot complete — that is an infrastructure
+state, not a code issue. Intake, Customer Intent, Design Program, Placement
+Bundle (artwork), and Final Response run without them.

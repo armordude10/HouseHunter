@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { getRunware } from "./runware-client.js";
+import { getRunwareConfig } from "./runware-client.js";
 import type { AgentTool } from "./tools.js";
 
 /**
@@ -65,7 +65,8 @@ interface NormalizedResponse {
   toolCalls: NormalizedToolCall[];
 }
 
-const MAX_TOOL_ITERATIONS = 12;
+const MAX_ITERATIONS = 16;
+const MAX_REPAIRS = 3;
 
 export async function runAgent<T extends z.ZodTypeAny>(
   agent: AgentDef<T>,
@@ -79,7 +80,10 @@ export async function runAgent<T extends z.ZodTypeAny>(
     { role: "user", content: userText },
   ];
 
-  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+  let repairsLeft = MAX_REPAIRS;
+  let lastError = "no response";
+
+  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     const response = await invokeTextInference(agent, messages, tools);
 
     if (response.toolCalls.length > 0) {
@@ -111,15 +115,31 @@ export async function runAgent<T extends z.ZodTypeAny>(
       continue;
     }
 
-    // No tool calls — this is the final structured answer.
+    // No tool calls — this should be the final structured answer.
     const text = response.text ?? "";
-    const parsed = parseAndValidate(agent, text);
-    return { output_text: JSON.stringify(parsed), output_parsed: parsed };
+    const validated = validate(agent, text);
+    if (validated.ok) {
+      return { output_text: JSON.stringify(validated.data), output_parsed: validated.data };
+    }
+
+    // Repair loop: hand the exact validation problems back to the model.
+    lastError = validated.error;
+    if (repairsLeft > 0) {
+      repairsLeft--;
+      messages.push({ role: "assistant", content: text });
+      messages.push({
+        role: "user",
+        content:
+          `Your previous response did not satisfy the required JSON schema: ${validated.error}. ` +
+          `Return the COMPLETE corrected JSON object with ALL required fields present and correctly typed. ` +
+          `Output JSON only — no markdown, no commentary.`,
+      });
+      continue;
+    }
+    break;
   }
 
-  throw new Error(
-    `${agent.name}: exceeded ${MAX_TOOL_ITERATIONS} tool iterations without producing a final answer`
-  );
+  throw new Error(`${agent.name}: could not produce schema-valid output. Last error: ${lastError}`);
 }
 
 // -----------------------------------------------------------------------------
@@ -130,64 +150,68 @@ async function invokeTextInference<T extends z.ZodTypeAny>(
   messages: ChatMessage[],
   tools: AgentTool[]
 ): Promise<NormalizedResponse> {
-  const runware = getRunware();
+  const { apiKey, base } = getRunwareConfig();
 
+  // Inline all $refs/definitions — Runware's structured-output validator
+  // rejects `$ref`/`definitions`, and reused sub-schemas (e.g. PlacementJob)
+  // must be expanded in place.
   const jsonSchema = zodToJsonSchema(agent.schema, {
-    name: agent.schemaName,
+    $refStrategy: "none",
     target: "openApi3",
   });
+  if (jsonSchema && typeof jsonSchema === "object") {
+    delete (jsonSchema as any).$schema;
+    delete (jsonSchema as any).definitions;
+  }
 
-  // The system turn (agent instructions) is carried in the dedicated
-  // `systemPrompt` field; remaining turns go in `messages`. This matches the
-  // native @runware/sdk-js IRequestTextInference shape (flat params, not a
-  // `settings` wrapper). Tool/structured-output fields ride the request's
-  // index signature.
-  const systemPrompt = messages.find((m) => m.role === "system")?.content ?? agent.instructions;
-  const convo = messages.filter((m) => m.role !== "system").map(serializeMessage);
+  // Provider-uniform structured output: rather than `response_format` (OpenAI
+  // wants json_object, Anthropic demands a schema param, Google rejects
+  // json_schema), we hand the schema to the model as a system contract and
+  // enforce correctness with Zod + the repair loop in runAgent.
+  const contract: ChatMessage = {
+    role: "system",
+    content:
+      `Return a single JSON object that strictly conforms to this JSON Schema. ` +
+      `Output JSON only — no markdown, no code fences, no commentary:\n${JSON.stringify(jsonSchema)}`,
+  };
+  const outMessages = [messages[0], contract, ...messages.slice(1)].map(serializeMessage);
 
   const request: Record<string, any> = {
-    taskType: "textInference",
     model: agent.model,
-    systemPrompt,
-    messages: convo,
-    maxTokens: agent.maxTokens ?? 8000,
+    messages: outMessages,
+    // GPT-5.x models on Runware require `max_completion_tokens` (not
+    // `max_tokens`); it is accepted across the other providers too.
+    max_completion_tokens: agent.maxTokens ?? 8000,
     ...(agent.temperature != null ? { temperature: agent.temperature } : {}),
-    // JSON structured output. Runware honors `schema` when outputFormat is JSON
-    // and accepts the OpenAI envelope {name, schema, strict}. We keep strict
-    // off (some node schemas use open `any`/optional fields) and re-validate
-    // the result against the unchanged Zod schema ourselves.
-    outputFormat: "json",
-    schema: {
-      name: agent.schemaName,
-      strict: false,
-      schema: jsonSchema,
-    },
-    includeCost: true,
   };
-
-  if (agent.reasoningEffort) {
-    request.reasoningEffort = agent.reasoningEffort;
-    if (agent.reasoningSummary) request.reasoningSummary = agent.reasoningSummary;
-  }
 
   if (tools.length > 0) {
     request.tools = tools.map((t) => ({
-      toolType: "function",
+      type: "function",
       function: {
         name: t.name,
         description: t.description,
         parameters: t.parameters,
       },
     }));
-    request.toolChoice = "auto";
+    request.tool_choice = "auto";
   }
 
-  // `textInference` is the native LLM task method on @runware/sdk-js (added in
-  // v1.2.5). It is cast here because tool-calling fields are passed through the
-  // request's index signature and tool calls are read from the (untyped)
-  // response; we normalize whatever shape comes back.
-  const raw = await (runware as { textInference: (p: any) => Promise<any> }).textInference(request);
-  return normalizeResponse(Array.isArray(raw) ? raw[0] : raw);
+  const res = await fetch(`${base}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  const json: any = await res.json().catch(() => ({}));
+  if (!res.ok || json?.error) {
+    const msg = json?.error?.message ?? `HTTP ${res.status}`;
+    throw new Error(`${agent.name}: Runware textInference failed: ${msg}`);
+  }
+  return normalizeResponse(json);
 }
 
 function serializeMessage(m: ChatMessage): Record<string, any> {
@@ -273,23 +297,30 @@ function normalizeToolCalls(calls: any): NormalizedToolCall[] {
 // -----------------------------------------------------------------------------
 // Output validation.
 // -----------------------------------------------------------------------------
-function parseAndValidate<T extends z.ZodTypeAny>(agent: AgentDef<T>, text: string): z.infer<T> {
+type ValidationResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+function validate<T extends z.ZodTypeAny>(
+  agent: AgentDef<T>,
+  text: string
+): ValidationResult<z.infer<T>> {
   const json = extractJson(text);
   let obj: unknown;
   try {
     obj = JSON.parse(json);
   } catch (err) {
-    throw new Error(`${agent.name}: model output was not valid JSON: ${(err as Error).message}`);
+    return { ok: false, error: `output was not valid JSON (${(err as Error).message})` };
   }
   const result = agent.schema.safeParse(obj);
   if (!result.success) {
-    throw new Error(
-      `${agent.name}: output failed schema validation: ${result.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ")}`
-    );
+    return {
+      ok: false,
+      error: result.error.issues
+        .slice(0, 8)
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("; "),
+    };
   }
-  return result.data;
+  return { ok: true, data: result.data };
 }
 
 /** Strip optional markdown code fences and isolate the JSON object. */

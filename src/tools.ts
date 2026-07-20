@@ -74,12 +74,31 @@ export class McpHub {
         ? { headers: { Authorization: `Bearer ${this.bearer}` } }
         : undefined;
 
-      const transport = new StreamableHTTPClientTransport(new URL(url), { requestInit });
       const client = new Client(
         { name: "threadbot-runware-backend", version: "1.0.0" },
         { capabilities: {} }
       );
-      await client.connect(transport);
+
+      // Cloud Run services can be scaled to zero and return 5xx during a cold
+      // start; retry the connect a few times with backoff before giving up.
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const transport = new StreamableHTTPClientTransport(new URL(url), { requestInit });
+          await client.connect(transport);
+          lastErr = undefined;
+          break;
+        } catch (err) {
+          lastErr = err;
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
+      }
+      if (lastErr) {
+        throw new Error(
+          `MCP server ${url} is unreachable after retries (${(lastErr as Error).message}). ` +
+            `If this is a Cloud Run service, it may be scaled to zero, paused, or on a broken revision.`
+        );
+      }
 
       const listed = await client.listTools();
       const toolsByName = new Map<string, { description: string; inputSchema: Record<string, any> }>();
