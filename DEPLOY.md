@@ -1,8 +1,44 @@
-# Temporary demo deploy — Cloud Run
+# Deploy the pipeline (free options first)
 
-Stands up the Threadbot Runware pipeline as a **new, standalone** public service
-(`threadbot-runware-demo`). It does not touch your existing MCP services, your
-local pipeline, or your normal deployment process.
+Stands up the Threadbot Runware pipeline as a **new, standalone** public service.
+It does not touch your local pipeline or your normal deployment process.
+
+> Only the LLM + artwork nodes run fully on Runware. The 8 tool-using nodes still
+> need the four Threadbot MCP backends reachable (see "MCP backends" at the end).
+
+## Option A — Render (free, no credit card) ★ recommended
+
+Render free web services are $0, give a public HTTPS URL, and deploy from GitHub.
+They sleep after ~15 min idle and cold-start in ~1 min (fine for a demo).
+
+1. Your branch is already on GitHub.
+2. Go to **render.com → New → Blueprint** and select this repo/branch. Render
+   reads `render.yaml` and configures the service automatically.
+3. When prompted, paste your **RUNWARE_API_KEY** (stored as a secret, never in git).
+4. Render builds the `Dockerfile` and gives you a URL like
+   `https://threadbot-runware-demo.onrender.com`.
+
+Smoke-test it:
+
+```bash
+URL=https://threadbot-runware-demo.onrender.com
+curl -s $URL/health
+curl -s -X POST $URL/run -H 'Content-Type: application/json' \
+  -d '{"input_as_text":"black streetwear tee with a neon koi fish, no logos"}'
+```
+
+## Other free/cheap hosts (same Dockerfile)
+
+- **Hugging Face Spaces** (free, Docker SDK): new Space → Docker → point at this
+  repo; add `RUNWARE_API_KEY` as a Space secret. The container listens on `$PORT`.
+- **Koyeb** free tier: one always-on service from a Dockerfile, public URL.
+- **Fly.io**: `fly launch` from this repo (uses the Dockerfile); scale-to-zero
+  keeps it near-free. Requires a card on file.
+
+All of these use the existing `Dockerfile` and the `RUNWARE_API_KEY` env var; the
+server binds `0.0.0.0` on `$PORT`, so nothing else needs changing.
+
+## Option B — Cloud Run (only if you already use GCP)
 
 ## 1. Deploy (run locally, where `gcloud` is authed)
 
@@ -72,8 +108,20 @@ target with the Cloud Run URL. To find the target:
 POST to `$URL/run` from Postman or a phone browser tool on a shared screen. That
 still shows the full pipeline running end to end on Runware.
 
-## 4. Tear down after the demo
+## Tear down a Cloud Run demo (if you used Option B)
 
 ```bash
 gcloud run services delete threadbot-runware-demo --region us-central1
 ```
+
+## MCP backends (the remaining piece)
+
+The pipeline's 8 tool-using nodes call four Threadbot MCP services
+(`policy`, `product-intelligence`, `pricing-agentbuilder`, `printful-mockups`).
+To run those on a free host instead of Cloud Run, their **source code** is needed
+so they can be containerized and deployed the same way (Render Blueprint / HF
+Space / Koyeb). Point this repo/session at wherever that code lives (a GitHub
+repo works best) and each service can get its own free Render web service; then
+set the four MCP URLs the pipeline uses via env/config. Until those four are
+reachable, Intake, Customer Intent, Design Program, Placement Bundle (artwork),
+and Final Response still run; the product/pricing/mockup nodes cannot.

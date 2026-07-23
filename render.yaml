@@ -1,0 +1,24 @@
+# Render Blueprint — free-tier deploy of the Threadbot Runware pipeline.
+# Render free web services cost $0, need no credit card, give a public HTTPS URL,
+# and deploy straight from this GitHub repo. Free services sleep after ~15 min
+# idle and cold-start in ~1 min on the next request (fine for a demo).
+#
+# One-time setup:
+#   1. Push this repo to GitHub (already done on your branch).
+#   2. On render.com: New → Blueprint → pick this repo/branch.
+#   3. When prompted, paste your RUNWARE_API_KEY (kept secret, not in git).
+#   4. Render builds the Dockerfile and gives you a URL like
+#      https://threadbot-runware-demo.onrender.com
+services:
+  - type: web
+    name: threadbot-runware-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: RUNWARE_API_KEY
+        sync: false # set in the Render dashboard (secret)
+      - key: THREADBOT_MCP_BEARER
+        sync: false # optional; leave blank if the MCP servers need no auth
